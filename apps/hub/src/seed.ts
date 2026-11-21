@@ -1,7 +1,8 @@
 // The demo's starting state: suppliers, the four parts on the board, and 30 days of sample use.
 // The sample is chosen so wood screws (capacity 12) use about 0.56 a day and reorder at 4.
 // The demo starts with 6 on the board, so taking two boxes crosses the line.
-import type { Snapshot, Supplier } from '@reup/contracts';
+import { Supplier, type Snapshot } from '@reup/contracts';
+import buyerSuppliers from '../../../services/buyer/suppliers.json';
 import type { Config } from './config';
 import type { RoomCore } from './core/room';
 import { daysBefore } from './core/time';
@@ -18,11 +19,9 @@ function at(days: number[]): number[] {
   return Array.from({ length: 30 }, (_, i) => (days.includes(i) ? 1 : 0));
 }
 
-/** Live retailers for price checks. Override with MARKET_SUPPLIERS (a JSON array of Supplier) once two pass the supplier test. */
-export const MARKET: Supplier[] = [
-  { id: 's-market-a', name: 'Home Hardware', kind: 'market', baseUrl: 'https://www.homehardware.ca', searchUrl: 'https://www.homehardware.ca/en/search?query={q}', country: 'CA' },
-  { id: 's-market-b', name: 'Canadian Tire', kind: 'market', baseUrl: 'https://www.canadiantire.ca', searchUrl: 'https://www.canadiantire.ca/en/search-results.html?q={q}', country: 'CA' },
-];
+/** Live retailers for price checks: the enabled entries of the buyer's list, so there is one file to edit.
+ * MARKET_SUPPLIERS (a JSON array of Supplier) overrides it without a deploy. */
+export const MARKET: Supplier[] = buyerSuppliers.filter((s) => s.enabled).map((s) => Supplier.parse(s));
 
 export function suppliersFor(config: Config): Supplier[] {
   const offcut: Supplier = { id: 's-offcut', name: 'Offcut Supply', kind: 'account', baseUrl: config.SUPPLY_URL, searchUrl: `${config.SUPPLY_URL}/search?q={q}`, country: 'CA' };
