@@ -13,7 +13,7 @@ Base URL: `HUB_URL`. JSON in and out. Times are ISO 8601 with an offset. Money i
 | APPROVE_KEY | `Authorization: Bearer` | phones (from the QR link `?k=`) | approve by phone, teach confirm and cancel |
 | SUPPLY_WEBHOOK_SECRET | `X-Offcut-Secret` | Offcut Supply | `/hooks/supply` |
 
-Reading state needs no token: `/live` for screens, `/api/state`, history.
+Reading state needs no token: `/live` for screens, `/api/state`, history, and a teach crop at `/api/teach/:id/crop.jpg`. The buyer's socket is the exception: `/live?role=buyer&token=DEVICE_TOKEN`, because only the buyer is sent jobs.
 
 ## Errors
 
