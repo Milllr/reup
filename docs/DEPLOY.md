@@ -1,6 +1,6 @@
 # Run and deploy
 
-Nothing on this page was run against Cloudflare from the build session: there was no account to run it on. The local half was run and works. The Cloudflare half is written from the wrangler docs and needs one careful pass by a person.
+The local half and the Cloudflare deploy were both run. The secrets line and the deploy workflow were not: they wait on the Infisical project and a Cloudflare API token.
 
 ## On one laptop
 
@@ -17,16 +17,23 @@ Nothing on this page was run against Cloudflare from the build session: there wa
 
 Then open http://localhost:3000 for the TV, http://localhost:3000/m for a phone and http://localhost:3000/ops for the operator (token `dev-ops-token` on a laptop).
 
-## Cloudflare, once
+## Cloudflare
 
-1. Sign in: `npx wrangler login`
-2. Make the two databases: `npx wrangler d1 create reup-hub` and `npx wrangler d1 create offcut-supply`
-3. Paste each `database_id` it prints into `apps/hub/wrangler.jsonc` and `apps/supply/wrangler.jsonc`, in place of the zeros.
-4. Secrets, from Infisical, one line a Worker. Keep the hub's under the Infisical path `/hub` and the store's under `/supply`.
+Deployed Sat Nov 21 with wrangler from Miller's laptop.
+
+| What | Address |
+| --- | --- |
+| Hub: TV, phone, operator, API | https://wheredidallmyinventorygo.wtf |
+| Offcut Supply | https://offcut.wheredidallmyinventorygo.wtf |
+
+The two D1 databases exist and their ids are in `apps/hub/wrangler.jsonc` and `apps/supply/wrangler.jsonc`. Deploy again after a change, from the repo root: `npm run deploy`
+
+Still to do:
+
+1. Secrets. The Workers run on their `dev-` values until this is done. From Infisical, one line a Worker, with the hub's secrets under the Infisical path `/hub` and the store's under `/supply`.
    * From apps/hub: `infisical export --path=/hub --format=dotenv | npx wrangler secret bulk`
    * From apps/supply: `infisical export --path=/supply --format=dotenv | npx wrangler secret bulk`
-5. Deploy both: `npm run deploy`
-6. Write the two workers.dev addresses in docs/DECISIONS.md. Until DNS is on Cloudflare, set `SUPPLY_URL` in `apps/hub/wrangler.jsonc` and `HUB_URL` in `apps/supply/wrangler.jsonc` to those addresses and deploy again.
+2. The domain. wheredidallmyinventorygo.wtf has its DNS at GoDaddy, so wrangler cannot put the Workers on it yet. Move the nameservers to Cloudflare, then add a custom domain to each Worker and change `SUPPLY_URL` and `HUB_URL` in the two wrangler.jsonc files back to the domain.
 
 | Worker | Secrets it reads |
 | --- | --- |

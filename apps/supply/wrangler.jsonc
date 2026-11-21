@@ -10,6 +10,7 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Shipper"] }],
   "d1_databases": [{ "binding": "DB", "database_name": "offcut-supply", "migrations_dir": "migrations" }],
   "vars": {
+    // The workers.dev address until the domain's DNS is on Cloudflare. Then: https://wheredidallmyinventorygo.wtf
     "HUB_URL": "https://wheredidallmyinventorygo.wtf",
     "ACCOUNT_EMAIL": "shop@reup.test",
     "SHIP_DELAY_MS": "20000",

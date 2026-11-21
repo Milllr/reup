@@ -16,6 +16,7 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
   "d1_databases": [{ "binding": "DB", "database_name": "reup-hub", "migrations_dir": "migrations" }],
   "vars": {
+    // The workers.dev address until the domain's DNS is on Cloudflare. Then: https://offcut.wheredidallmyinventorygo.wtf
     "SUPPLY_URL": "https://offcut.wheredidallmyinventorygo.wtf",
     "GEMINI_MODEL": "gemini-3.8-flash",
     "ORDER_CAP_CAD": "150",
