@@ -104,7 +104,8 @@ export function afterCountChange(room: RoomCore, productId: string, before: numb
     return;
   }
   const policy = room.policy(productId);
-  if (!policy || after > policy.reorderPoint || room.openOrderFor(productId)) return;
+  // A part with no use yet has no reorder point to cross.
+  if (!policy || policy.ratePerDay <= 0 || after > policy.reorderPoint || room.openOrderFor(productId)) return;
   const name = room.zone(product.zoneId)?.name ?? product.name;
   const many = /s$/.test(name);
   room.activity('attention', after === 0 ? `${name} ran out.` : `${name} ${many ? 'are' : 'is'} at the reorder point.`);

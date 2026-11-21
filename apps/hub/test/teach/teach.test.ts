@@ -68,11 +68,17 @@ describe('naming a new part', () => {
     expect(product).toMatchObject({ id: 'p-wood-screws-8-x-2-in', zoneId: 'z-teach', sku: 'OC-1008-200' });
     expect(r.room.zone('z-teach')?.productId).toBe(product.id);
     expect(r.room.policy(product.id)).toMatchObject({ sampleHistory: true, leadDays: 1 });
-    expect(r.room.policy(product.id)?.ratePerDay).toBeGreaterThan(0.3);
+    // A new part has no use yet: it is counted, never low, and taking it off the spot does not start an order.
+    expect(r.room.policy(product.id)).toMatchObject({ ratePerDay: 0, reorderPoint: 0 });
     expect(r.room.count(product.id)?.count).toBe(1);
     expect(r.room.s.teach).toBeNull();
     expect(r.room.s.orders).toHaveLength(0);
+
     expect(r.room.s.activity.at(-1)?.text).toBe('Wood screws #8 x 2 in added. Counting it now.');
+    await r.call('POST', '/ingest/counts', { counts: [{ productId: product.id, zoneId: 'z-teach', count: 0, level: null, pockets: null, source: 'eye', ts: r.room.iso() }] }, DEVICE);
+    expect(r.room.count(product.id)?.count).toBe(0);
+    expect(r.room.s.orders).toHaveLength(0);
+    expect(r.room.s.activity.at(-1)?.text).toBe('1 box of wood screws #8 x 2 in taken. 0 left.');
   });
 
   it('fails plainly when naming throws or takes over 12 seconds, and a person can still confirm', async () => {

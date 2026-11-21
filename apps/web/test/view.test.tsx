@@ -37,6 +37,13 @@ describe('the plate and the word for each moment', () => {
     expect(partRows(mockSnapshot('low'))[0]).toMatchObject({ low: true, meta: 'At the reorder point · 7 days of cover' });
     expect(partRows(mockSnapshot('ontheway'))[0]).toMatchObject({ low: false, onTheWay: true, meta: '8 boxes on the way · arrives Tuesday' });
     expect(partRows(mockSnapshot('order'))[0]?.meta).toBe('Ordering 8 boxes');
+    // A part that was only just taught has no use yet: counted, never low, even at zero.
+    const taught = mockSnapshot('shelf');
+    taught.products.push({ ...taught.products[0]!, id: 'p-tape', name: 'Masking tape', zoneId: 'z-teach', capacity: null });
+    taught.counts.push({ ...taught.counts[0]!, productId: 'p-tape', zoneId: 'z-teach', count: 0, pockets: null });
+    taught.policies.push({ ...taught.policies[0]!, productId: 'p-tape', ratePerDay: 0, reorderPoint: 0, daysOfCover: null });
+    expect(partRows(taught).at(-1)).toMatchObject({ low: false, meta: 'Counting · not in use yet' });
+    expect(shelfMoment(taught).word).toBe('Stocked');
   });
 
   it('formats times in Toronto', () => {

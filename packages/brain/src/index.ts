@@ -28,7 +28,9 @@ export function ratePerDay(dailyUse: readonly number[], alpha = ALPHA): number {
 
 /** d is use per day after the season factor. */
 export function reorderPoint(d: number, leadDays: number, reviewDays = REVIEW_DAYS, z = Z, capacity: number | null = null): number {
-  const demand = Math.max(0, d) * (leadDays + reviewDays);
+  // A part nobody uses is never reordered. This is what keeps a part that was only just taught off the reorder list.
+  if (!(d > 0)) return 0;
+  const demand = d * (leadDays + reviewDays);
   let point = Math.ceil(demand + z * Math.sqrt(demand));
   point = Math.max(1, point);
   if (capacity != null) point = Math.min(point, Math.max(1, capacity - 1));

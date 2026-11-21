@@ -104,10 +104,10 @@ export function confirmTeach(room: RoomCore, id: string, body: TeachConfirmBody)
   delete room.x.eyeCounts[zone.id];
   delete room.x.nodeCounts[zone.id];
 
-  // A starting rate of about 0.5 a day, flagged as sample until real picks replace it.
+  // No use yet: the rate starts at zero, so a new part is counted but never shown as low or reordered until someone uses it.
   const byDay: RoomCore['x']['usage'][string] = {};
-  daysBefore(room.today(), 30).forEach((day, i) => {
-    byDay[day] = { used: i % 2, restocked: 0, sample: true };
+  daysBefore(room.today(), 30).forEach((day) => {
+    byDay[day] = { used: 0, restocked: 0, sample: true };
   });
   room.x.usage[product.id] = byDay;
   room.x.leadDays[product.id] = room.x.catalog?.items.find((i) => i.sku === body.sku)?.leadDays ?? 2;

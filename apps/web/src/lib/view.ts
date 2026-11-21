@@ -51,10 +51,12 @@ export function partRows(s: Snapshot): PartRow[] {
     const count = s.counts.find((c) => c.productId === product.id)?.count ?? 0;
     const policy = s.policies.find((p) => p.productId === product.id);
     const openOrder = [...s.orders].reverse().find((o) => o.productId === product.id && OPEN.has(o.state));
-    const atLine = policy != null && count <= policy.reorderPoint;
+    // A part with no use yet is counted, never low.
+    const inUse = policy != null && policy.ratePerDay > 0;
+    const atLine = policy != null && inUse && count <= policy.reorderPoint;
     const placed = openOrder != null && PLACED.has(openOrder.state);
     const cover = coverText(policy?.daysOfCover ?? null);
-    let meta = policy ? `Reorder at ${policy.reorderPoint} · ${cover}` : 'Counting';
+    let meta = policy && inUse ? `Reorder at ${policy.reorderPoint} · ${cover}` : policy ? 'Counting · not in use yet' : 'Counting';
     if (placed && openOrder) meta = `${unitsText(openOrder.units, product.unit)} on the way${openOrder.eta ? ` · arrives ${weekday(openOrder.eta)}` : ''}`;
     else if (openOrder) meta = `Ordering ${unitsText(openOrder.units, product.unit)}`;
     else if (atLine) meta = `${count === 0 ? 'Out' : 'At the reorder point'} · ${cover}`;

@@ -1,5 +1,6 @@
 // Ingest: counts, picks, reaches and heartbeats from the eye and the shelf node, and the count of record rule.
 import { unitsText } from '@reup/brain';
+import { TEACH_ZONE } from '../seed';
 import type { Count, IngestCountsBody, IngestNodeBody, IngestNodeResult, IngestPicksBody, IngestPicksResult, IngestReachesBody, PickEvent, Zone } from '@reup/contracts';
 import type { RoomCore } from '../core/room';
 import { dayIn } from '../core/time';
@@ -34,7 +35,9 @@ function recordPick(room: RoomCore, pick: PickEvent): void {
   room.x.recentPicks.push({ pick, at: Date.parse(pick.ts) });
   if (room.x.recentPicks.length > 20) room.x.recentPicks.shift();
   if (!product) return;
-  const what = `${unitsText(Math.abs(pick.delta), product.unit)} of ${(zone?.name ?? product.name).toLowerCase()}`;
+  // The zone's name is the short one ('Wood screws'). The teach spot is named for the spot, not the part, so there the part's own name is used.
+  const named = zone && zone.id !== TEACH_ZONE ? zone.name : product.name;
+  const what = `${unitsText(Math.abs(pick.delta), product.unit)} of ${named.toLowerCase()}`;
   if (pick.delta < 0) room.activity('info', `${what} taken. ${pick.countAfter} left.`);
   else room.activity('info', `${what} added. ${pick.countAfter} on the board.`);
 }
@@ -153,7 +156,7 @@ export function ingestNode(room: RoomCore, body: IngestNodeBody): IngestNodeResu
     zones: room.s.zones,
     reorderPoints: room.s.zones.flatMap((z) => {
       const policy = z.productId ? room.policy(z.productId) : undefined;
-      return z.productId && policy ? [{ productId: z.productId, zoneId: z.id, reorderPoint: policy.reorderPoint }] : [];
+      return z.productId && policy && policy.ratePerDay > 0 ? [{ productId: z.productId, zoneId: z.id, reorderPoint: policy.reorderPoint }] : [];
     }),
     awaitingApproval: room.s.orders.filter((o) => o.state === 'awaiting_approval').map((o) => o.id),
   };

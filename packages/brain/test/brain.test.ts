@@ -18,7 +18,11 @@ describe('reorderPoint', () => {
     expect(reorderPoint(2.1, 1, 1)).toBe(8);
     expect(reorderPoint(2.1, 1, 1, 1.65, 6)).toBe(5);
   });
-  it('is at least 1', () => expect(reorderPoint(0, 2, 1)).toBe(1));
+  it('is at least 1 for a part in use, and 0 for a part nobody uses', () => {
+    expect(reorderPoint(0.01, 2, 1)).toBe(1);
+    expect(reorderPoint(0, 2, 1)).toBe(0);
+    expect(reorderPoint(0, 2, 1, 1.65, 12)).toBe(0);
+  });
 });
 
 describe('orderQty', () => {
