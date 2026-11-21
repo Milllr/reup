@@ -1,0 +1,8 @@
+# Everything the eye needs to run on the laptop with the cameras. Large (it pulls in PyTorch).
+# Install on the machine that runs the eye: python -m pip install -r services/eye/requirements.txt
+-r requirements-dev.txt
+ultralytics>=8.4.0
+opencv-python>=4.10
+httpx>=0.27
+fastapi>=0.115
+uvicorn>=0.32

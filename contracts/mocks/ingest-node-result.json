@@ -1,0 +1,74 @@
+{
+  "ok": true,
+  "zones": [
+    {
+      "id": "z-screws",
+      "name": "Wood screws",
+      "kind": "pockets",
+      "camera": "board",
+      "quad": [
+        [
+          0.04,
+          0.1
+        ],
+        [
+          0.56,
+          0.1
+        ],
+        [
+          0.56,
+          0.42
+        ],
+        [
+          0.04,
+          0.42
+        ]
+      ],
+      "rows": 2,
+      "cols": 6,
+      "productId": "p-screws"
+    },
+    {
+      "id": "z-brackets",
+      "name": "Corner brackets",
+      "kind": "pockets",
+      "camera": "board",
+      "quad": [
+        [
+          0.62,
+          0.1
+        ],
+        [
+          0.9,
+          0.1
+        ],
+        [
+          0.9,
+          0.42
+        ],
+        [
+          0.62,
+          0.42
+        ]
+      ],
+      "rows": 2,
+      "cols": 3,
+      "productId": "p-brackets"
+    }
+  ],
+  "reorderPoints": [
+    {
+      "productId": "p-screws",
+      "zoneId": "z-screws",
+      "reorderPoint": 4
+    },
+    {
+      "productId": "p-brackets",
+      "zoneId": "z-brackets",
+      "reorderPoint": 2
+    }
+  ],
+  "awaitingApproval": [
+    "o-1"
+  ]
+}

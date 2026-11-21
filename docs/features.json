@@ -1,0 +1,408 @@
+{
+  "features": [
+    {
+      "id": "F1", "title": "Camera capture and the local stream", "lane": "eye", "priority": 0, "demo": true,
+      "story": "As the TV, I want a smooth live picture of the board, so that a judge sees the real thing.",
+      "acceptance": [
+        "Run `python -m reup_eye --hub $HUB_URL` on the laptop and see both cameras open at 1080p (board: Facecam, aux: C920). Camera choice is by name or index in services/eye/config.toml",
+        "Open http://localhost:8089/stream/board.mjpg in a browser and see live video at 15 fps or more",
+        "Unplug a camera: the eye keeps running, reports that camera offline within 3 seconds, and reopens it when it is plugged back in",
+        "Every 5 seconds the eye posts camera health with its counts or alone, as IngestCountsBody.cameras"
+      ],
+      "tests": ["frame source falls back and retries when open fails", "camera health reports fps over a 2 second window", "config loads camera names, indexes and the stream port with defaults"],
+      "screens": ["docs/ui/shelf.html"], "depends": []
+    },
+    {
+      "id": "F2", "title": "Zones and the empty board reference", "lane": "eye", "priority": 0, "demo": true,
+      "story": "As the operator, I want to mark zones once and capture the empty board, so that counting is exact.",
+      "acceptance": [
+        "The eye loads zones from GET /api/state at start and again when it receives a `zones` message or every 10 seconds",
+        "POST http://localhost:8089/reference/board captures and saves the empty board frame for that camera to services/eye/data/ (gitignored); it survives a restart",
+        "For a pocket zone the eye warps the quad to a flat rectangle and splits it into rows by cols pocket cells in pocket order",
+        "GET http://localhost:8089/debug/board.jpg returns the current frame with zones and pocket cells drawn, for checking alignment"
+      ],
+      "tests": ["quad to rectangle mapping returns the four corners for the four cell corners", "pocket cells are numbered row by row from the top left", "a saved reference loads back identical", "zones parse from the snapshot mock"],
+      "screens": [], "depends": ["F1"]
+    },
+    {
+      "id": "F3", "title": "Pocket counting on the laptop", "lane": "eye", "priority": 0, "demo": true,
+      "story": "As reup, I want to know which pockets are full, so that the count is never a guess.",
+      "acceptance": [
+        "With the reference captured, each pocket is full when its mean absolute difference from the reference (grey, blurred, gain corrected using the board border) is over the threshold in config; count is the number of full pockets",
+        "Take a unit out of a pocket: within 1.5 seconds of the hand leaving, the eye posts a Count with the new pockets array and count, source eye",
+        "While anything is moving inside the board quad no count is posted; a count is posted only after 500 ms of stillness",
+        "An unchanged count is not posted again, except once every 30 seconds as a keepalive",
+        "Dimming the room lights by a third does not change any pocket's state (gain correction)"
+      ],
+      "tests": ["occupancy on synthetic frames: empty, full, half covered", "gain correction cancels a uniform brightness change", "settle filter holds counts while motion energy is over the limit and releases after 500 ms", "changed-only posting with a 30 second keepalive", "the posted body validates as IngestCountsBody"],
+      "screens": ["docs/ui/shelf.html"], "depends": ["F2"]
+    },
+    {
+      "id": "F4", "title": "Open zone counting and outlines", "lane": "eye", "priority": 1, "demo": true,
+      "story": "As reup, I want to count items that do not sit in pockets, and trace every part on screen.",
+      "acceptance": [
+        "For an open zone the eye counts instances of that zone's product found by YOLOE-26 using the product's taught example crop as a visual prompt (check docs.ultralytics.com/models/yoloe for the current way to fix visual prompt classes once, not per frame)",
+        "The model size and image size come from config; the detector runs in its own thread so the stream never stutters",
+        "GET http://localhost:8089/outlines/board.json returns, per detected item, a simplified polygon in normalized coordinates, refreshed at least 3 times a second",
+        "If ultralytics or the weights are missing, pocket counting and the stream still work and open zones report no count; the log says why in one line"
+      ],
+      "tests": ["instances are assigned to the zone that contains their centre", "polygon simplification keeps at most 24 points", "count smoothing: a count must hold for 3 consecutive detections before it is posted", "the detector module is not imported when disabled in config"],
+      "screens": ["docs/ui/shelf.html"], "depends": ["F2"]
+    },
+    {
+      "id": "F5", "title": "The teach spot", "lane": "eye", "priority": 1, "demo": true,
+      "story": "As a shop owner, I want to add a part by showing it to the camera, so that there is no setup.",
+      "acceptance": [
+        "The teach spot is a fixed quad in config on the aux camera. When something is placed on it and holds still for 1 second, the eye crops it and posts POST /api/teach with a JPEG under 400 kB",
+        "The same item is not posted twice: a new teach needs the spot to be empty for 2 seconds first",
+        "After a teach is confirmed, the eye saves the crop as that product's visual prompt for F4"
+      ],
+      "tests": ["presence detection against the empty teach spot reference", "debounce: one teach per placement", "JPEG is re-encoded at lower quality until under 400 kB"],
+      "screens": [], "depends": ["F2"]
+    },
+    {
+      "id": "F6", "title": "The reorder brain", "lane": "hub", "priority": 0, "demo": true,
+      "story": "As reup, I want a reorder point I can explain in one sentence.",
+      "acceptance": [
+        "packages/brain exports pure functions with no I/O: ratePerDay(dailyUse, alpha=0.3) is the exponentially weighted mean of units used per day, newest day weighted most",
+        "reorderPoint = ceil(d*(L+R) + z*sqrt(d*(L+R))) where d = ratePerDay*seasonFactor, L = leadDays, R = reviewDays, z = 1.65; at least 1; at most capacity-1 when capacity is known",
+        "orderQty = ceil(d*14), at least 1, and at most capacity minus the current count when capacity is known",
+        "daysOfCover = count/d, null when d is 0",
+        "reason reads exactly like: \"Uses about 0.6 a day. Delivery takes 2 days. Reorder at 4.\" (singular day when 1)",
+        "coverText(days): under 14 days \"7 days of cover\" (rounded, at least 1), from 14 days \"4 weeks of cover\" (rounded), null \"Not in use yet\"",
+        "marketNote compares the cheapest ok market quote with the account quote per unit: \"Retailer A is $1.20 more per box.\" or \"... less per box.\"; null when no market quote is ok. The unit word is the first word of product.unit, or unit for each",
+        "packsFor(units, packs[]) picks the pack option with the lowest total for at least that many units"
+      ],
+      "tests": ["rate: constant use, a recent spike weighs more, empty history is 0", "reorder point: d=0.56, L=2, R=1 gives 4; d=2.1, L=1, R=1 gives 8; d=2.1 with capacity 6 gives 5", "order quantity caps at free space on the board", "days of cover, its null case and coverText wording", "reason wording, singular and plural", "market note more, less, equal and none", "packsFor prefers a case when it is cheaper"],
+      "screens": [], "depends": []
+    },
+    {
+      "id": "F7", "title": "The Room: live state, WebSocket and history", "lane": "hub", "priority": 0, "demo": true,
+      "story": "As every screen, I want one live state that never disagrees with itself.",
+      "acceptance": [
+        "One Durable Object named Room holds the Snapshot in memory and in its storage; it survives a restart of the Worker",
+        "GET /live upgrades to a WebSocket (hibernation API), sends {type:snapshot} first, then a ServerMessage for every change; role comes from the query; job messages go only to role=buyer",
+        "GET /api/state returns the Snapshot; every response and message validates against contracts",
+        "Every Count, PickEvent, Order change, Run and Quote is also written to D1 (tables in apps/hub/migrations)",
+        "GET /api/products/:id/history returns 30 days of use per day and a 7 day forecast from the brain, as HistoryResult",
+        "Bearer tokens are checked as contracts/api.md says; a wrong or missing token gets 401 with ApiError",
+        "buyerOnline is true while a role=buyer socket is connected"
+      ],
+      "tests": ["snapshot on connect, then one message per change", "job messages are not sent to screens", "401 for a wrong token on every ingest route", "history sums picks per local day (America/Toronto)", "state survives a simulated restart"],
+      "screens": [], "depends": ["F6"]
+    },
+    {
+      "id": "F8", "title": "Ingest and the count of record", "lane": "hub", "priority": 0, "demo": true,
+      "story": "As reup, I want two cameras to agree on one number.",
+      "acceptance": [
+        "POST /ingest/counts stores counts. For a pocket zone the node's count is the count of record when the node is online at level 2 or more; otherwise the eye's. Open and bin zones use the eye",
+        "When the count of record changes, the hub writes a PickEvent with the delta (unless the node already sent one for it), recomputes the Policy with the brain, and broadcasts count, pick and policy",
+        "POST /ingest/picks skips ids it has already seen and reports accepted and duplicates",
+        "POST /ingest/reaches broadcasts each reach and marks picks within 2 seconds of a reach as handSeen",
+        "POST /ingest/node updates NodeStatus and returns zones, reorder points and orders awaiting approval; with no heartbeat for 15 seconds the node is marked offline",
+        "If eye and node disagree on a pocket zone for more than 3 seconds, an activity line with tone attention says which zone"
+      ],
+      "tests": ["count of record by zone kind, node level and node online", "a delta produces one pick, a repeat of the same count produces none", "duplicate pick ids are skipped", "reach marks nearby picks", "node goes offline after 15 seconds", "disagreement activity is raised once, not every second"],
+      "screens": [], "depends": ["F7"]
+    },
+    {
+      "id": "F9", "title": "Orders: from the reorder point to received", "lane": "hub", "priority": 0, "demo": true,
+      "story": "As reup, I want to carry an order from noticing to arrival without a person, except for the yes.",
+      "acceptance": [
+        "When a count of record is at or under its reorder point and the product has no order that is not received, failed or cancelled, the hub creates an Order in pricing with a PO number like RU-1042 and sends a market job (unless every market quote is under 10 minutes old) and a cart job",
+        "POST /ingest/quotes stores quotes. POST /ingest/cart moves the order to awaiting_approval with unit price, total and the market note, or to failed with the error",
+        "POST /api/orders/:id/approve moves awaiting_approval to approved, sends a place job, and sets approvedBy; any other state gets 409",
+        "POST /ingest/placed moves the order to placed with the confirmation and eta, or to failed",
+        "A spend cap (ORDER_CAP_CAD, default 150, and DAY_CAP_CAD, default 400) fails an order with a clear error before the place job is sent",
+        "When the count of record for the product rises by at least 1 after the order is placed or shipped, the order becomes received and an activity line says so",
+        "POST /ingest/reorder from the node creates the order with trigger node if none is open",
+        "POST /api/orders (ops) starts one by hand; POST /api/orders/:id/cancel cancels any order that is not placed",
+        "The hub sets snapshot.screen: shop when an order enters pricing or carting, order from awaiting_approval until 20 seconds after placed, then shelf. POST /api/demo/screen overrides it until it is set to null",
+        "Jobs not finished are listed by GET /api/jobs, oldest first"
+      ],
+      "tests": ["an order opens once at the reorder point and not again while one is open", "the full happy path through every state", "approve in the wrong state is 409", "the spend caps", "received on restock", "cart failure and place failure", "screen follows order state and the override", "node triggered reorder"],
+      "screens": ["docs/ui/order.html", "docs/ui/shop.html"], "depends": ["F8"]
+    },
+    {
+      "id": "F10", "title": "Naming a new part with Gemini", "lane": "hub", "priority": 1, "demo": true,
+      "story": "As a shop owner, I want reup to tell me what a part is and where to buy it.",
+      "acceptance": [
+        "POST /api/teach stores the crop (R2 or Durable Object storage), sets TeachState to naming and broadcasts it",
+        "The hub fetches Offcut's /catalog.json (cached 5 minutes) and asks the Gemini API (model from GEMINI_MODEL, structured JSON output) to pick the best matching catalog item or none, with a confidence of sure, fairly_sure or not_sure. Search the Gemini docs for the current model name and request shape before writing the call",
+        "The suggestion uses the catalog item's name, unit and sku; with no match it uses Gemini's own name and a null sku. State becomes needs_confirm",
+        "POST /api/teach/:id/confirm creates the Product, attaches it to the zone, seeds a starting rate of 0.5 a day flagged sampleHistory, and broadcasts product, policy and teach null",
+        "If Gemini fails or times out after 12 seconds the state is failed with a plain error and the phone can still type a name and confirm"
+      ],
+      "tests": ["the prompt lists every catalog item with its sku", "a returned sku that is not in the catalog is treated as no match", "confirm creates the product and a policy", "timeout leads to failed, and confirm still works"],
+      "screens": ["docs/ui/phone.html"], "depends": ["F7"]
+    },
+    {
+      "id": "F11", "title": "The store's webhook", "lane": "hub", "priority": 1, "demo": true,
+      "story": "As reup, I want to hear from the supplier when the order ships.",
+      "acceptance": [
+        "POST /hooks/supply with the right X-Offcut-Secret updates the order whose poNumber matches: order.confirmed keeps placed and sets eta, order.shipped sets shipped, order.delivered adds an activity line",
+        "A wrong secret gets 401; an unknown PO number gets 404; a repeat is harmless"
+      ],
+      "tests": ["each event", "wrong secret", "unknown PO", "repeat"],
+      "screens": [], "depends": ["F9"]
+    },
+    {
+      "id": "F12", "title": "Market check on live retailers", "lane": "buyer", "priority": 0, "demo": true,
+      "story": "As reup, I want to know the going price before I buy.",
+      "acceptance": [
+        "The buyer connects to the hub WebSocket as role=buyer, reconnects with backoff, and on connect calls GET /api/jobs for anything it missed",
+        "For a market job it starts one TinyFish agent run per supplier at once (client.agent.stream), each starting on that supplier's searchUrl with the phrase, with output_schema {listing_name, pack_size, price, currency, in_stock, delivery_days, product_url} all nullable, browser_profile stealth, proxy country from the supplier, and max_duration_seconds 180. Read docs.tinyfish.ai/tinyagent/how-to/compare-prices.md first",
+        "The goal tells the agent to close any cookie notice, check the first 5 listings, skip sponsored and bundle listings, return the lowest price before tax and shipping, never add to a cart, never sign in, and stop",
+        "A run that ends COMPLETED with a null price, or whose result mentions a captcha or a block, is a failed quote (ok false) with a plain error",
+        "Quotes are posted with POST /ingest/quotes; one failed site never stops the others",
+        "Suppliers are read from services/buyer/suppliers.json (the two retailers that passed the supplier test)"
+      ],
+      "tests": ["goal text contains the stop rules", "result mapping: good, null price, captcha text", "unit price is price divided by pack size", "one rejected run does not reject the job", "reconnect asks for missed jobs"],
+      "screens": ["docs/ui/shop.html"], "depends": ["F15"]
+    },
+    {
+      "id": "F13", "title": "Filling the cart at Offcut Supply", "lane": "buyer", "priority": 0, "demo": true,
+      "story": "As reup, I want the cart ready so a person only has to say yes.",
+      "acceptance": [
+        "For a cart job the buyer runs one agent on Offcut Supply with use_profile true and TINYFISH_PROFILE_ID (a saved signed in session), no proxy, browser_profile lite",
+        "The goal, as numbered steps: search for the SKU (or the phrase when the SKU is null), open the product, choose the pack option that gives the lowest total for the units, set the quantity, add to cart, open the cart, go to checkout review, read the totals, and stop without placing the order",
+        "It returns {pack_label, pack_size, packs, unit_price, total, delivery_days, cart_ok}; the buyer posts POST /ingest/cart",
+        "If the item is out of stock it returns cart_ok false with the reason and the buyer reports the failure",
+        "A second cart job for the same order first empties the cart"
+      ],
+      "tests": ["goal text for a SKU and for a phrase", "the goal forbids placing the order", "result mapping to IngestCartBody, ok and failed", "out of stock is reported as a failure"],
+      "screens": ["docs/ui/shop.html", "docs/ui/order.html"], "depends": ["F15"]
+    },
+    {
+      "id": "F14", "title": "Placing the order and tracking it", "lane": "buyer", "priority": 0, "demo": true,
+      "story": "As reup, after a yes I want the order placed and a confirmation number back.",
+      "acceptance": [
+        "A place job is run only when the hub sends it (the hub sends it only after an approval). The agent opens the cart, goes to checkout, enters the PO number, chooses Bill to account, places the order, and returns {confirmation, delivery_date}",
+        "The buyer posts POST /ingest/placed. A run that ends without a confirmation number is a failure, never a guess",
+        "The buyer refuses any place job whose supplier is not kind account, and logs it",
+        "Stretch: a track job opens the order status page for the confirmation and returns the status and date"
+      ],
+      "tests": ["refuses a market supplier", "goal contains the PO number and Bill to account", "missing confirmation is a failure", "delivery date parses to an ISO time at noon local"],
+      "screens": ["docs/ui/order.html"], "depends": ["F13"]
+    },
+    {
+      "id": "F15", "title": "Run mirror, live preview and replay", "lane": "buyer", "priority": 0, "demo": true,
+      "story": "As a judge, I want to watch the agent work, and never stare at an error.",
+      "acceptance": [
+        "Every agent run is mirrored to the hub as a Run with POST /ingest/runs: on start, on STREAMING_URL (streamingUrl set), on each PROGRESS (a step appended with its purpose), and on COMPLETE (status, error). See docs.tinyfish.ai/tinyagent/api/agent/index.md for the event fields",
+        "If the SSE stream drops, the buyer polls the run by id until it reaches a final status",
+        "Every completed run is saved to services/buyer/recordings/<kind>-<supplier>.json (gitignored) with its steps, timings and result",
+        "When replay is on for a kind (hub ReplayBody, delivered in the job or polled), or a live run fails, the buyer plays the last good recording at its original pace with replay true and no streamingUrl, then reports its saved result",
+        "A startup check prints whether TINYFISH_API_KEY and TINYFISH_PROFILE_ID are set, without printing them"
+      ],
+      "tests": ["event to Run mapping for each event type", "polling takes over when the stream ends early", "a recording round trips", "replay keeps the step order and sets replay true", "a failed live run falls back to a recording when one exists"],
+      "screens": ["docs/ui/shop.html"], "depends": []
+    },
+    {
+      "id": "F16", "title": "Offcut Supply: catalog, search and product pages", "lane": "supply", "priority": 0, "demo": true,
+      "story": "As an agent, I need a real store to shop in.",
+      "acceptance": [
+        "GET / shows categories and featured items; GET /search?q= finds items by name, SKU or category words, best match first; GET /p/:sku shows name, SKU, unit, pack options as radio buttons with prices, stock, delivery days, a quantity field and Add to cart",
+        "The catalog is seeded into D1 from contracts/mocks/catalog.json by a seed script; prices are CAD",
+        "GET /catalog.json returns the whole catalog as the Catalog contract",
+        "A cookie notice shows on first visit and goes away when dismissed",
+        "Every page has the footer: Offcut Supply is a demo store built for Hack Western 13. Nothing here is for sale.",
+        "Pages are server rendered HTML that works with JavaScript off, with real labels on every input, matching the Offcut look in docs/UI.md"
+      ],
+      "tests": ["search ranks an exact SKU first and finds by words in any order", "catalog.json validates as Catalog", "an out of stock item shows Out of stock and has no Add to cart button", "the footer is on every route"],
+      "screens": [], "depends": []
+    },
+    {
+      "id": "F17", "title": "Offcut Supply: account, cart, checkout and orders", "lane": "supply", "priority": 0, "demo": true,
+      "story": "As a buyer with an account, I want to order on account with a PO number.",
+      "acceptance": [
+        "GET /signin and POST /signin sign in the one demo account (email and password from secrets) with a session cookie that lasts 7 days",
+        "POST /cart adds a pack option and quantity; GET /cart shows lines, lets a quantity change or a line be removed, and has Empty cart",
+        "GET /checkout needs a sign in and shows the review page: lines, subtotal, HST at 13 percent, shipping (free at 50 dollars and over, else 9.95), total, delivery date, a PO number field, payment fixed to Bill to account (net 30), and a Place order button",
+        "POST /checkout needs a PO number, creates the order with a confirmation number like OC-58213, empties the cart and shows the confirmation page with the number and the delivery date",
+        "GET /orders lists the account's orders; GET /orders/:confirmation shows its status: Confirmed, Shipped or Delivered",
+        "No card field exists anywhere"
+      ],
+      "tests": ["totals: tax, shipping threshold, rounding to cents", "checkout without sign in redirects to /signin", "checkout without a PO number shows an error and creates nothing", "confirmation numbers are unique", "delivery date skips weekends"],
+      "screens": [], "depends": ["F16"]
+    },
+    {
+      "id": "F18", "title": "Offcut Supply: admin switches and the webhook", "lane": "supply", "priority": 1, "demo": true,
+      "story": "As the demo operator, I want to change a price or stock and watch reup adapt.",
+      "acceptance": [
+        "GET /admin (password from secrets) lists items with editable price and an in stock switch, and lists orders with Mark shipped and Mark delivered",
+        "On a new order the store posts order.confirmed to HUB_URL/hooks/supply with X-Offcut-Secret; 20 seconds later (a Durable Object alarm) it posts order.shipped with the delivery date; Mark delivered posts order.delivered",
+        "A failed webhook is retried 3 times and never blocks the checkout page",
+        "POST /admin/reset clears orders and carts and restores seeded prices and stock"
+      ],
+      "tests": ["webhook body validates as SupplyWebhookBody", "retry on a 500", "reset restores the seed", "admin needs the password"],
+      "screens": [], "depends": ["F17"]
+    },
+    {
+      "id": "F19", "title": "Shelf node level 1: reach, ledger, heartbeat, button", "lane": "node", "priority": 0, "demo": true,
+      "story": "As the shelf, I want to notice every hand and remember it, with or without a network.",
+      "acceptance": [
+        "edge/qnx/vision is the QNX AI workshop hand tracker changed to print one JSON line to stdout per event: {\"type\":\"reach\",\"state\":\"start\"|\"end\",\"zone\":id|null,\"ts\":...} when a hand enters or leaves the board quad, using the zones file the guard writes",
+        "edge/qnx/guard reads those lines, appends each to a ledger file with fsync before doing anything else, and posts them to POST /ingest/reaches",
+        "The guard posts POST /ingest/node every 5 seconds and saves the zones, reorder points and awaiting approvals it gets back to disk",
+        "Anything that could not be sent stays in an outbox on disk and is sent in order when the hub answers again; ids make resending safe",
+        "A press of the Grove button on its GPIO pin approves the oldest awaiting order with POST /api/orders/:id/approve by button; with none waiting it does nothing; presses within 1 second count once",
+        "`./run.sh` on the Pi starts both; README lists the exact QNX packages and steps used"
+      ],
+      "tests": ["ledger append and replay after a crash mid write", "outbox keeps order and drains on reconnect", "heartbeat result is saved and loaded", "button debounce", "reach lines parse; a broken line is logged and skipped", "posted bodies match the contract mocks key for key"],
+      "screens": [], "depends": []
+    },
+    {
+      "id": "F20", "title": "Shelf node level 2: pocket counts on the Pi", "lane": "node", "priority": 1, "demo": true,
+      "story": "As the shelf, I want to count pockets myself and call for an order even when offline.",
+      "acceptance": [
+        "After each reach ends and the frame is still for 500 ms, vision compares every pocket of every pocket zone with its empty reference (same rule as F3, written in C++ with no OpenCV) and prints {\"type\":\"pockets\",\"zone\":id,\"pockets\":[...],\"ts\":...}",
+        "The guard turns a change into a PickEvent and a Count with source node, writes both to the ledger and sends them; NodeStatus.level is 2",
+        "`./capture_reference.sh` saves the empty reference on the Pi",
+        "When a count is at or under the saved reorder point and the hub has not answered for 10 seconds, the guard writes a reorder call to the ledger and sends it with POST /ingest/reorder when the hub is back",
+        "The C++ pocket math has host tests that CI compiles with g++ and runs"
+      ],
+      "tests": ["C++: occupancy on synthetic buffers, gain correction, pocket order", "guard: pockets change to pick and count", "guard: offline reorder call is made once per crossing", "guard: count and pick bodies match the mocks key for key"],
+      "screens": [], "depends": ["F19"]
+    },
+    {
+      "id": "F21", "title": "Shelf node level 3: it does not fall over", "lane": "node", "priority": 1, "demo": true,
+      "story": "As a QNX judge, I want to see why this runs on a real time OS.",
+      "acceptance": [
+        "A small supervisor starts vision and guard as separate processes, restarts either within 1 second if it exits, and counts vision restarts in NodeStatus.visionRestarts",
+        "The guard runs at a higher priority than vision (set with the QNX scheduling tools; record the commands in the README)",
+        "Killing vision by hand: the button still approves, the heartbeat continues, vision is back within 1 second, and no ledger line is lost or repeated",
+        "`./judge_demo.sh` prints the three things to show a judge with the exact commands: kill vision, pull the network cable, press the button"
+      ],
+      "tests": ["supervisor restarts a child that exits and counts it", "supervisor stops both children on SIGTERM", "a restart does not duplicate ledger ids"],
+      "screens": [], "depends": ["F20"]
+    },
+    {
+      "id": "F22", "title": "Shelf node level 4: a trained model on the Pi (stretch)", "lane": "node", "priority": 3, "demo": false,
+      "story": "As the shelf, I want to count open zones myself.",
+      "acceptance": [
+        "services/eye/tools/make_dataset.py records board footage and writes YOLO labels from YOLOE detections; train.md gives the one line commands to train YOLO26n on the remote GPU and export TFLite",
+        "vision loads the TFLite model and prints open zone counts in the same JSON line form; NodeStatus.level is 4",
+        "If the model file is missing, levels 1 to 3 run unchanged"
+      ],
+      "tests": ["dataset writer produces valid YOLO label lines", "guard handles the open zone count line"],
+      "screens": [], "depends": ["F21", "F4"]
+    },
+    {
+      "id": "F23", "title": "App shell and live store", "lane": "web", "priority": 0, "demo": true,
+      "story": "As the TV, I want to show the right screen without anyone touching it.",
+      "acceptance": [
+        "apps/web is React with Vite; docs/ui/glass.css is copied to src/styles/glass.css and is the only styling base; Source Sans 3 is bundled, not fetched at run time",
+        "A store connects to /live as role=screen, validates every message with the contracts, applies it to the Snapshot, and reconnects with backoff; while disconnected a chip says \"Hub unreachable. Showing the last counts from 9:14.\"",
+        "With `?mock=1` the app runs from contracts/mocks/snapshot.json and plays server-messages.json on a timer, with no hub",
+        "/ shows the screen named by snapshot.screen with a 240 ms cross fade; /m is the phone view; /ops is the operator page",
+        "With `?ops=<token>` on /, keys 1 to 4 force Shelf, Shop, Order, Why and 0 hands control back, through POST /api/demo/screen",
+        "The World, Pane, Chip, Drops, Count, Button and StatusBar components exist and match docs/UI.md"
+      ],
+      "tests": ["reducer applies each ServerMessage type from the mock", "an invalid message is dropped and logged, not applied", "reconnect backoff", "screen switch follows the snapshot", "Count rolls from the old value to the new one", "Drops renders full and empty by count and capacity"],
+      "screens": ["docs/ui/shelf.html"], "depends": []
+    },
+    {
+      "id": "F24", "title": "Shelf screen", "lane": "web", "priority": 0, "demo": true,
+      "story": "As a judge, I want to see the board and its counts and nothing else.",
+      "acceptance": [
+        "Matches docs/ui/shelf.html at 1920 by 1080: wordmark and status chips, the feed in a glass frame, product cards, the status bar",
+        "The feed is an <img> of cameras[board].streamUrl; if it fails to load it shows the board drawn from the pockets arrays, with a chip saying \"Camera feed unavailable. Showing counts.\"",
+        "Zone outlines and count chips are placed from each zone's quad; item outlines come from the eye's outlines JSON when reachable",
+        "A product at or under its reorder point uses the sun rim and its status line; one with an open order shows \"Ordering 8 boxes from Offcut Supply.\"",
+        "A count change rolls the number, and the taken drops fade to rings; a reach makes the frame rim glow aqua until it ends",
+        "The sentence under the feed is the newest info or attention activity; the status bar is the newest working activity or \"Watching the board.\"",
+        "With no products: \"No parts yet. Put one on the teach spot.\""
+      ],
+      "tests": ["renders the snapshot mock", "sun state at the reorder point", "feed fallback when the image errors", "empty state", "chip position from a quad"],
+      "screens": ["docs/ui/shelf.html"], "depends": ["F23"]
+    },
+    {
+      "id": "F25", "title": "Shop screen", "lane": "web", "priority": 0, "demo": true,
+      "story": "As a judge, I want to watch reup shop.",
+      "acceptance": [
+        "Matches docs/ui/shop.html: one pane per run of the focused order (market runs and the cart run), each a glass frame with the supplier name, its kind (Price check or Your supplier), the newest step, and the live preview iframe",
+        "Before the streaming URL arrives the pane shows the sheen and \"Opening a browser.\"",
+        "When a run completes its pane shows the result line: \"$8.69 a box. In stock. 3 days.\" or for the cart \"8 boxes in the cart. $67.71 with tax.\"",
+        "A failed run shows a clay chip and the plain error; a replayed run shows a chip with the word Replay and plays its steps without an iframe",
+        "The small board strip at the top keeps showing the focused product's count and drops"
+      ],
+      "tests": ["one pane per run from the mock", "loading, live, done, failed and replay states", "result line wording for market and cart"],
+      "screens": ["docs/ui/shop.html"], "depends": ["F23"]
+    },
+    {
+      "id": "F26", "title": "Order screen", "lane": "web", "priority": 0, "demo": true,
+      "story": "As a judge, I want to say yes with a wooden button.",
+      "acceptance": [
+        "Matches docs/ui/order.html: one large glass card with the product, units, supplier, unit price, total, arrival day, the reason and the market note",
+        "awaiting_approval: the sun rim and \"Press the button to approve.\" with a drawn button that pulses slowly",
+        "approved and placing: aqua, \"Placing the order at Offcut Supply.\" and the live pane of the place run beside the card",
+        "placed: leaf, \"Ordered. Confirmation OC-58213. Arrives Tuesday.\"; shipped adds \"Shipped.\"; failed shows the clay chip and the error with \"Nothing was bought.\"",
+        "The PO number and who approved (Button or Phone) show in the caption"
+      ],
+      "tests": ["each order state renders its line", "arrival day formats as a weekday name in America/Toronto", "the market note is hidden when null"],
+      "screens": ["docs/ui/order.html"], "depends": ["F23"]
+    },
+    {
+      "id": "F27", "title": "Why screen", "lane": "web", "priority": 1, "demo": true,
+      "story": "As a judge, I want to see that the reorder point is reasoning, not a setting.",
+      "acceptance": [
+        "As docs/UI.md describes: an SVG chart of 30 days of use (bars), the stock line, a 7 day forecast band, the reorder point as a sun line, today marked",
+        "The card beside it shows the policy reason and a season control (Normal 1.0, Busy week 1.4, Exam week 0.6) that calls POST /api/demo/season when opened with the ops token; the line moves within 300 ms of the policy message",
+        "A chip says \"Sample history\" when any day is flagged sample"
+      ],
+      "tests": ["scales map the history mock into the chart box", "the reorder line follows a policy message", "season control posts the right factor"],
+      "screens": [], "depends": ["F23"]
+    },
+    {
+      "id": "F28", "title": "Phone view and the teach overlay", "lane": "web", "priority": 1, "demo": true,
+      "story": "As the person near the board, I want to approve and to name a new part from my phone.",
+      "acceptance": [
+        "/m matches docs/ui/phone.html at 390 wide: counts list with drops, a pending order card with Approve (needs `?k=<approve key>`, stored for the session), and the newest activity",
+        "When a teach needs confirming, /m shows the crop, editable name, unit and SKU, a zone picker, and Confirm and Not a part",
+        "On the TV the Teach overlay from docs/UI.md shows over Shelf while teach is not null, and \"Counting it now.\" for 3 seconds after confirm",
+        "Approve without a key shows \"This phone cannot approve. Scan the code on the station.\""
+      ],
+      "tests": ["approve posts by phone with the key", "teach form posts TeachConfirmBody", "overlay shows and hides with teach state", "no key state"],
+      "screens": ["docs/ui/phone.html"], "depends": ["F23"]
+    },
+    {
+      "id": "F29", "title": "Operator page", "lane": "web", "priority": 1, "demo": false,
+      "story": "As the operator, I want to set up the board and rescue the demo from one page.",
+      "acceptance": [
+        "/ops asks for the ops token once and stores it for the session",
+        "Zone editor: the board frame with draggable quads, add and remove zone, kind, rows and cols steppers, product picker, Save (PUT /api/zones) and \"Capture empty board\" (calls the eye)",
+        "Health: cameras, node (level, last seen, queued, restarts), buyer, and any eye and node disagreement",
+        "Run log: newest first with kind, supplier, status and duration",
+        "Buttons: Reset demo, Start an order for a product, Cancel order, Replay on or off per kind, Season"
+      ],
+      "tests": ["dragging a corner updates the quad and clamps to 0..1", "save posts ZonesBody", "reset asks for confirmation first"],
+      "screens": [], "depends": ["F23"]
+    },
+    {
+      "id": "F30", "title": "Seed, sample history and reset", "lane": "hub", "priority": 0, "demo": true,
+      "story": "As the operator, I want the same clean start for every judge.",
+      "acceptance": [
+        "A seed in apps/hub/src/seed.ts holds the suppliers, and 30 days of sample daily use per seeded product (flagged sample), chosen so the demo product (wood screws, capacity 12) has a rate of 0.56 a day and a reorder point of 4; the demo starts with 6 on the board, so taking two crosses the line",
+        "POST /api/demo/reset cancels open orders, clears runs, quotes older than 10 minutes and activity, restores sample history and policies, and keeps zones, products and current counts",
+        "POST /api/demo/season sets the season, recomputes every policy and broadcasts them",
+        "POST /api/demo/replay stores the replay switches and includes them in jobs"
+      ],
+      "tests": ["reset leaves zones and products and clears orders", "season recomputes policies", "the demo product's reorder point is 4 with the seed"],
+      "screens": [], "depends": ["F9"]
+    },
+    {
+      "id": "F31", "title": "Deploy and secrets", "lane": "integrator", "priority": 0, "demo": true,
+      "story": "As the team, we want one command to put the hub, the screens and the store on the internet.",
+      "acceptance": [
+        "apps/hub/wrangler.jsonc defines the Worker, the Room Durable Object, the D1 database and static assets from apps/web/dist; apps/supply/wrangler.jsonc defines the store and its D1",
+        "`npm run deploy` at the root builds web, applies D1 migrations and deploys both Workers",
+        "Secrets are pushed from Infisical with one documented line per Worker; none are in the repo",
+        "Custom domains are set when DNS is on Cloudflare; until then the workers.dev URLs work and are written in docs/DECISIONS.md",
+        "A GitHub Action deploys main after CI passes, using a Cloudflare API token secret"
+      ],
+      "tests": ["wrangler config files parse and name the bindings the code uses"],
+      "screens": [], "depends": []
+    }
+  ]
+}

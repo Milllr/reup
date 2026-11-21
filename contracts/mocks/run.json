@@ -1,0 +1,28 @@
+{
+  "id": "r-3",
+  "tinyfishRunId": "a1b2c3d4-e5f6-7890-abcd-ef1234567803",
+  "kind": "cart",
+  "supplierId": "s-offcut",
+  "productId": "p-screws",
+  "orderId": "o-1",
+  "status": "running",
+  "streamingUrl": "https://tf-live.example.com/r-3",
+  "steps": [
+    {
+      "ts": "2026-11-21T09:14:10-05:00",
+      "purpose": "Searching for OC-1008-114"
+    },
+    {
+      "ts": "2026-11-21T09:14:13-05:00",
+      "purpose": "Choosing Box of 100"
+    },
+    {
+      "ts": "2026-11-21T09:14:16-05:00",
+      "purpose": "Setting quantity to 8"
+    }
+  ],
+  "replay": false,
+  "error": null,
+  "startedAt": "2026-11-21T09:14:08-05:00",
+  "finishedAt": null
+}

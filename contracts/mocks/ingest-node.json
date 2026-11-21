@@ -1,0 +1,10 @@
+{
+  "status": {
+    "online": true,
+    "level": 2,
+    "lastSeen": "2026-11-21T09:14:58-05:00",
+    "queued": 0,
+    "visionRestarts": 0,
+    "offlineSince": null
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "q-2",
+  "productId": "p-screws",
+  "supplierId": "s-market-a",
+  "listingName": "#8 x 1-1/4 in. Wood Screws (100 Pack)",
+  "packSize": 1,
+  "price": 8.69,
+  "currency": "CAD",
+  "unitPrice": 8.69,
+  "inStock": true,
+  "deliveryDays": 3,
+  "url": "https://retailer-a.example.com/p/123",
+  "runId": "r-1",
+  "ok": true,
+  "fetchedAt": "2026-11-21T09:14:40-05:00"
+}

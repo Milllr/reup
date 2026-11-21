@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reup: phone</title>
+<link rel="stylesheet" href="glass.css">
+<style>
+  /* Mockup only: force the phone width on a desktop browser. */
+  body { max-width: 390px; margin: 0 auto; font-size: 16px; }
+  .world { padding: 16px; gap: 14px; min-height: 844px; }
+  .title { font-size: 22px; } .sentence { font-size: 17px; line-height: 23px; } .label { font-size: 15px; }
+  .caption, .chip { font-size: 14px; } .count { font-size: 44px; line-height: 48px; }
+  .glass { padding: 14px 16px; } .drop { width: 18px; height: 18px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field input, .field select { font: inherit; min-height: 44px; padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(22,51,28,0.25); background: rgba(255,255,255,0.9); color: var(--ink); }
+  .line { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid rgba(22,51,28,0.08); }
+  .line:first-of-type { border-top: 0; }
+</style>
+</head>
+<body>
+<main class="world">
+  <header class="between" style="align-items:center">
+    <img src="../../brand/reup-wordmark-ink.svg" alt="reup" style="height:34px">
+    <span class="chip">Live</span>
+  </header>
+
+  <section class="glass sun col" style="gap:10px" aria-label="Order waiting for approval">
+    <span class="label sun-text">Waiting for a yes</span>
+    <p class="sentence" style="font-weight:500">8 boxes of wood screws from Offcut Supply</p>
+    <p class="caption" style="margin:0">$67.71 with tax. Arrives Tuesday. PO RU-1042.</p>
+    <button class="btn primary" type="button">Approve</button>
+    <button class="btn quiet" type="button">Not now</button>
+  </section>
+
+  <section class="glass col" style="gap:10px" aria-label="New part to confirm">
+    <span class="label aqua-text">New part on the teach spot</span>
+    <div style="display:flex; gap:12px; align-items:center">
+      <div role="img" aria-label="Photo of the new part" style="width:84px; height:84px; border-radius:12px; background:linear-gradient(180deg,#C9A27A,#A97E55); flex:none"></div>
+      <span class="caption">Looks like wood screws #8 x 2 in. Fairly sure.</span>
+    </div>
+    <label class="field"><span class="caption">Name</span><input value="Wood screws #8 x 2 in"></label>
+    <label class="field"><span class="caption">One unit is</span><input value="box of 100"></label>
+    <label class="field"><span class="caption">Offcut SKU</span><input value="OC-1008-200"></label>
+    <label class="field"><span class="caption">Where it sits</span><select><option>Wood screws, row 2</option><option>A new zone</option></select></label>
+    <button class="btn primary" type="button">Confirm</button>
+    <button class="btn quiet" type="button">Not a part</button>
+  </section>
+
+  <section class="glass" aria-label="Counts">
+    <div class="line"><span class="count" style="font-size:30px; line-height:34px; width:34px">4</span><div class="col grow" style="gap:4px"><span class="label sun-text">Wood screws #8 x 1-1/4 in</span><span class="caption">of 12 · at the reorder point</span></div></div>
+    <div class="line"><span class="count" style="font-size:30px; line-height:34px; width:34px">5</span><div class="col grow" style="gap:4px"><span class="label">Corner brackets 2 in</span><span class="caption">of 6 · 4 weeks of cover</span></div></div>
+    <div class="line"><span class="count" style="font-size:30px; line-height:34px; width:34px">3</span><div class="col grow" style="gap:4px"><span class="label">Wood glue 473 mL</span><span class="caption">of 4 · 6 weeks of cover</span></div></div>
+    <div class="line"><span class="count" style="font-size:30px; line-height:34px; width:34px">6</span><div class="col grow" style="gap:4px"><span class="label">Sanding discs 120 grit</span><span class="caption">of 6 · 5 weeks of cover</span></div></div>
+  </section>
+
+  <p class="caption" style="margin:0; text-align:center; color:#16331C">2 boxes of wood screws taken at 9:14 AM.</p>
+</main>
+</body>
+</html>

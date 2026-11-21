@@ -1,0 +1,40 @@
+{
+  "counts": [
+    {
+      "productId": "p-screws",
+      "zoneId": "z-screws",
+      "count": 4,
+      "level": null,
+      "pockets": [
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "source": "node",
+      "ts": "2026-11-21T09:14:03-05:00"
+    }
+  ],
+  "cameras": [
+    {
+      "id": "board",
+      "online": true,
+      "fps": 24.0,
+      "streamUrl": "http://192.168.1.20:8089/stream/board.mjpg"
+    },
+    {
+      "id": "aux",
+      "online": true,
+      "fps": 15.0,
+      "streamUrl": "http://192.168.1.20:8089/stream/aux.mjpg"
+    }
+  ]
+}

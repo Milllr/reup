@@ -1,0 +1,5 @@
+{
+  "ok": false,
+  "code": "conflict",
+  "message": "Order o-1 is not waiting for approval."
+}

@@ -1,0 +1,230 @@
+{
+  "productId": "p-screws",
+  "days": [
+    {
+      "day": "2026-10-22",
+      "used": 1,
+      "endCount": 11,
+      "sample": true
+    },
+    {
+      "day": "2026-10-23",
+      "used": 0,
+      "endCount": 11,
+      "sample": true
+    },
+    {
+      "day": "2026-10-24",
+      "used": 1,
+      "endCount": 10,
+      "sample": true
+    },
+    {
+      "day": "2026-10-25",
+      "used": 0,
+      "endCount": 10,
+      "sample": true
+    },
+    {
+      "day": "2026-10-26",
+      "used": 0,
+      "endCount": 10,
+      "sample": true
+    },
+    {
+      "day": "2026-10-27",
+      "used": 0,
+      "endCount": 10,
+      "sample": true
+    },
+    {
+      "day": "2026-10-28",
+      "used": 1,
+      "endCount": 9,
+      "sample": true
+    },
+    {
+      "day": "2026-10-29",
+      "used": 1,
+      "endCount": 8,
+      "sample": true
+    },
+    {
+      "day": "2026-10-30",
+      "used": 0,
+      "endCount": 8,
+      "sample": true
+    },
+    {
+      "day": "2026-10-31",
+      "used": 1,
+      "endCount": 7,
+      "sample": true
+    },
+    {
+      "day": "2026-11-01",
+      "used": 0,
+      "endCount": 7,
+      "sample": true
+    },
+    {
+      "day": "2026-11-02",
+      "used": 0,
+      "endCount": 7,
+      "sample": true
+    },
+    {
+      "day": "2026-11-03",
+      "used": 0,
+      "endCount": 7,
+      "sample": true
+    },
+    {
+      "day": "2026-11-04",
+      "used": 1,
+      "endCount": 6,
+      "sample": true
+    },
+    {
+      "day": "2026-11-05",
+      "used": 1,
+      "endCount": 5,
+      "sample": true
+    },
+    {
+      "day": "2026-11-06",
+      "used": 0,
+      "endCount": 5,
+      "sample": true
+    },
+    {
+      "day": "2026-11-07",
+      "used": 1,
+      "endCount": 4,
+      "sample": true
+    },
+    {
+      "day": "2026-11-08",
+      "used": 0,
+      "endCount": 12,
+      "sample": true
+    },
+    {
+      "day": "2026-11-09",
+      "used": 0,
+      "endCount": 12,
+      "sample": true
+    },
+    {
+      "day": "2026-11-10",
+      "used": 0,
+      "endCount": 12,
+      "sample": true
+    },
+    {
+      "day": "2026-11-11",
+      "used": 1,
+      "endCount": 11,
+      "sample": true
+    },
+    {
+      "day": "2026-11-12",
+      "used": 0,
+      "endCount": 11,
+      "sample": true
+    },
+    {
+      "day": "2026-11-13",
+      "used": 1,
+      "endCount": 10,
+      "sample": true
+    },
+    {
+      "day": "2026-11-14",
+      "used": 1,
+      "endCount": 9,
+      "sample": true
+    },
+    {
+      "day": "2026-11-15",
+      "used": 0,
+      "endCount": 9,
+      "sample": true
+    },
+    {
+      "day": "2026-11-16",
+      "used": 0,
+      "endCount": 9,
+      "sample": true
+    },
+    {
+      "day": "2026-11-17",
+      "used": 0,
+      "endCount": 9,
+      "sample": true
+    },
+    {
+      "day": "2026-11-18",
+      "used": 1,
+      "endCount": 8,
+      "sample": true
+    },
+    {
+      "day": "2026-11-19",
+      "used": 0,
+      "endCount": 8,
+      "sample": true
+    },
+    {
+      "day": "2026-11-20",
+      "used": 1,
+      "endCount": 7,
+      "sample": true
+    }
+  ],
+  "forecast": [
+    {
+      "day": "2026-11-22",
+      "expected": 0.56,
+      "low": 0.0,
+      "high": 2.0
+    },
+    {
+      "day": "2026-11-23",
+      "expected": 0.56,
+      "low": 0.0,
+      "high": 2.0
+    },
+    {
+      "day": "2026-11-24",
+      "expected": 0.56,
+      "low": 0.0,
+      "high": 2.0
+    },
+    {
+      "day": "2026-11-25",
+      "expected": 0.56,
+      "low": 0.0,
+      "high": 2.0
+    },
+    {
+      "day": "2026-11-26",
+      "expected": 0.56,
+      "low": 0.0,
+      "high": 2.0
+    },
+    {
+      "day": "2026-11-27",
+      "expected": 0.56,
+      "low": 0.0,
+      "high": 2.0
+    },
+    {
+      "day": "2026-11-28",
+      "expected": 0.56,
+      "low": 0.0,
+      "high": 2.0
+    }
+  ],
+  "reorderPoint": 4
+}

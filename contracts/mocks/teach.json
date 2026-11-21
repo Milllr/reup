@@ -1,0 +1,15 @@
+{
+  "id": "t-1",
+  "status": "needs_confirm",
+  "cropUrl": "/crops/t-1.jpg",
+  "suggestion": {
+    "name": "Wood screws #8 x 2 in",
+    "unit": "box of 100",
+    "sku": "OC-1008-200",
+    "searchPhrase": "#8 x 2 wood screws box of 100",
+    "confidence": "fairly_sure"
+  },
+  "zoneId": null,
+  "error": null,
+  "ts": "2026-11-21T09:30:00-05:00"
+}

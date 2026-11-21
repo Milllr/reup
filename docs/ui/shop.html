@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reup: Shop</title>
+<link rel="stylesheet" href="glass.css">
+<style>
+  .world { height: 1080px; width: 1920px; }
+  /* Mockup only: grey bars stand in for the live browser. The app puts the TinyFish preview iframe in .pane-view. */
+  .fake { position: absolute; inset: 0; padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+  .fake i { display: block; height: 16px; border-radius: 4px; background: #E3E8EE; }
+  .pane-view { aspect-ratio: auto; flex: 1 1 0; background: #fff; }
+</style>
+</head>
+<body>
+<main class="world">
+  <header class="between" style="height:56px; align-items:center">
+    <img src="../../brand/reup-wordmark-ink.svg" alt="reup" style="height:52px">
+    <div class="glass" style="padding:10px 20px; display:flex; align-items:center; gap:18px; animation:none">
+      <span class="label sun-text">Wood screws #8 x 1-1/4 in</span>
+      <span style="font-size:34px; font-weight:300">4</span>
+      <div class="drops" aria-label="4 of 12 in stock"><span class="drop sun"></span><span class="drop sun"></span><span class="drop sun"></span><span class="drop sun"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span></div>
+      <span class="caption">Ordering 8 boxes</span>
+    </div>
+  </header>
+
+  <h1 class="title">Shopping for 8 boxes of wood screws</h1>
+
+  <div class="row grow" style="min-height:0">
+    <section class="glass frame grow col" style="gap:0" aria-label="Price check at Retailer A">
+      <div class="pane-head"><span class="label">Retailer A</span><span class="chip muted">Price check</span></div>
+      <div class="pane-view"><div class="fake"><i style="width:40%"></i><i style="width:90%"></i><i style="width:75%"></i><i style="width:82%"></i><i style="width:60%"></i></div></div>
+      <p class="sentence" style="padding:14px 8px 0">$8.69 a box. In stock. 3 days.</p>
+      <p class="caption" style="margin:4px 8px 0">Done in 32 seconds</p>
+    </section>
+
+    <section class="glass frame clay grow col" style="gap:0" aria-label="Price check at Retailer B">
+      <div class="pane-head"><span class="label">Retailer B</span><span class="chip clay">Blocked</span></div>
+      <div class="pane-view"><div class="fake"><i style="width:55%"></i><i style="width:30%"></i></div></div>
+      <p class="sentence" style="padding:14px 8px 0">The site showed a challenge page.</p>
+      <p class="caption" style="margin:4px 8px 0">No price from this one</p>
+    </section>
+
+    <section class="glass frame aqua grow col" style="gap:0" aria-label="Filling the cart at Offcut Supply">
+      <div class="pane-head"><span class="label aqua-text">Offcut Supply</span><span class="chip aqua">Your supplier</span></div>
+      <div class="pane-view"><div class="fake"><i style="width:35%"></i><i style="width:88%"></i><i style="width:70%"></i><i style="width:92%"></i><i style="width:48%"></i><i style="width:66%"></i></div></div>
+      <p class="sentence sheen" style="padding:14px 8px 0">Setting quantity to 8.</p>
+      <p class="caption" style="margin:4px 8px 0">Step 3 · signed in as the shop account</p>
+    </section>
+  </div>
+
+  <footer class="glass bar">
+    <div style="display:flex; align-items:center; gap:16px"><span class="drop aqua" aria-hidden="true"></span><span class="sentence">Filling a cart at Offcut Supply. 1 of 2 price checks came back.</span></div>
+    <span class="caption" style="font-size:22px">Nothing is bought until someone presses the button.</span>
+  </footer>
+</main>
+</body>
+</html>

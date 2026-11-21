@@ -1,0 +1,14 @@
+{
+  "name": "@reup/brain",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": { "@reup/contracts": "*" },
+  "devDependencies": { "typescript": "^7.0.0", "vitest": "^5.1.0" }
+}

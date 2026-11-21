@@ -1,0 +1,14 @@
+{
+  "productId": "p-screws",
+  "ratePerDay": 0.56,
+  "seasonFactor": 1.0,
+  "leadDays": 2,
+  "reviewDays": 1,
+  "z": 1.65,
+  "reorderPoint": 4,
+  "orderQty": 8,
+  "daysOfCover": 7.1,
+  "reason": "Uses about 0.6 a day. Delivery takes 2 days. Reorder at 4.",
+  "sampleHistory": true,
+  "updatedAt": "2026-11-21T09:14:04-05:00"
+}

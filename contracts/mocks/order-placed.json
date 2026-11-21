@@ -1,0 +1,22 @@
+{
+  "id": "o-1",
+  "productId": "p-screws",
+  "supplierId": "s-offcut",
+  "state": "placed",
+  "units": 8,
+  "packs": 8,
+  "packSize": 1,
+  "unitPrice": 7.49,
+  "total": 67.71,
+  "currency": "CAD",
+  "reason": "8 boxes fills the board and arrives before it runs out.",
+  "marketNote": "Retailer A is $1.20 more per box.",
+  "poNumber": "RU-1042",
+  "confirmation": "OC-58213",
+  "eta": "2026-11-24T12:00:00-05:00",
+  "approvedBy": "button",
+  "trigger": "hub",
+  "error": null,
+  "createdAt": "2026-11-21T09:14:05-05:00",
+  "updatedAt": "2026-11-21T09:16:02-05:00"
+}

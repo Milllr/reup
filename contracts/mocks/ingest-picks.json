@@ -1,0 +1,14 @@
+{
+  "picks": [
+    {
+      "id": "pk-0007",
+      "productId": "p-screws",
+      "zoneId": "z-screws",
+      "delta": -2,
+      "countAfter": 4,
+      "source": "node",
+      "handSeen": true,
+      "ts": "2026-11-21T09:14:03-05:00"
+    }
+  ]
+}

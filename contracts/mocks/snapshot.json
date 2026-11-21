@@ -1,0 +1,509 @@
+{
+  "now": "2026-11-21T09:14:59-05:00",
+  "screen": "shop",
+  "focusProductId": "p-screws",
+  "zones": [
+    {
+      "id": "z-screws",
+      "name": "Wood screws",
+      "kind": "pockets",
+      "camera": "board",
+      "quad": [
+        [
+          0.04,
+          0.1
+        ],
+        [
+          0.56,
+          0.1
+        ],
+        [
+          0.56,
+          0.42
+        ],
+        [
+          0.04,
+          0.42
+        ]
+      ],
+      "rows": 2,
+      "cols": 6,
+      "productId": "p-screws"
+    },
+    {
+      "id": "z-brackets",
+      "name": "Corner brackets",
+      "kind": "pockets",
+      "camera": "board",
+      "quad": [
+        [
+          0.62,
+          0.1
+        ],
+        [
+          0.9,
+          0.1
+        ],
+        [
+          0.9,
+          0.42
+        ],
+        [
+          0.62,
+          0.42
+        ]
+      ],
+      "rows": 2,
+      "cols": 3,
+      "productId": "p-brackets"
+    },
+    {
+      "id": "z-glue",
+      "name": "Wood glue",
+      "kind": "open",
+      "camera": "board",
+      "quad": [
+        [
+          0.04,
+          0.55
+        ],
+        [
+          0.45,
+          0.55
+        ],
+        [
+          0.45,
+          0.92
+        ],
+        [
+          0.04,
+          0.92
+        ]
+      ],
+      "rows": null,
+      "cols": null,
+      "productId": "p-glue"
+    },
+    {
+      "id": "z-discs",
+      "name": "Sanding discs",
+      "kind": "open",
+      "camera": "board",
+      "quad": [
+        [
+          0.51,
+          0.55
+        ],
+        [
+          0.9,
+          0.55
+        ],
+        [
+          0.9,
+          0.92
+        ],
+        [
+          0.51,
+          0.92
+        ]
+      ],
+      "rows": null,
+      "cols": null,
+      "productId": "p-discs"
+    }
+  ],
+  "products": [
+    {
+      "id": "p-screws",
+      "name": "Wood screws #8 x 1-1/4 in",
+      "unit": "box of 100",
+      "sku": "OC-1008-114",
+      "zoneId": "z-screws",
+      "capacity": 12,
+      "searchPhrase": "#8 x 1-1/4 wood screws box of 100",
+      "imageUrl": null,
+      "createdAt": "2026-11-21T03:40:00-05:00"
+    },
+    {
+      "id": "p-brackets",
+      "name": "Corner brackets 2 in",
+      "unit": "bag of 4",
+      "sku": "OC-2202",
+      "zoneId": "z-brackets",
+      "capacity": 6,
+      "searchPhrase": "2 inch corner bracket 4 pack",
+      "imageUrl": null,
+      "createdAt": "2026-11-21T03:41:00-05:00"
+    },
+    {
+      "id": "p-glue",
+      "name": "Wood glue 473 mL",
+      "unit": "each",
+      "sku": "OC-3473",
+      "zoneId": "z-glue",
+      "capacity": 4,
+      "searchPhrase": "wood glue 473 ml",
+      "imageUrl": null,
+      "createdAt": "2026-11-21T03:42:00-05:00"
+    },
+    {
+      "id": "p-discs",
+      "name": "Sanding discs 120 grit",
+      "unit": "pack of 10",
+      "sku": "OC-4120",
+      "zoneId": "z-discs",
+      "capacity": 6,
+      "searchPhrase": "5 inch sanding discs 120 grit 10 pack",
+      "imageUrl": null,
+      "createdAt": "2026-11-21T03:43:00-05:00"
+    }
+  ],
+  "counts": [
+    {
+      "productId": "p-screws",
+      "zoneId": "z-screws",
+      "count": 4,
+      "level": null,
+      "pockets": [
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "source": "node",
+      "ts": "2026-11-21T09:14:03-05:00"
+    },
+    {
+      "productId": "p-brackets",
+      "zoneId": "z-brackets",
+      "count": 5,
+      "level": null,
+      "pockets": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "source": "node",
+      "ts": "2026-11-21T09:02:00-05:00"
+    },
+    {
+      "productId": "p-glue",
+      "zoneId": "z-glue",
+      "count": 3,
+      "level": null,
+      "pockets": null,
+      "source": "eye",
+      "ts": "2026-11-21T08:50:00-05:00"
+    },
+    {
+      "productId": "p-discs",
+      "zoneId": "z-discs",
+      "count": 6,
+      "level": null,
+      "pockets": null,
+      "source": "eye",
+      "ts": "2026-11-21T08:50:00-05:00"
+    }
+  ],
+  "policies": [
+    {
+      "productId": "p-screws",
+      "ratePerDay": 0.56,
+      "seasonFactor": 1.0,
+      "leadDays": 2,
+      "reviewDays": 1,
+      "z": 1.65,
+      "reorderPoint": 4,
+      "orderQty": 8,
+      "daysOfCover": 7.1,
+      "reason": "Uses about 0.6 a day. Delivery takes 2 days. Reorder at 4.",
+      "sampleHistory": true,
+      "updatedAt": "2026-11-21T09:14:04-05:00"
+    },
+    {
+      "productId": "p-brackets",
+      "ratePerDay": 0.17,
+      "seasonFactor": 1.0,
+      "leadDays": 2,
+      "reviewDays": 1,
+      "z": 1.65,
+      "reorderPoint": 2,
+      "orderQty": 1,
+      "daysOfCover": 29.4,
+      "reason": "Uses about 0.2 a day. Delivery takes 2 days. Reorder at 2.",
+      "sampleHistory": true,
+      "updatedAt": "2026-11-21T09:14:04-05:00"
+    },
+    {
+      "productId": "p-glue",
+      "ratePerDay": 0.07,
+      "seasonFactor": 1.0,
+      "leadDays": 2,
+      "reviewDays": 1,
+      "z": 1.65,
+      "reorderPoint": 1,
+      "orderQty": 1,
+      "daysOfCover": 42.9,
+      "reason": "Uses about 0.1 a day. Delivery takes 2 days. Reorder at 1.",
+      "sampleHistory": true,
+      "updatedAt": "2026-11-21T09:14:04-05:00"
+    },
+    {
+      "productId": "p-discs",
+      "ratePerDay": 0.17,
+      "seasonFactor": 1.0,
+      "leadDays": 2,
+      "reviewDays": 1,
+      "z": 1.65,
+      "reorderPoint": 2,
+      "orderQty": 1,
+      "daysOfCover": 35.3,
+      "reason": "Uses about 0.2 a day. Delivery takes 2 days. Reorder at 2.",
+      "sampleHistory": true,
+      "updatedAt": "2026-11-21T09:14:04-05:00"
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "s-offcut",
+      "name": "Offcut Supply",
+      "kind": "account",
+      "baseUrl": "https://offcut.wheredidallmyinventorygo.wtf",
+      "searchUrl": "https://offcut.wheredidallmyinventorygo.wtf/search?q={q}",
+      "country": "CA"
+    },
+    {
+      "id": "s-market-a",
+      "name": "Retailer A",
+      "kind": "market",
+      "baseUrl": "https://retailer-a.example.com",
+      "searchUrl": "https://retailer-a.example.com/search?q={q}",
+      "country": "CA"
+    },
+    {
+      "id": "s-market-b",
+      "name": "Retailer B",
+      "kind": "market",
+      "baseUrl": "https://retailer-b.example.com",
+      "searchUrl": "https://retailer-b.example.com/s?k={q}",
+      "country": "CA"
+    }
+  ],
+  "quotes": [
+    {
+      "id": "q-1",
+      "productId": "p-screws",
+      "supplierId": "s-offcut",
+      "listingName": "#8 x 1-1/4 in Wood Screws, Robertson, Box of 100",
+      "packSize": 1,
+      "price": 7.49,
+      "currency": "CAD",
+      "unitPrice": 7.49,
+      "inStock": true,
+      "deliveryDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-1008-114",
+      "runId": null,
+      "ok": true,
+      "fetchedAt": "2026-11-21T09:10:00-05:00"
+    },
+    {
+      "id": "q-2",
+      "productId": "p-screws",
+      "supplierId": "s-market-a",
+      "listingName": "#8 x 1-1/4 in. Wood Screws (100 Pack)",
+      "packSize": 1,
+      "price": 8.69,
+      "currency": "CAD",
+      "unitPrice": 8.69,
+      "inStock": true,
+      "deliveryDays": 3,
+      "url": "https://retailer-a.example.com/p/123",
+      "runId": "r-1",
+      "ok": true,
+      "fetchedAt": "2026-11-21T09:14:40-05:00"
+    },
+    {
+      "id": "q-3",
+      "productId": "p-screws",
+      "supplierId": "s-market-b",
+      "listingName": null,
+      "packSize": null,
+      "price": null,
+      "currency": null,
+      "unitPrice": null,
+      "inStock": null,
+      "deliveryDays": null,
+      "url": null,
+      "runId": "r-2",
+      "ok": false,
+      "fetchedAt": "2026-11-21T09:14:55-05:00"
+    }
+  ],
+  "orders": [
+    {
+      "id": "o-1",
+      "productId": "p-screws",
+      "supplierId": "s-offcut",
+      "state": "carting",
+      "units": 8,
+      "packs": 8,
+      "packSize": 1,
+      "unitPrice": 7.49,
+      "total": null,
+      "currency": "CAD",
+      "reason": "8 boxes fills the board and arrives before it runs out.",
+      "marketNote": "Retailer A is $1.20 more per box.",
+      "poNumber": "RU-1042",
+      "confirmation": null,
+      "eta": null,
+      "approvedBy": null,
+      "trigger": "hub",
+      "error": null,
+      "createdAt": "2026-11-21T09:14:05-05:00",
+      "updatedAt": "2026-11-21T09:14:20-05:00"
+    }
+  ],
+  "runs": [
+    {
+      "id": "r-1",
+      "tinyfishRunId": "a1b2c3d4-e5f6-7890-abcd-ef1234567801",
+      "kind": "market",
+      "supplierId": "s-market-a",
+      "productId": "p-screws",
+      "orderId": "o-1",
+      "status": "completed",
+      "streamingUrl": "https://tf-live.example.com/r-1",
+      "steps": [
+        {
+          "ts": "2026-11-21T09:14:10-05:00",
+          "purpose": "Closing the cookie notice"
+        },
+        {
+          "ts": "2026-11-21T09:14:13-05:00",
+          "purpose": "Reading the first 5 listings"
+        },
+        {
+          "ts": "2026-11-21T09:14:16-05:00",
+          "purpose": "Returning the lowest price"
+        }
+      ],
+      "replay": false,
+      "error": null,
+      "startedAt": "2026-11-21T09:14:08-05:00",
+      "finishedAt": "2026-11-21T09:14:40-05:00"
+    },
+    {
+      "id": "r-2",
+      "tinyfishRunId": "a1b2c3d4-e5f6-7890-abcd-ef1234567802",
+      "kind": "market",
+      "supplierId": "s-market-b",
+      "productId": "p-screws",
+      "orderId": "o-1",
+      "status": "failed",
+      "streamingUrl": "https://tf-live.example.com/r-2",
+      "steps": [
+        {
+          "ts": "2026-11-21T09:14:10-05:00",
+          "purpose": "Opening the search results"
+        }
+      ],
+      "replay": false,
+      "error": "The site showed a challenge page.",
+      "startedAt": "2026-11-21T09:14:08-05:00",
+      "finishedAt": "2026-11-21T09:14:55-05:00"
+    },
+    {
+      "id": "r-3",
+      "tinyfishRunId": "a1b2c3d4-e5f6-7890-abcd-ef1234567803",
+      "kind": "cart",
+      "supplierId": "s-offcut",
+      "productId": "p-screws",
+      "orderId": "o-1",
+      "status": "running",
+      "streamingUrl": "https://tf-live.example.com/r-3",
+      "steps": [
+        {
+          "ts": "2026-11-21T09:14:10-05:00",
+          "purpose": "Searching for OC-1008-114"
+        },
+        {
+          "ts": "2026-11-21T09:14:13-05:00",
+          "purpose": "Choosing Box of 100"
+        },
+        {
+          "ts": "2026-11-21T09:14:16-05:00",
+          "purpose": "Setting quantity to 8"
+        }
+      ],
+      "replay": false,
+      "error": null,
+      "startedAt": "2026-11-21T09:14:08-05:00",
+      "finishedAt": null
+    }
+  ],
+  "node": {
+    "online": true,
+    "level": 2,
+    "lastSeen": "2026-11-21T09:14:58-05:00",
+    "queued": 0,
+    "visionRestarts": 0,
+    "offlineSince": null
+  },
+  "cameras": [
+    {
+      "id": "board",
+      "online": true,
+      "fps": 24.0,
+      "streamUrl": "http://192.168.1.20:8089/stream/board.mjpg"
+    },
+    {
+      "id": "aux",
+      "online": true,
+      "fps": 15.0,
+      "streamUrl": "http://192.168.1.20:8089/stream/aux.mjpg"
+    },
+    {
+      "id": "node",
+      "online": true,
+      "fps": 10.0,
+      "streamUrl": null
+    }
+  ],
+  "buyerOnline": true,
+  "teach": null,
+  "activity": [
+    {
+      "id": "a-1",
+      "ts": "2026-11-21T09:14:03-05:00",
+      "tone": "info",
+      "text": "2 boxes of wood screws taken. 4 left."
+    },
+    {
+      "id": "a-2",
+      "ts": "2026-11-21T09:14:05-05:00",
+      "tone": "attention",
+      "text": "Wood screws are at the reorder point."
+    },
+    {
+      "id": "a-3",
+      "ts": "2026-11-21T09:14:08-05:00",
+      "tone": "working",
+      "text": "Checking 2 retailers and filling a cart at Offcut Supply."
+    }
+  ],
+  "season": {
+    "factor": 1.0,
+    "label": "Normal"
+  }
+}

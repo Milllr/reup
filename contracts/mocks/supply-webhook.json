@@ -1,0 +1,6 @@
+{
+  "event": "order.shipped",
+  "confirmation": "OC-58213",
+  "poNumber": "RU-1042",
+  "eta": "2026-11-24T12:00:00-05:00"
+}

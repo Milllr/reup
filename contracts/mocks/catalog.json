@@ -1,0 +1,306 @@
+{
+  "currency": "CAD",
+  "items": [
+    {
+      "sku": "OC-1008-114",
+      "name": "#8 x 1-1/4 in Wood Screws, Robertson",
+      "category": "Screws",
+      "unit": "box of 100",
+      "packs": [
+        {
+          "label": "Box of 100",
+          "size": 1,
+          "price": 7.49
+        },
+        {
+          "label": "Case of 10 boxes",
+          "size": 10,
+          "price": 67.9
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-1008-114"
+    },
+    {
+      "sku": "OC-1008-200",
+      "name": "#8 x 2 in Wood Screws, Robertson",
+      "category": "Screws",
+      "unit": "box of 100",
+      "packs": [
+        {
+          "label": "Box of 100",
+          "size": 1,
+          "price": 9.29
+        },
+        {
+          "label": "Case of 10 boxes",
+          "size": 10,
+          "price": 84.5
+        }
+      ],
+      "inStock": true,
+      "leadDays": 1,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-1008-200"
+    },
+    {
+      "sku": "OC-1010-300",
+      "name": "#10 x 3 in Wood Screws, Robertson",
+      "category": "Screws",
+      "unit": "box of 50",
+      "packs": [
+        {
+          "label": "Box of 50",
+          "size": 1,
+          "price": 8.99
+        },
+        {
+          "label": "Case of 10 boxes",
+          "size": 10,
+          "price": 81.0
+        }
+      ],
+      "inStock": true,
+      "leadDays": 1,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-1010-300"
+    },
+    {
+      "sku": "OC-1107-125",
+      "name": "1-1/4 in Pocket Hole Screws, Coarse",
+      "category": "Screws",
+      "unit": "box of 100",
+      "packs": [
+        {
+          "label": "Box of 100",
+          "size": 1,
+          "price": 8.79
+        }
+      ],
+      "inStock": true,
+      "leadDays": 1,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-1107-125"
+    },
+    {
+      "sku": "OC-1425-200",
+      "name": "1/4-20 x 2 in Carriage Bolts",
+      "category": "Bolts and nuts",
+      "unit": "bag of 10",
+      "packs": [
+        {
+          "label": "Bag of 10",
+          "size": 1,
+          "price": 5.49
+        },
+        {
+          "label": "Box of 10 bags",
+          "size": 10,
+          "price": 49.9
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-1425-200"
+    },
+    {
+      "sku": "OC-1426",
+      "name": "1/4-20 Hex Nuts",
+      "category": "Bolts and nuts",
+      "unit": "bag of 25",
+      "packs": [
+        {
+          "label": "Bag of 25",
+          "size": 1,
+          "price": 3.99
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-1426"
+    },
+    {
+      "sku": "OC-1427",
+      "name": "1/4 in Flat Washers",
+      "category": "Bolts and nuts",
+      "unit": "bag of 25",
+      "packs": [
+        {
+          "label": "Bag of 25",
+          "size": 1,
+          "price": 2.99
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-1427"
+    },
+    {
+      "sku": "OC-2202",
+      "name": "2 in Corner Brackets, Zinc",
+      "category": "Brackets and hinges",
+      "unit": "bag of 4",
+      "packs": [
+        {
+          "label": "Bag of 4",
+          "size": 1,
+          "price": 4.29
+        },
+        {
+          "label": "Box of 12 bags",
+          "size": 12,
+          "price": 46.8
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-2202"
+    },
+    {
+      "sku": "OC-2310",
+      "name": "3 in Butt Hinges, Satin",
+      "category": "Brackets and hinges",
+      "unit": "pair",
+      "packs": [
+        {
+          "label": "Pair",
+          "size": 1,
+          "price": 6.49
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-2310"
+    },
+    {
+      "sku": "OC-3473",
+      "name": "Wood Glue 473 mL",
+      "category": "Glue and tape",
+      "unit": "each",
+      "packs": [
+        {
+          "label": "Each",
+          "size": 1,
+          "price": 8.99
+        },
+        {
+          "label": "Case of 12",
+          "size": 12,
+          "price": 97.0
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-3473"
+    },
+    {
+      "sku": "OC-3610",
+      "name": "Painter's Tape 24 mm x 55 m",
+      "category": "Glue and tape",
+      "unit": "roll",
+      "packs": [
+        {
+          "label": "Roll",
+          "size": 1,
+          "price": 6.29
+        },
+        {
+          "label": "Sleeve of 6",
+          "size": 6,
+          "price": 34.5
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-3610"
+    },
+    {
+      "sku": "OC-4120",
+      "name": "5 in Sanding Discs, 120 Grit",
+      "category": "Sanding",
+      "unit": "pack of 10",
+      "packs": [
+        {
+          "label": "Pack of 10",
+          "size": 1,
+          "price": 7.99
+        },
+        {
+          "label": "Box of 5 packs",
+          "size": 5,
+          "price": 36.5
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-4120"
+    },
+    {
+      "sku": "OC-4220",
+      "name": "5 in Sanding Discs, 220 Grit",
+      "category": "Sanding",
+      "unit": "pack of 10",
+      "packs": [
+        {
+          "label": "Pack of 10",
+          "size": 1,
+          "price": 7.99
+        },
+        {
+          "label": "Box of 5 packs",
+          "size": 5,
+          "price": 36.5
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-4220"
+    },
+    {
+      "sku": "OC-5038",
+      "name": "3/8 in Dowel Pins, Fluted",
+      "category": "Joinery",
+      "unit": "bag of 50",
+      "packs": [
+        {
+          "label": "Bag of 50",
+          "size": 1,
+          "price": 4.79
+        }
+      ],
+      "inStock": true,
+      "leadDays": 3,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-5038"
+    },
+    {
+      "sku": "OC-5020",
+      "name": "#20 Biscuits",
+      "category": "Joinery",
+      "unit": "bag of 100",
+      "packs": [
+        {
+          "label": "Bag of 100",
+          "size": 1,
+          "price": 9.49
+        }
+      ],
+      "inStock": true,
+      "leadDays": 3,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-5020"
+    },
+    {
+      "sku": "OC-6001",
+      "name": "Carpenter Pencils",
+      "category": "Shop supplies",
+      "unit": "box of 12",
+      "packs": [
+        {
+          "label": "Box of 12",
+          "size": 1,
+          "price": 5.99
+        }
+      ],
+      "inStock": false,
+      "leadDays": 1,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-6001"
+    }
+  ]
+}

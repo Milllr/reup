@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "jobs": [
+    {
+      "id": "j-1",
+      "kind": "market",
+      "productId": "p-screws",
+      "searchPhrase": "#8 x 1-1/4 wood screws box of 100",
+      "supplierIds": [
+        "s-market-a",
+        "s-market-b"
+      ]
+    },
+    {
+      "id": "j-2",
+      "kind": "cart",
+      "orderId": "o-1",
+      "productId": "p-screws",
+      "supplierId": "s-offcut",
+      "sku": "OC-1008-114",
+      "searchPhrase": "#8 x 1-1/4 wood screws box of 100",
+      "units": 8
+    },
+    {
+      "id": "j-3",
+      "kind": "place",
+      "orderId": "o-1",
+      "supplierId": "s-offcut",
+      "poNumber": "RU-1042"
+    },
+    {
+      "id": "j-4",
+      "kind": "track",
+      "orderId": "o-1",
+      "supplierId": "s-offcut",
+      "confirmation": "OC-58213"
+    }
+  ]
+}

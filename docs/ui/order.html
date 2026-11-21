@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reup: Order</title>
+<link rel="stylesheet" href="glass.css">
+<style>
+  .world { height: 1080px; width: 1920px; }
+  .big { font-size: 56px; line-height: 62px; font-weight: 300; letter-spacing: -0.8px; margin: 0; }
+  .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+  .fact b { display: block; font-size: 44px; line-height: 50px; font-weight: 300; }
+  /* The wooden button, drawn. It breathes slowly while reup waits. */
+  .knob { width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle at 36% 30%, #FFF3C4 0 8%, #F4C430 40%, #B8901E 100%); border: 6px solid #C9A27A; box-shadow: 0 10px 24px rgba(122, 98, 24, 0.35); animation: breathe 2400ms ease-in-out infinite; }
+</style>
+</head>
+<body>
+<main class="world">
+  <header class="between" style="height:56px; align-items:center">
+    <img src="../../brand/reup-wordmark-ink.svg" alt="reup" style="height:52px">
+    <div style="display:flex; gap:12px"><span class="chip">Shelf node · QNX · online</span><span class="chip muted">PO RU-1042</span></div>
+  </header>
+
+  <!-- State shown: awaiting_approval. Other states are listed at the bottom of this file. -->
+  <section class="glass sun grow col" style="padding:48px 56px; gap:36px; justify-content:center" aria-label="Order waiting for approval">
+    <div class="col" style="gap:8px">
+      <span class="label sun-text" style="font-size:24px">Waiting for a yes</span>
+      <h1 class="big">8 boxes of wood screws #8 x 1-1/4 in<br>from Offcut Supply</h1>
+    </div>
+
+    <div class="facts">
+      <div class="fact"><b>$7.49</b><span class="caption">a box</span></div>
+      <div class="fact"><b>$67.71</b><span class="caption">total with tax, free shipping</span></div>
+      <div class="fact"><b>Tuesday</b><span class="caption">arrives, 2 business days</span></div>
+      <div class="fact"><b>7 days</b><span class="caption">of cover left on the board</span></div>
+    </div>
+
+    <div class="col" style="gap:6px">
+      <p class="sentence">8 boxes fills the board and arrives before it runs out.</p>
+      <p class="sentence" style="color:var(--ink-muted)">Retailer A is $1.20 more per box.</p>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:36px">
+      <div class="knob breathe" role="img" aria-label="The wooden button"></div>
+      <div class="col" style="gap:4px">
+        <p class="big" style="font-size:48px">Press the button to approve.</p>
+        <span class="caption" style="font-size:22px">Or approve from a phone. Nothing is bought until then.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="glass bar">
+    <div style="display:flex; align-items:center; gap:16px"><span class="drop sun" aria-hidden="true"></span><span class="sentence">The cart is ready at Offcut Supply.</span></div>
+    <span class="caption" style="font-size:22px">Spend cap: $150 an order</span>
+  </footer>
+</main>
+
+<!--
+Other states of the same card. The rim colour and the top label change; the facts stay.
+
+approved, placing   rim aqua.  Label "Placing the order".  Replace the button row with the live pane of the place run
+                    (class "glass frame", 640px wide) and the line "Placing the order at Offcut Supply."
+placed              rim leaf (no modifier). Label "Ordered". Line: "Ordered. Confirmation OC-58213. Arrives Tuesday."
+                    Caption: "Approved by the button at 9:16 AM."
+shipped             as placed, plus the chip "Shipped".
+failed              rim clay. Label "Could not order". Line: the error in plain words, then "Nothing was bought."
+cancelled           rim none. Label "Cancelled". Line: "Nothing was bought."
+-->
+</body>
+</html>

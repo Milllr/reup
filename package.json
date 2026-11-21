@@ -1,0 +1,23 @@
+{
+  "name": "reup",
+  "private": true,
+  "version": "0.1.0",
+  "description": "reup: an inventory employee. Hack Western 13.",
+  "workspaces": [
+    "contracts",
+    "packages/*",
+    "apps/*",
+    "services/buyer"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:py": "python -m pytest",
+    "check": "npm run typecheck && npm run test && npm run test:py && npm run test:cpp",
+    "dev": "npm run dev -w apps/web",
+    "test:cpp": "node edge/qnx/tests/run_cpp_tests.mjs"
+  }
+}
