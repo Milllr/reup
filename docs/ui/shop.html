@@ -4,56 +4,57 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>reup: Shop</title>
-<link rel="stylesheet" href="glass.css">
+<link rel="stylesheet" href="specimen.css">
 <style>
-  .world { height: 1080px; width: 1920px; }
-  /* Mockup only: grey bars stand in for the live browser. The app puts the TinyFish preview iframe in .pane-view. */
-  .fake { position: absolute; inset: 0; padding: 22px; display: flex; flex-direction: column; gap: 12px; }
-  .fake i { display: block; height: 16px; border-radius: 4px; background: #E3E8EE; }
-  .pane-view { aspect-ratio: auto; flex: 1 1 0; background: #fff; }
+  /* Mockup only. The pale pages with grey bars stand in for the live browser; the app puts the TinyFish preview iframe in .fill.mat. */
+  .frame > .page { background: #F4F5F1; padding: 26px; display: flex; flex-direction: column; gap: 14px; }
+  .page i { display: block; height: 16px; background: #D5D8CF; }
+  .result { position: absolute; z-index: 6; width: 544px; top: 322px; gap: 10px; }
 </style>
 </head>
-<body>
-<main class="world">
-  <header class="between" style="height:56px; align-items:center">
-    <img src="../../brand/reup-wordmark-ink.svg" alt="reup" style="height:52px">
-    <div class="glass" style="padding:10px 20px; display:flex; align-items:center; gap:18px; animation:none">
-      <span class="label sun-text">Wood screws #8 x 1-1/4 in</span>
-      <span style="font-size:34px; font-weight:300">4</span>
-      <div class="drops" aria-label="4 of 12 in stock"><span class="drop sun"></span><span class="drop sun"></span><span class="drop sun"></span><span class="drop sun"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span></div>
-      <span class="caption">Ordering 8 boxes</span>
+<body class="tv">
+<div class="stage">
+<main class="plate wine">
+  <img class="mark abs" style="left:48px; top:40px" src="../../brand/reup-wordmark-light.svg" alt="reup">
+  <span class="tag center" style="top:42px">Shopped by TinyFish on the live web</span>
+  <span class="meta abs" style="right:48px; top:52px">PO RU-1042 · Sat 9:14 AM</span>
+
+  <p class="copy abs" style="left:96px; top:140px; max-width:860px; font-size:34px">Filling a cart at Offcut Supply. 1 of 2 price checks came back. Nothing is bought until someone presses the button.</p>
+
+  <div class="row abs" style="left:1280px; top:140px">
+    <span class="figure low">4</span>
+    <div class="stack" style="gap:8px; padding-bottom:4px">
+      <span class="name">Wood screws #8 x 1-1/4 in</span>
+      <div class="units" aria-label="4 of 12 in stock"><i></i><i></i><i></i><i></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i></div>
+      <span class="meta">Ordering 8 boxes</span>
     </div>
-  </header>
-
-  <h1 class="title">Shopping for 8 boxes of wood screws</h1>
-
-  <div class="row grow" style="min-height:0">
-    <section class="glass frame grow col" style="gap:0" aria-label="Price check at Retailer A">
-      <div class="pane-head"><span class="label">Retailer A</span><span class="chip muted">Price check</span></div>
-      <div class="pane-view"><div class="fake"><i style="width:40%"></i><i style="width:90%"></i><i style="width:75%"></i><i style="width:82%"></i><i style="width:60%"></i></div></div>
-      <p class="sentence" style="padding:14px 8px 0">$8.69 a box. In stock. 3 days.</p>
-      <p class="caption" style="margin:4px 8px 0">Done in 32 seconds</p>
-    </section>
-
-    <section class="glass frame clay grow col" style="gap:0" aria-label="Price check at Retailer B">
-      <div class="pane-head"><span class="label">Retailer B</span><span class="chip clay">Blocked</span></div>
-      <div class="pane-view"><div class="fake"><i style="width:55%"></i><i style="width:30%"></i></div></div>
-      <p class="sentence" style="padding:14px 8px 0">The site showed a challenge page.</p>
-      <p class="caption" style="margin:4px 8px 0">No price from this one</p>
-    </section>
-
-    <section class="glass frame aqua grow col" style="gap:0" aria-label="Filling the cart at Offcut Supply">
-      <div class="pane-head"><span class="label aqua-text">Offcut Supply</span><span class="chip aqua">Your supplier</span></div>
-      <div class="pane-view"><div class="fake"><i style="width:35%"></i><i style="width:88%"></i><i style="width:70%"></i><i style="width:92%"></i><i style="width:48%"></i><i style="width:66%"></i></div></div>
-      <p class="sentence sheen" style="padding:14px 8px 0">Setting quantity to 8.</p>
-      <p class="caption" style="margin:4px 8px 0">Step 3 · signed in as the shop account</p>
-    </section>
   </div>
 
-  <footer class="glass bar">
-    <div style="display:flex; align-items:center; gap:16px"><span class="drop aqua" aria-hidden="true"></span><span class="sentence">Filling a cart at Offcut Supply. 1 of 2 price checks came back.</span></div>
-    <span class="caption" style="font-size:22px">Nothing is bought until someone presses the button.</span>
-  </footer>
+  <!-- One frame per run. The result sits above its frame; the tag on the frame's top edge says whose page it is. -->
+  <div class="result stack" style="left:96px"><span class="figure mid">$8.69</span><span class="meta">A box · in stock · 3 days · done in 32 seconds</span></div>
+  <section class="frame" style="left:96px; top:450px; width:544px; height:400px" aria-label="Price check at Retailer A">
+    <i class="h tl"></i><i class="h tr"></i><i class="h bl"></i><i class="h br"></i>
+    <span class="tag cream">Price check · Retailer A</span>
+    <div class="fill mat page"><i style="width:40%"></i><i style="width:90%"></i><i style="width:75%"></i><i style="width:82%"></i><i style="width:60%"></i><i style="width:70%"></i></div>
+  </section>
+
+  <div class="result stack" style="left:688px"><span class="figure mid">No price</span><span class="meta">The site showed a challenge page</span></div>
+  <section class="frame" style="left:688px; top:450px; width:544px; height:400px" aria-label="Price check at Retailer B">
+    <i class="h tl"></i><i class="h tr"></i><i class="h bl"></i><i class="h br"></i>
+    <span class="tag alert">Blocked · Retailer B</span>
+    <div class="fill mat page"><i style="width:55%"></i><i style="width:30%"></i></div>
+  </section>
+
+  <div class="result stack" style="left:1280px"><span class="figure mid">Step 3</span><span class="meta">Setting quantity to 8 · signed in as the shop account</span></div>
+  <section class="frame waiting" style="left:1280px; top:450px; width:544px; height:400px" aria-label="Filling the cart at Offcut Supply">
+    <i class="h tl"></i><i class="h tr"></i><i class="h bl"></i><i class="h br"></i>
+    <span class="tag cream">Your supplier · Offcut Supply</span>
+    <div class="fill mat page"><i style="width:35%"></i><i style="width:88%"></i><i style="width:70%"></i><i style="width:92%"></i><i style="width:48%"></i><i style="width:66%"></i></div>
+  </section>
+
+  <h1 class="word bottom">Shopping</h1>
 </main>
+</div>
+<script src="specimen.js"></script>
 </body>
 </html>

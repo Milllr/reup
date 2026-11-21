@@ -1,6 +1,6 @@
 import math, subprocess, sys, os
 out = sys.argv[1]
-INK="#16331C"; LIGHT="#F4FAEE"
+INK="#1E1A19"; LIGHT="#F7FBE2"
 def pt(cx,cy,r,deg):
     a=math.radians(deg); return (cx+r*math.cos(a), cy+r*math.sin(a))
 def sector(cx,cy,ro,ri,a0,a1):

@@ -4,118 +4,120 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>reup: Shelf</title>
-<link rel="stylesheet" href="glass.css">
+<link rel="stylesheet" href="specimen.css">
 <style>
-  /* Mockup only: a drawing that stands in for the camera feed. The app shows the MJPEG stream here. */
-  .world { height: 1080px; width: 1920px; }
-  .zone { position: absolute; border: 1.5px solid rgba(255,255,255,0.8); border-radius: 12px; padding: 16px; }
-  .pockets { display: grid; gap: 14px; }
-  .pocket { height: 92px; border-radius: 10px; border: 1.5px dashed rgba(255,255,255,0.32); }
-  .pocket.full { border: 2px solid rgba(255,255,255,0.9); background: linear-gradient(180deg,#C9A27A,#A97E55); }
-  .bottle { width: 78px; height: 176px; border-radius: 16px 16px 10px 10px; background: linear-gradient(180deg,#E9C46A,#D9A441); border: 2px solid rgba(255,255,255,0.9); }
-  .disc { width: 92px; height: 92px; border-radius: 50%; background: radial-gradient(circle,#6B5B4B 0 12%,#B08968 13% 100%); border: 2px solid rgba(255,255,255,0.9); }
+  /* Mockup only. The dark board is a drawing that stands in for the camera feed; the app shows the MJPEG stream there. */
+  .board { background: #262320; }
+  .pockets { display: grid; gap: 12px; height: 100%; }
+  .pocket { border: 2px dashed rgba(247, 251, 226, 0.22); }
+  .pocket.full { border: 0; background: #B08A62; }
+  .bottle { width: 70px; height: 168px; background: #D9A441; }
+  .disc { width: 84px; height: 84px; border-radius: 50%; background: #9C7B5C; }
+  .index .figure { min-width: 74px; }
+  body:not(.is-low) .when-low, .is-low .when-ok { display: none; }
 </style>
 </head>
-<body>
-<main class="world">
-  <header class="between" style="height:56px; align-items:center">
-    <img src="../../brand/reup-wordmark-ink.svg" alt="reup" style="height:52px">
-    <div style="display:flex; gap:12px">
-      <span class="chip">Board camera · live</span>
-      <span class="chip">Shelf node · QNX · online</span>
-      <span class="chip muted">Sat 9:14 AM</span>
-    </div>
-  </header>
+<body class="tv">
+<div class="stage">
+<main class="plate olive" id="plate">
+  <img class="mark abs" style="left:48px; top:40px" src="../../brand/reup-wordmark-light.svg" alt="reup">
+  <span class="tag center" style="top:42px">Counted by the shelf node on QNX</span>
+  <span class="meta abs" style="right:48px; top:52px">Sat 9:14 AM · board camera live</span>
 
-  <div class="row grow" style="min-height:0">
-    <section class="glass frame grow col" style="gap:14px" aria-label="Live parts board">
-      <div class="feed">
-        <span class="caption" style="position:absolute; right:16px; top:12px; color:rgba(255,255,255,0.55)">Camera feed (mock drawing)</span>
-
-        <div class="zone" style="left:40px; top:70px">
-          <span class="chip sun" style="left:14px; top:0">4 · Wood screws</span>
-          <div class="pockets" style="grid-template-columns:repeat(6,92px)">
-            <div class="pocket full"></div><div class="pocket full"></div><div class="pocket full"></div><div class="pocket full"></div><div class="pocket"></div><div class="pocket"></div>
-            <div class="pocket"></div><div class="pocket"></div><div class="pocket"></div><div class="pocket"></div><div class="pocket"></div><div class="pocket"></div>
-          </div>
-        </div>
-
-        <div class="zone" style="left:760px; top:70px">
-          <span class="chip" style="left:14px; top:0">5 · Corner brackets</span>
-          <div class="pockets" style="grid-template-columns:repeat(3,92px)">
-            <div class="pocket full"></div><div class="pocket full"></div><div class="pocket full"></div>
-            <div class="pocket full"></div><div class="pocket full"></div><div class="pocket"></div>
-          </div>
-        </div>
-
-        <div class="zone" style="left:40px; top:380px; width:500px; height:250px; display:flex; align-items:flex-end; gap:34px; padding:24px 28px">
-          <span class="chip" style="left:14px; top:0">3 · Wood glue</span>
-          <div class="bottle"></div><div class="bottle"></div><div class="bottle"></div>
-        </div>
-
-        <div class="zone" style="left:620px; top:380px; width:476px; height:250px; display:grid; grid-template-columns:repeat(3,1fr); gap:14px; justify-items:center; align-items:center; padding:22px 28px">
-          <span class="chip" style="left:14px; top:0">6 · Sanding discs</span>
-          <div class="disc"></div><div class="disc"></div><div class="disc"></div><div class="disc"></div><div class="disc"></div><div class="disc"></div>
+  <!-- The specimen: the live feed, selected. Each zone is a selection inside it, with its tag on its top edge. -->
+  <section class="frame settle" style="left:96px; top:118px; width:1150px; height:700px" aria-label="Live parts board">
+    <i class="h tl"></i><i class="h tr"></i><i class="h bl"></i><i class="h br"></i>
+    <div class="fill mat board">
+      <div class="zone" id="screws" style="left:44px; top:62px; width:600px; height:230px; padding:14px">
+        <i class="h tl"></i><i class="h tr"></i><i class="h bl"></i><i class="h br"></i>
+        <span class="tag cream when-ok">Wood screws · 6 of 12</span>
+        <span class="tag alert when-low">Wood screws · 4 of 12</span>
+        <div class="pockets" style="grid-template-columns:repeat(6,1fr); grid-template-rows:repeat(2,1fr)">
+          <div class="pocket full"></div><div class="pocket full"></div><div class="pocket full"></div><div class="pocket full"></div>
+          <div class="pocket full when-ok"></div><div class="pocket full when-ok"></div><div class="pocket when-low"></div><div class="pocket when-low"></div>
+          <div class="pocket"></div><div class="pocket"></div><div class="pocket"></div><div class="pocket"></div><div class="pocket"></div><div class="pocket"></div>
         </div>
       </div>
-      <p class="sentence" style="padding:0 8px 4px">2 boxes of wood screws taken. 4 left, about 7 days of cover. That is the reorder point.</p>
-    </section>
 
-    <aside class="col" style="width:560px" aria-label="Parts">
-      <article class="glass sun col" style="gap:10px">
-        <div class="between"><span class="label sun-text">Wood screws #8 x 1-1/4 in, box of 100</span><span class="caption">7 days of cover</span></div>
-        <div style="display:flex; align-items:center; gap:20px">
-          <span class="count">4</span>
-          <div class="col" style="gap:8px">
-            <div class="drops" aria-label="4 of 12 in stock">
-              <span class="drop sun"></span><span class="drop sun"></span><span class="drop sun"></span><span class="drop sun"></span>
-              <span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span><span class="drop empty"></span>
-            </div>
-            <span class="caption">of 12 · reorder at 4</span>
-          </div>
+      <div class="zone" style="left:720px; top:62px; width:350px; height:230px; padding:14px">
+        <i class="h tl"></i><i class="h tr"></i><i class="h bl"></i><i class="h br"></i>
+        <span class="tag cream">Corner brackets · 5 of 6</span>
+        <div class="pockets" style="grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(2,1fr)">
+          <div class="pocket full"></div><div class="pocket full"></div><div class="pocket full"></div>
+          <div class="pocket full"></div><div class="pocket full"></div><div class="pocket"></div>
         </div>
-        <span class="sun-text" style="font-size:20px; font-weight:500">At the reorder point. Getting prices for 8 boxes.</span>
-      </article>
+      </div>
 
-      <article class="glass col" style="gap:10px">
-        <div class="between"><span class="label">Corner brackets 2 in, bag of 4</span><span class="caption">4 weeks of cover</span></div>
-        <div style="display:flex; align-items:center; gap:20px">
-          <span class="count">5</span>
-          <div class="col" style="gap:8px">
-            <div class="drops" aria-label="5 of 6 in stock"><span class="drop"></span><span class="drop"></span><span class="drop"></span><span class="drop"></span><span class="drop"></span><span class="drop empty"></span></div>
-            <span class="caption">of 6 · reorder at 2</span>
-          </div>
-        </div>
-      </article>
+      <div class="zone row" style="left:44px; top:376px; width:450px; height:240px; padding:22px 30px; gap:30px">
+        <i class="h tl"></i><i class="h tr"></i><i class="h bl"></i><i class="h br"></i>
+        <span class="tag cream">Wood glue · 3</span>
+        <div class="bottle"></div><div class="bottle"></div><div class="bottle"></div>
+      </div>
 
-      <article class="glass col" style="gap:10px">
-        <div class="between"><span class="label">Wood glue 473 mL</span><span class="caption">6 weeks of cover</span></div>
-        <div style="display:flex; align-items:center; gap:20px">
-          <span class="count">3</span>
-          <div class="col" style="gap:8px">
-            <div class="drops" aria-label="3 of 4 in stock"><span class="drop"></span><span class="drop"></span><span class="drop"></span><span class="drop empty"></span></div>
-            <span class="caption">of 4 · reorder at 1</span>
-          </div>
-        </div>
-      </article>
+      <div class="zone" style="left:570px; top:376px; width:500px; height:240px; padding:18px 30px; display:grid; grid-template-columns:repeat(3,1fr); justify-items:center; align-items:center">
+        <i class="h tl"></i><i class="h tr"></i><i class="h bl"></i><i class="h br"></i>
+        <span class="tag cream">Sanding discs · 6</span>
+        <div class="disc"></div><div class="disc"></div><div class="disc"></div><div class="disc"></div><div class="disc"></div><div class="disc"></div>
+      </div>
+    </div>
+  </section>
 
-      <article class="glass col" style="gap:10px">
-        <div class="between"><span class="label">Sanding discs 120 grit, pack of 10</span><span class="caption">5 weeks of cover</span></div>
-        <div style="display:flex; align-items:center; gap:20px">
-          <span class="count">6</span>
-          <div class="col" style="gap:8px">
-            <div class="drops" aria-label="6 of 6 in stock"><span class="drop"></span><span class="drop"></span><span class="drop"></span><span class="drop"></span><span class="drop"></span><span class="drop"></span></div>
-            <span class="caption">of 6 · reorder at 2</span>
-          </div>
-        </div>
-      </article>
-    </aside>
-  </div>
+  <!-- The index: type and squares on the plate. No boxes. -->
+  <section class="abs stack index" style="left:1326px; top:122px; width:560px; gap:26px" aria-label="Parts">
+    <div class="row">
+      <span class="figure when-ok">6</span><span class="figure low when-low">4</span>
+      <div class="stack" style="gap:8px; padding-bottom:4px">
+        <span class="name">Wood screws #8 x 1-1/4 in</span>
+        <div class="units when-ok" aria-label="6 of 12 in stock"><i></i><i></i><i></i><i></i><i></i><i></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i></div>
+        <div class="units when-low" aria-label="4 of 12 in stock"><i></i><i></i><i></i><i></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i class="gone"></i></div>
+        <span class="meta when-ok">Reorder at 4 · 11 days of cover</span>
+        <span class="meta when-low">At the reorder point · 7 days of cover</span>
+      </div>
+    </div>
+    <div class="row">
+      <span class="figure">5</span>
+      <div class="stack" style="gap:8px; padding-bottom:4px">
+        <span class="name">Corner brackets 2 in</span>
+        <div class="units" aria-label="5 of 6 in stock"><i></i><i></i><i></i><i></i><i></i><i class="gone"></i></div>
+        <span class="meta">Reorder at 2 · 4 weeks of cover</span>
+      </div>
+    </div>
+    <div class="row">
+      <span class="figure">3</span>
+      <div class="stack" style="gap:8px; padding-bottom:4px">
+        <span class="name">Wood glue 473 mL</span>
+        <div class="units" aria-label="3 of 4 in stock"><i></i><i></i><i></i><i class="gone"></i></div>
+        <span class="meta">Reorder at 1 · 6 weeks of cover</span>
+      </div>
+    </div>
+    <div class="row">
+      <span class="figure">6</span>
+      <div class="stack" style="gap:8px; padding-bottom:4px">
+        <span class="name">Sanding discs 120 grit</span>
+        <div class="units" aria-label="6 of 6 in stock"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <span class="meta">Reorder at 2 · 5 weeks of cover</span>
+      </div>
+    </div>
+    <p class="copy when-ok" style="margin-top:14px">Watching the board. Every part is above its reorder point.</p>
+    <p class="copy when-low" style="margin-top:14px">2 boxes of wood screws taken. 4 left, about 7 days of cover. Getting prices for 8 boxes.</p>
+  </section>
 
-  <footer class="glass bar">
-    <div style="display:flex; align-items:center; gap:16px"><span class="drop aqua" aria-hidden="true"></span><span class="sentence">Checking 2 retailers and filling a cart at Offcut Supply.</span></div>
-    <span class="caption" style="font-size:22px">Nothing is bought until someone presses the button.</span>
-  </footer>
+  <h1 class="word bottom when-ok">Stocked</h1>
+  <h1 class="word bottom when-low">Reorder</h1>
 </main>
+</div>
+<script src="specimen.js"></script>
+<script>
+  // Mockup only: press any key, or open with ?low, to see the cut from olive to wine when a part reaches its reorder point.
+  const flip = () => {
+    document.body.classList.toggle('is-low');
+    const plate = document.getElementById('plate');
+    plate.classList.toggle('olive'); plate.classList.toggle('wine');
+    document.getElementById('screws').classList.toggle('low');
+    fitWords();
+  };
+  addEventListener('keydown', flip);
+  if (location.search.includes('low')) flip();
+</script>
 </body>
 </html>

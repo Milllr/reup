@@ -31,7 +31,7 @@ Read on demand. It is not loaded into every session.
 
 | Part | Runs on | Built with | Why |
 | --- | --- | --- | --- |
-| Web | Browser, served by the hub | React 19, Vite, TypeScript, plain CSS from docs/ui/glass.css | One origin, no CORS, and the mockup CSS is the app CSS |
+| Web | Browser, served by the hub | React 19, Vite, TypeScript, plain CSS from docs/ui/specimen.css | One origin, no CORS, and the mockup CSS is the app CSS |
 | Hub | Cloudflare | Worker with Hono, one Durable Object (`Room`) for live state and WebSockets, D1 for history | One public address every machine dials out to, so nothing has to find anything on the venue network |
 | Brain | Inside the hub | `packages/brain`, pure TypeScript | Reorder math with no I/O, so it is fully unit tested |
 | Supply | Cloudflare, its own Worker | Hono with server rendered HTML, D1 | A real, plain web store that an agent has to browse like a person |

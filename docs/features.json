@@ -292,78 +292,78 @@
       "id": "F23", "title": "App shell and live store", "lane": "web", "priority": 0, "demo": true,
       "story": "As the TV, I want to show the right screen without anyone touching it.",
       "acceptance": [
-        "apps/web is React with Vite; docs/ui/glass.css is copied to src/styles/glass.css and is the only styling base; Source Sans 3 is bundled, not fetched at run time",
-        "A store connects to /live as role=screen, validates every message with the contracts, applies it to the Snapshot, and reconnects with backoff; while disconnected a chip says \"Hub unreachable. Showing the last counts from 9:14.\"",
+        "apps/web is React with Vite; docs/ui/specimen.css and docs/ui/fonts/ are copied to src/styles/ unchanged and are the only styling base; Inter Tight and Geist Mono load from those files, never from the network",
+        "A store connects to /live as role=screen, validates every message with the contracts, applies it to the Snapshot, and reconnects with backoff; while disconnected an alert tag says \"Hub unreachable. Showing the last counts from 9:14.\" and the word takes the text colour",
         "With `?mock=1` the app runs from contracts/mocks/snapshot.json and plays server-messages.json on a timer, with no hub",
-        "/ shows the screen named by snapshot.screen with a 240 ms cross fade; /m is the phone view; /ops is the operator page",
+        "/ shows the screen named by snapshot.screen inside the Stage, a 1920 by 1080 box scaled to fit the window; a screen change is a cut (120 ms on the plate colour), never a fade; /m is the phone view; /ops is the operator page",
         "With `?ops=<token>` on /, keys 1 to 4 force Shelf, Shop, Order, Why and 0 hands control back, through POST /api/demo/screen",
-        "The World, Pane, Chip, Drops, Count, Button and StatusBar components exist and match docs/UI.md"
+        "The Stage, Plate, Word, Frame, Zone, Tag, Figure, Units and Button components exist and match docs/UI.md; Word measures its text and sets --size so the word spans the plate, between 320 and 540"
       ],
-      "tests": ["reducer applies each ServerMessage type from the mock", "an invalid message is dropped and logged, not applied", "reconnect backoff", "screen switch follows the snapshot", "Count rolls from the old value to the new one", "Drops renders full and empty by count and capacity"],
+      "tests": ["reducer applies each ServerMessage type from the mock", "an invalid message is dropped and logged, not applied", "reconnect backoff", "screen switch follows the snapshot", "plate and word for each moment in the docs/UI.md table", "Word sets --size from the measured width and clamps it to 320 and 540", "Units renders full and hollow squares by count and capacity"],
       "screens": ["docs/ui/shelf.html"], "depends": []
     },
     {
       "id": "F24", "title": "Shelf screen", "lane": "web", "priority": 0, "demo": true,
       "story": "As a judge, I want to see the board and its counts and nothing else.",
       "acceptance": [
-        "Matches docs/ui/shelf.html at 1920 by 1080: wordmark and status chips, the feed in a glass frame, product cards, the status bar",
-        "The feed is an <img> of cameras[board].streamUrl; if it fails to load it shows the board drawn from the pockets arrays, with a chip saying \"Camera feed unavailable. Showing counts.\"",
-        "Zone outlines and count chips are placed from each zone's quad; item outlines come from the eye's outlines JSON when reachable",
-        "A product at or under its reorder point uses the sun rim and its status line; one with an open order shows \"Ordering 8 boxes from Offcut Supply.\"",
-        "A count change rolls the number, and the taken drops fade to rings; a reach makes the frame rim glow aqua until it ends",
-        "The sentence under the feed is the newest info or attention activity; the status bar is the newest working activity or \"Watching the board.\"",
+        "Matches docs/ui/shelf.html at 1920 by 1080 in both states (plain and `?low`): wordmark, the top tag, the feed on a mat in the frame with handles, the index of parts, one sentence, the word",
+        "The feed is an <img> of cameras[board].streamUrl; if it fails to load it shows the board drawn from the pockets arrays, with an alert tag saying \"Camera feed unavailable. Showing counts.\"",
+        "Each zone is a selection with handles and a tag (\"Wood screws · 6 of 12\") placed from the zone's quad; item outlines come from the eye's outlines JSON when reachable",
+        "A product at or under its reorder point with no placed order cuts the plate to wine with the word \"Reorder\", an orange zone with an alert tag and an orange figure; once its order is placed the plate is olive, the word is \"On the way\" and its row reads \"8 boxes on the way · arrives Tuesday\"",
+        "A count change cuts the figure to the new value and the taken squares go hollow; a reach turns that zone lime until it ends",
+        "The sentence under the index is the newest activity, or \"Watching the board. Every part is above its reorder point.\"; the top tag reads \"Counted by the shelf node on QNX\" at node level 2 or higher and \"Counted by the eye\" otherwise",
         "With no products: \"No parts yet. Put one on the teach spot.\""
       ],
-      "tests": ["renders the snapshot mock", "sun state at the reorder point", "feed fallback when the image errors", "empty state", "chip position from a quad"],
+      "tests": ["renders the snapshot mock", "wine plate and the word Reorder at the reorder point", "olive plate and On the way once the order is placed", "feed fallback when the image errors", "empty state", "zone position from a quad"],
       "screens": ["docs/ui/shelf.html"], "depends": ["F23"]
     },
     {
       "id": "F25", "title": "Shop screen", "lane": "web", "priority": 0, "demo": true,
       "story": "As a judge, I want to watch reup shop.",
       "acceptance": [
-        "Matches docs/ui/shop.html: one pane per run of the focused order (market runs and the cart run), each a glass frame with the supplier name, its kind (Price check or Your supplier), the newest step, and the live preview iframe",
-        "Before the streaming URL arrives the pane shows the sheen and \"Opening a browser.\"",
-        "When a run completes its pane shows the result line: \"$8.69 a box. In stock. 3 days.\" or for the cart \"8 boxes in the cart. $67.71 with tax.\"",
-        "A failed run shows a clay chip and the plain error; a replayed run shows a chip with the word Replay and plays its steps without an iframe",
-        "The small board strip at the top keeps showing the focused product's count and drops"
+        "Matches docs/ui/shop.html: wine plate, the word \"Shopping\", one frame per run of the focused order (market runs and the cart run), each with a tag on its top edge naming its kind and supplier (\"Price check · Retailer A\", \"Your supplier · Offcut Supply\"), the live preview iframe on a mat, and the newest step above it",
+        "Before the streaming URL arrives the frame is empty with blinking handles and \"Opening a browser.\" above it; handles blink until the run ends",
+        "When a run completes the result shows above its frame as a figure and a meta line: \"$8.69\" with \"A box · in stock · 3 days\", or for the cart \"$67.71\" with \"8 boxes in the cart · with tax\"",
+        "A failed run gets an alert tag (\"Blocked · Retailer B\"), the figure \"No price\" and the plain error as the meta line; a replayed run's tag ends with \"· replay\" and it plays its steps without an iframe",
+        "The focused product stays top right: its count as an orange figure, its name, its squares and \"Ordering 8 boxes\""
       ],
-      "tests": ["one pane per run from the mock", "loading, live, done, failed and replay states", "result line wording for market and cart"],
+      "tests": ["one frame per run from the mock", "loading, live, done, failed and replay states", "result figure and meta wording for market and cart"],
       "screens": ["docs/ui/shop.html"], "depends": ["F23"]
     },
     {
       "id": "F26", "title": "Order screen", "lane": "web", "priority": 0, "demo": true,
       "story": "As a judge, I want to say yes with a wooden button.",
       "acceptance": [
-        "Matches docs/ui/order.html: one large glass card with the product, units, supplier, unit price, total, arrival day, the reason and the market note",
-        "awaiting_approval: the sun rim and \"Press the button to approve.\" with a drawn button that pulses slowly",
-        "approved and placing: aqua, \"Placing the order at Offcut Supply.\" and the live pane of the place run beside the card",
-        "placed: leaf, \"Ordered. Confirmation OC-58213. Arrives Tuesday.\"; shipped adds \"Shipped.\"; failed shows the clay chip and the error with \"Nothing was bought.\"",
-        "The PO number and who approved (Button or Phone) show in the caption"
+        "Matches docs/ui/order.html: paper plate, the word is the order (\"8 boxes\"), the PartBox drawing across the frame with the product's name and unit on its label, the total, unit price, arrival day and supplier on the left, the reason and the market note as small copy",
+        "awaiting_approval: \"Press the button to approve.\" on the right, the frame's orange handles blink, and the tag reads \"Waiting for a yes · PO RU-1042 · spend cap $150 an order\"",
+        "approved and placing: wine plate, the word \"Placing\", the frame turns landscape and holds the live pane of the place run, \"Placing the order at Offcut Supply.\"",
+        "placed: olive plate, the word \"Ordered\", the confirmation number OC-58213 as the figure, \"Ordered. Arrives Tuesday.\"; shipped changes the tag to \"Shipped · arrives Tuesday\"; failed is a wine plate with the word \"Stopped\", an alert tag with the error and \"Nothing was bought.\"; cancelled is paper with the word \"Cancelled\"",
+        "The PO number and who approved (\"Approved with the button at 9:16 AM\" or \"from a phone\") show in the tag"
       ],
-      "tests": ["each order state renders its line", "arrival day formats as a weekday name in America/Toronto", "the market note is hidden when null"],
+      "tests": ["each order state renders its plate, word and line", "the word pluralises the unit: 8 boxes, 3 bags, 2 units for each", "arrival day formats as a weekday name in America/Toronto", "the market note is hidden when null"],
       "screens": ["docs/ui/order.html"], "depends": ["F23"]
     },
     {
       "id": "F27", "title": "Why screen", "lane": "web", "priority": 1, "demo": true,
       "story": "As a judge, I want to see that the reorder point is reasoning, not a setting.",
       "acceptance": [
-        "As docs/UI.md describes: an SVG chart of 30 days of use (bars), the stock line, a 7 day forecast band, the reorder point as a sun line, today marked",
-        "The card beside it shows the policy reason and a season control (Normal 1.0, Busy week 1.4, Exam week 0.6) that calls POST /api/demo/season when opened with the ops token; the line moves within 300 ms of the policy message",
-        "A chip says \"Sample history\" when any day is flagged sample"
+        "Matches docs/ui/why.html: paper plate, the word \"Forecast\", an SVG chart in the frame with 30 days of use (bars), the stepped stock line, a 7 day forecast band, the reorder point as an orange line, today as a dotted line",
+        "Beside it: the reorder point as a figure, the policy reason, and a season control (Normal 1.0, Busy week 1.4, Exam week 0.6) that calls POST /api/demo/season when opened with the ops token; the line moves within 300 ms of the policy message",
+        "The tag \"Sample history\" shows bottom right when any day is flagged sample"
       ],
       "tests": ["scales map the history mock into the chart box", "the reorder line follows a policy message", "season control posts the right factor"],
-      "screens": [], "depends": ["F23"]
+      "screens": ["docs/ui/why.html"], "depends": ["F23"]
     },
     {
-      "id": "F28", "title": "Phone view and the teach overlay", "lane": "web", "priority": 1, "demo": true,
+      "id": "F28", "title": "Phone view and the Teach plate", "lane": "web", "priority": 1, "demo": true,
       "story": "As the person near the board, I want to approve and to name a new part from my phone.",
       "acceptance": [
-        "/m matches docs/ui/phone.html at 390 wide: counts list with drops, a pending order card with Approve (needs `?k=<approve key>`, stored for the session), and the newest activity",
+        "/m matches docs/ui/phone.html at 390 wide: plates stacked as bands, each with its own word fitted to the band: a pending order with Approve (needs `?k=<approve key>`, stored for the session), then the counts with the newest activity",
         "When a teach needs confirming, /m shows the crop, editable name, unit and SKU, a zone picker, and Confirm and Not a part",
-        "On the TV the Teach overlay from docs/UI.md shows over Shelf while teach is not null, and \"Counting it now.\" for 3 seconds after confirm",
+        "On the TV the Teach plate from docs/UI.md replaces Shelf while teach is not null (paper, the word \"New part\", the crop in a frame with blinking handles), then an olive plate with the word \"Counting\" for 3 seconds after confirm",
         "Approve without a key shows \"This phone cannot approve. Scan the code on the station.\""
       ],
-      "tests": ["approve posts by phone with the key", "teach form posts TeachConfirmBody", "overlay shows and hides with teach state", "no key state"],
+      "tests": ["approve posts by phone with the key", "teach form posts TeachConfirmBody", "the Teach plate shows and hides with teach state", "no key state"],
       "screens": ["docs/ui/phone.html"], "depends": ["F23"]
     },
     {

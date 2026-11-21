@@ -13,8 +13,8 @@ Six logo candidates, drawn Sat Nov 21. Miller picks one; until then the app uses
 | reup-tally.svg | 6. A tally whose crossing stroke goes up |
 | reup-wordmark.svg | The name, ending in mark 1 |
 
-Each mark comes in three files: plain (uses `currentColor`, for inline SVG), `-ink` (`#16331C`) and `-light` (`#F4FAEE`) for `<img>`.
+Each mark comes in three files: plain (uses `currentColor`, for inline SVG), `-ink` (`#1E1A19`, for the paper plate) and `-light` (`#F7FBE2`, cream, for the olive and wine plates) for `<img>`.
 
-Rules: one colour, always the colour of the text around it. Never outlined, never on a gradient of its own. Keep clear space of a quarter of the mark's width around it.
+Rules: one colour, always the colour of the text around it (docs/UI.md). Never outlined, never on a gradient. Keep clear space of a quarter of the mark's width around it.
 
 `make_marks.py` redraws every file: `python brand/make_marks.py brand`
