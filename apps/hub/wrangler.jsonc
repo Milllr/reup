@@ -1,0 +1,27 @@
+// The hub: one Worker, one Durable Object (Room), D1 for the log, and the built web app as static assets.
+// Secrets (DEVICE_TOKEN, OPS_TOKEN, APPROVE_KEY, SUPPLY_WEBHOOK_SECRET, GEMINI_API_KEY) are set with wrangler secret, from Infisical.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "reup-hub",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/ingest/*", "/hooks/*", "/live"]
+  },
+  "durable_objects": { "bindings": [{ "name": "ROOM", "class_name": "Room" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  "d1_databases": [{ "binding": "DB", "database_name": "reup-hub", "migrations_dir": "migrations" }],
+  "vars": {
+    // The workers.dev address until the domain's DNS is on Cloudflare. Then: https://offcut.wheredidallmyinventorygo.wtf
+    "SUPPLY_URL": "https://offcut.wheredidallmyinventorygo.wtf",
+    "GEMINI_MODEL": "gemini-3.8-flash",
+    "ORDER_CAP_CAD": "150",
+    "DAY_CAP_CAD": "400",
+    "TIME_ZONE": "America/Toronto"
+  },
+  "observability": { "enabled": true }
+}

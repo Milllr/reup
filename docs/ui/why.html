@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reup: Why</title>
+<link rel="stylesheet" href="specimen.css">
+</head>
+<body class="tv">
+<div class="stage">
+<main class="plate paper">
+  <h1 class="word top">Forecast</h1>
+
+  <!-- The chart is 980 by 500 units: 25 across per day, 34 up per box. 30 days of use, then 7 days of forecast. -->
+  <section class="frame" style="left:96px; top:284px; width:1100px; height:580px" aria-label="Wood screws: use, stock and forecast">
+    <i class="h tl"></i><i class="h tr"></i><i class="h bl"></i><i class="h br"></i>
+    <svg class="chart" viewBox="0 0 980 500" role="img" aria-label="Stock fell from 12 to 4 over 12 days, was refilled, and is at 4 again today">
+      <rect class="bar" x="32" y="436" width="16" height="34"/><rect class="bar" x="82" y="436" width="16" height="34"/><rect class="bar" x="107" y="436" width="16" height="34"/><rect class="bar" x="157" y="402" width="16" height="68"/><rect class="bar" x="207" y="436" width="16" height="34"/><rect class="bar" x="257" y="436" width="16" height="34"/><rect class="bar" x="307" y="436" width="16" height="34"/><rect class="bar" x="382" y="436" width="16" height="34"/><rect class="bar" x="457" y="436" width="16" height="34"/><rect class="bar" x="507" y="436" width="16" height="34"/><rect class="bar" x="582" y="436" width="16" height="34"/><rect class="bar" x="657" y="436" width="16" height="34"/><rect class="bar" x="707" y="436" width="16" height="34"/><rect class="bar" x="757" y="402" width="16" height="68"/>
+      <polygon class="band" points="765,334 790,334 815,346 840,359 840,87 865,101 890,115 915,130 940,146 940,245 915,222 890,199 865,176 840,152 840,423 815,399 790,372 765,334"/>
+      <polyline class="stock" points="40,96 90,96 90,130 115,130 115,164 165,164 165,232 215,232 215,266 265,266 265,300 315,300 315,334 365,334 365,62 390,62 390,96 465,96 465,130 515,130 515,164 590,164 590,198 665,198 665,232 715,232 715,266 765,266 765,334"/>
+      <line class="today" x1="765" y1="40" x2="765" y2="470"/>
+      <line class="rop" x1="20" y1="334" x2="960" y2="334"/>
+      <text x="20" y="322">Reorder at 4</text>
+      <text x="753" y="28" text-anchor="end">Today</text>
+      <text x="779" y="28">Next 7 days</text>
+      <text x="20" y="494">30 days ago</text>
+    </svg>
+  </section>
+
+  <div class="abs stack" style="left:1284px; top:420px; width:588px; gap:30px">
+    <div class="row">
+      <span class="figure">4</span>
+      <div class="stack" style="gap:8px; padding-bottom:4px"><span class="name">Wood screws #8 x 1-1/4 in</span><span class="meta">Reorder point, in boxes</span></div>
+    </div>
+    <p class="copy">Uses about 0.6 a day. Delivery takes 2 days. Reorder at 4.</p>
+    <div class="stack" style="gap:10px">
+      <span class="meta">Season</span>
+      <div class="seg" role="group" aria-label="Season">
+        <button class="btn" type="button" aria-pressed="true">Normal</button><button class="btn" type="button" aria-pressed="false">Busy week</button><button class="btn" type="button" aria-pressed="false">Exam week</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="copy small abs" style="left:268px; bottom:40px; max-width:30em">Bars are boxes used each day. The line is what was on the board. The shaded part is what reup expects next.</p>
+  <img class="mark abs" style="left:48px; bottom:40px" src="../../brand/reup-wordmark-ink.svg" alt="reup">
+  <span class="tag abs" style="right:48px; bottom:44px">Sample history</span>
+</main>
+</div>
+<script src="specimen.js"></script>
+</body>
+</html>

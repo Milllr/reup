@@ -13,6 +13,8 @@ export const Job = z.discriminatedUnion('kind', [
     searchPhrase: z.string(),
     /** Market suppliers to check, one run each, all at once. */
     supplierIds: z.array(Id).min(1),
+    /** True when the operator asked for the last good recording in place of a live run. */
+    replay: z.boolean().optional(),
   }),
   z.object({
     id: Id,
@@ -23,6 +25,7 @@ export const Job = z.discriminatedUnion('kind', [
     sku: z.string().nullable(),
     searchPhrase: z.string(),
     units: z.number().int().positive(),
+    replay: z.boolean().optional(),
   }),
   z.object({
     id: Id,
@@ -30,6 +33,7 @@ export const Job = z.discriminatedUnion('kind', [
     orderId: Id,
     supplierId: Id,
     poNumber: z.string(),
+    replay: z.boolean().optional(),
   }),
   z.object({
     id: Id,

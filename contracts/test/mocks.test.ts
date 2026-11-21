@@ -69,4 +69,12 @@ describe('contract mocks', () => {
     expect(C.Count.safeParse({ ...good, count: -1 }).success).toBe(false);
     expect(C.Count.safeParse({ ...good, ts: '2026-11-21 09:14' }).success).toBe(false);
   });
+
+  it('lets camera health be posted alone, but not an empty body', () => {
+    const body = load('ingest-counts') as { counts: unknown[]; cameras: unknown[] };
+    expect(C.IngestCountsBody.safeParse({ counts: [], cameras: body.cameras }).success).toBe(true);
+    expect(C.IngestCountsBody.safeParse({ counts: body.counts }).success).toBe(true);
+    expect(C.IngestCountsBody.safeParse({ counts: [] }).success).toBe(false);
+    expect(C.IngestCountsBody.safeParse({ counts: [], cameras: [] }).success).toBe(false);
+  });
 });

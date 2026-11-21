@@ -4,67 +4,60 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>reup: Order</title>
-<link rel="stylesheet" href="glass.css">
-<style>
-  .world { height: 1080px; width: 1920px; }
-  .big { font-size: 56px; line-height: 62px; font-weight: 300; letter-spacing: -0.8px; margin: 0; }
-  .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
-  .fact b { display: block; font-size: 44px; line-height: 50px; font-weight: 300; }
-  /* The wooden button, drawn. It breathes slowly while reup waits. */
-  .knob { width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle at 36% 30%, #FFF3C4 0 8%, #F4C430 40%, #B8901E 100%); border: 6px solid #C9A27A; box-shadow: 0 10px 24px rgba(122, 98, 24, 0.35); animation: breathe 2400ms ease-in-out infinite; }
-</style>
+<link rel="stylesheet" href="specimen.css">
 </head>
-<body>
-<main class="world">
-  <header class="between" style="height:56px; align-items:center">
-    <img src="../../brand/reup-wordmark-ink.svg" alt="reup" style="height:52px">
-    <div style="display:flex; gap:12px"><span class="chip">Shelf node · QNX · online</span><span class="chip muted">PO RU-1042</span></div>
-  </header>
+<body class="tv">
+<div class="stage">
+<!-- State shown: awaiting_approval. The other states are listed at the bottom of this file. -->
+<main class="plate paper">
+  <h1 class="word top">8 boxes</h1>
 
-  <!-- State shown: awaiting_approval. Other states are listed at the bottom of this file. -->
-  <section class="glass sun grow col" style="padding:48px 56px; gap:36px; justify-content:center" aria-label="Order waiting for approval">
-    <div class="col" style="gap:8px">
-      <span class="label sun-text" style="font-size:24px">Waiting for a yes</span>
-      <h1 class="big">8 boxes of wood screws #8 x 1-1/4 in<br>from Offcut Supply</h1>
-    </div>
-
-    <div class="facts">
-      <div class="fact"><b>$7.49</b><span class="caption">a box</span></div>
-      <div class="fact"><b>$67.71</b><span class="caption">total with tax, free shipping</span></div>
-      <div class="fact"><b>Tuesday</b><span class="caption">arrives, 2 business days</span></div>
-      <div class="fact"><b>7 days</b><span class="caption">of cover left on the board</span></div>
-    </div>
-
-    <div class="col" style="gap:6px">
-      <p class="sentence">8 boxes fills the board and arrives before it runs out.</p>
-      <p class="sentence" style="color:var(--ink-muted)">Retailer A is $1.20 more per box.</p>
-    </div>
-
-    <div style="display:flex; align-items:center; gap:36px">
-      <div class="knob breathe" role="img" aria-label="The wooden button"></div>
-      <div class="col" style="gap:4px">
-        <p class="big" style="font-size:48px">Press the button to approve.</p>
-        <span class="caption" style="font-size:22px">Or approve from a phone. Nothing is bought until then.</span>
-      </div>
-    </div>
+  <section class="frame waiting" style="left:730px; top:280px; width:460px; height:600px" aria-label="Wood screws, the part being ordered">
+    <i class="h tl"></i><i class="h tr"></i><i class="h bl"></i><i class="h br"></i>
   </section>
+  <!-- PartBox: the app draws this same box for any part, with the product's name and unit on the label. -->
+  <svg class="subject" style="left:640px; top:350px; width:640px; transform:rotate(-9deg)" viewBox="0 0 560 420" role="img" aria-label="A box of wood screws">
+    <polygon points="60,150 210,95 520,130 380,190" fill="#D9BC8E"/>
+    <polygon points="60,150 380,190 380,400 60,350" fill="#C49E6E"/>
+    <polygon points="380,190 520,130 520,330 380,400" fill="#A9845A"/>
+    <polygon points="205,122 232,112 404,160 372,172" fill="#C49E6E"/>
+    <g transform="matrix(1,0.125,0,1,0,0)">
+      <rect x="92" y="186" width="256" height="104" fill="#F7FBE2"/>
+      <text x="108" y="222" font-family="'Geist Mono Variable',monospace" font-weight="600" font-size="22" letter-spacing="1" fill="#1E1A19">WOOD SCREWS</text>
+      <text x="108" y="250" font-family="'Geist Mono Variable',monospace" font-weight="500" font-size="17" letter-spacing="0.6" fill="#1E1A19">#8 X 1-1/4 IN</text>
+      <text x="108" y="274" font-family="'Geist Mono Variable',monospace" font-weight="500" font-size="17" letter-spacing="0.6" fill="#1E1A19">BOX OF 100</text>
+    </g>
+  </svg>
 
-  <footer class="glass bar">
-    <div style="display:flex; align-items:center; gap:16px"><span class="drop sun" aria-hidden="true"></span><span class="sentence">The cart is ready at Offcut Supply.</span></div>
-    <span class="caption" style="font-size:22px">Spend cap: $150 an order</span>
-  </footer>
+  <div class="abs stack" style="left:96px; top:420px; width:560px; gap:34px">
+    <div class="stack" style="gap:12px"><span class="figure">$67.71</span><span class="meta">Total with tax · free shipping · $7.49 a box</span></div>
+    <div class="stack" style="gap:12px"><span class="figure mid">Tuesday</span><span class="meta">Arrives · 2 business days · from Offcut Supply</span></div>
+    <p class="copy small" style="max-width:21em">8 boxes fills the board and arrives before it runs out. Retailer A is $1.20 more per box.</p>
+  </div>
+
+  <div class="abs stack" style="left:1280px; top:420px; width:580px; gap:22px">
+    <p class="figure mid">Press the button to approve.</p>
+    <p class="copy small" style="max-width:19em">Or approve from a phone. Nothing is bought until then.</p>
+  </div>
+
+  <img class="mark abs" style="left:48px; bottom:40px" src="../../brand/reup-wordmark-ink.svg" alt="reup">
+  <span class="tag abs" style="right:48px; bottom:44px">Waiting for a yes · PO RU-1042 · spend cap $150 an order</span>
 </main>
+</div>
+<script src="specimen.js"></script>
 
 <!--
-Other states of the same card. The rim colour and the top label change; the facts stay.
+Other states of the same screen. The plate, the word and the tag change; the part stays in its frame.
 
-approved, placing   rim aqua.  Label "Placing the order".  Replace the button row with the live pane of the place run
-                    (class "glass frame", 640px wide) and the line "Placing the order at Offcut Supply."
-placed              rim leaf (no modifier). Label "Ordered". Line: "Ordered. Confirmation OC-58213. Arrives Tuesday."
-                    Caption: "Approved by the button at 9:16 AM."
-shipped             as placed, plus the chip "Shipped".
-failed              rim clay. Label "Could not order". Line: the error in plain words, then "Nothing was bought."
-cancelled           rim none. Label "Cancelled". Line: "Nothing was bought."
+approved, placing   plate wine.  Word "Placing".  The frame turns landscape (760 by 480, same centre) and holds the live pane of
+                    the place run with the class "waiting". Right column: "Placing the order at Offcut Supply."
+                    Tag: "Approved with the button at 9:16 AM".
+placed              plate olive. Word "Ordered".  The part is back in the frame. Left column: the figure is the confirmation number
+                    "OC-58213" with the meta "Confirmation · arrives Tuesday · $67.71". Right column: "Ordered. Arrives Tuesday."
+                    Tag: "Bought by reup · approved with the button at 9:16 AM".
+shipped             as placed, and the tag reads "Shipped · arrives Tuesday".
+failed              plate wine.  Word "Stopped".  Alert tag with the error in plain words. Right column: "Nothing was bought."
+cancelled           plate paper. Word "Cancelled". Right column: "Nothing was bought." Handles stop blinking.
 -->
 </body>
 </html>

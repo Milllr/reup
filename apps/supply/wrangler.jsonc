@@ -1,0 +1,20 @@
+// Offcut Supply: the demo store reup buys from. Its own Worker, its own D1, and one Durable Object that ships orders 20 seconds later.
+// Secrets (SUPPLY_WEBHOOK_SECRET, ACCOUNT_PASSWORD, ADMIN_PASSWORD) are set with wrangler secret, from Infisical.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "offcut-supply",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": { "bindings": [{ "name": "SHIPPER", "class_name": "Shipper" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Shipper"] }],
+  "d1_databases": [{ "binding": "DB", "database_name": "offcut-supply", "migrations_dir": "migrations" }],
+  "vars": {
+    // The workers.dev address until the domain's DNS is on Cloudflare. Then: https://wheredidallmyinventorygo.wtf
+    "HUB_URL": "https://wheredidallmyinventorygo.wtf",
+    "ACCOUNT_EMAIL": "shop@reup.test",
+    "SHIP_DELAY_MS": "20000",
+    "TIME_ZONE": "America/Toronto"
+  },
+  "observability": { "enabled": true }
+}
