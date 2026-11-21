@@ -148,6 +148,17 @@ describe('orders', () => {
     expect(r.room.s.orders[0]).toMatchObject({ productId: 'p-brackets', trigger: 'node' });
   });
 
+  it('credits the node when its queued count opened the order a moment before its call arrived', async () => {
+    const r = await rig();
+    await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 6)] }, DEVICE);
+    await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 4)] }, DEVICE);
+    expect(r.room.s.orders[0]).toMatchObject({ productId: 'p-screws', trigger: 'hub' });
+    await r.call('POST', '/ingest/reorder', { id: 'ro-2', productId: 'p-screws', countAfter: 4, ts: r.room.iso() }, DEVICE);
+    expect(r.room.s.orders).toHaveLength(1);
+    expect(r.room.s.orders[0]?.trigger).toBe('node');
+    expect(r.room.s.activity.some((a) => a.text === 'The shelf node called for this reorder while it was offline.')).toBe(true);
+  });
+
   it('starts an order by hand and cancels it; a placed order cannot be cancelled', async () => {
     const r = await rig();
     const made = await r.call('POST', '/api/orders', { productId: 'p-glue', units: 2 }, OPS);

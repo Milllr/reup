@@ -113,7 +113,17 @@ export function afterCountChange(room: RoomCore, productId: string, before: numb
 
 export function ingestReorder(room: RoomCore, body: IngestReorderBody): void {
   if (!room.firstTime(`reorder:${body.id}`)) return;
-  if (!room.product(body.productId) || room.openOrderFor(body.productId)) return;
+  if (!room.product(body.productId)) return;
+  const open = room.openOrderFor(body.productId);
+  if (open) {
+    // The node's count arrived just before its call and already opened the order. The call was still the node's.
+    if (open.trigger === 'hub' && ['pricing', 'carting', 'awaiting_approval'].includes(open.state)) {
+      open.trigger = 'node';
+      saveOrder(room, open);
+      room.activity('attention', 'The shelf node called for this reorder while it was offline.');
+    }
+    return;
+  }
   room.activity('attention', 'The shelf node called for a reorder while it was offline.');
   openOrder(room, body.productId, 'node');
 }
