@@ -27,5 +27,6 @@ scratch/
 *.tsbuildinfo
 .pytest_cache/
 services/eye/data/
+edge/qnx/data/
 services/buyer/recordings/
 .dev.vars
