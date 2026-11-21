@@ -8,7 +8,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "durable_objects": { "bindings": [{ "name": "SHIPPER", "class_name": "Shipper" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Shipper"] }],
-  "d1_databases": [{ "binding": "DB", "database_name": "offcut-supply", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "offcut-supply", "migrations_dir": "migrations" }],
   "vars": {
     "HUB_URL": "https://wheredidallmyinventorygo.wtf",
     "ACCOUNT_EMAIL": "shop@reup.test",
