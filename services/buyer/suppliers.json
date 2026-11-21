@@ -1,0 +1,7 @@
+[
+  { "id": "s-market-a", "name": "Home Hardware", "kind": "market", "baseUrl": "https://www.homehardware.ca", "searchUrl": "https://www.homehardware.ca/en/search?query={q}", "country": "CA", "enabled": true, "tested": false },
+  { "id": "s-market-b", "name": "Canadian Tire", "kind": "market", "baseUrl": "https://www.canadiantire.ca", "searchUrl": "https://www.canadiantire.ca/en/search-results.html?q={q}", "country": "CA", "enabled": true, "tested": false },
+  { "id": "s-market-c", "name": "Home Depot", "kind": "market", "baseUrl": "https://www.homedepot.ca", "searchUrl": "https://www.homedepot.ca/search?q={q}", "country": "CA", "enabled": false, "tested": false },
+  { "id": "s-market-d", "name": "Lee Valley", "kind": "market", "baseUrl": "https://www.leevalley.com", "searchUrl": "https://www.leevalley.com/en-ca/search#q={q}", "country": "CA", "enabled": false, "tested": false },
+  { "id": "s-market-e", "name": "RONA", "kind": "market", "baseUrl": "https://www.rona.ca", "searchUrl": "https://www.rona.ca/en/search?query={q}", "country": "CA", "enabled": false, "tested": false }
+]
