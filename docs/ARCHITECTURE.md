@@ -36,7 +36,7 @@ Read on demand. It is not loaded into every session.
 | Brain | Inside the hub | `packages/brain`, pure TypeScript | Reorder math with no I/O, so it is fully unit tested |
 | Supply | Cloudflare, its own Worker | Hono with server rendered HTML, D1 | A real, plain web store that an agent has to browse like a person |
 | Buyer | Laptop | Node 22, TypeScript, `@tiny-fish/sdk`, `ws` | TinyFish reports run progress over one long SSE connection, which a plain process holds without tricks |
-| Eye | Laptop | Python 3.12+, OpenCV, Ultralytics YOLOE-26, FastAPI for the local MJPEG stream | The detector needs a GPU or a fast CPU, and the video should stay local |
+| Eye | Laptop | Python 3.12+, numpy, OpenCV, Ultralytics YOLOE-26, the standard library http.server for the local MJPEG stream | The detector needs a GPU or a fast CPU, and the video should stay local |
 | Shelf node | Raspberry Pi 5, QNX 8 | C++ with TFLite and the QNX sensor framework (from github.com/qnx/QNX-AI-workshop), plus a guard in Python if the image has it, else C++ | Required for the QNX prize, and it is the part that keeps working when everything else is down |
 | Naming | Hub calls the Gemini API | One image plus the Offcut catalog as a closed list | A model that names once and never counts |
 | Secrets | Infisical, pushed to Wrangler | | No keys in the repo |
@@ -63,7 +63,7 @@ Offline rule: the node keeps a copy of each product's reorder point. If it canno
 | --- | --- | --- |
 | Hub and web | `wrangler dev` on the worktree PORT | https://wheredidallmyinventorygo.wtf (workers.dev URL until DNS is live) |
 | Supply | `wrangler dev` on PORT + 1 | https://offcut.wheredidallmyinventorygo.wtf (workers.dev URL until DNS is live) |
-| Eye stream | http://<laptop>:8089/stream/board.mjpg | local only |
+| Eye stream | http://localhost:8089/stream/board.mjpg (the TV's browser runs on the eye's laptop) | local only |
 | Node | the Pi on the venue or hotspot network | local only |
 
 TinyFish runs in the cloud, so Offcut Supply must be deployed for cart runs. It cannot reach localhost.

@@ -16,7 +16,7 @@
       "id": "F2", "title": "Zones and the empty board reference", "lane": "eye", "priority": 0, "demo": true,
       "story": "As the operator, I want to mark zones once and capture the empty board, so that counting is exact.",
       "acceptance": [
-        "The eye loads zones from GET /api/state at start and again when it receives a `zones` message or every 10 seconds",
+        "The eye loads zones from GET /api/state at start and again every 2 seconds (it has no socket to the hub, so a `zones` change is picked up by the next poll)",
         "POST http://localhost:8089/reference/board captures and saves the empty board frame for that camera to services/eye/data/ (gitignored); it survives a restart",
         "For a pocket zone the eye warps the quad to a flat rectangle and splits it into rows by cols pocket cells in pocket order",
         "GET http://localhost:8089/debug/board.jpg returns the current frame with zones and pocket cells drawn, for checking alignment"
@@ -28,7 +28,7 @@
       "id": "F3", "title": "Pocket counting on the laptop", "lane": "eye", "priority": 0, "demo": true,
       "story": "As reup, I want to know which pockets are full, so that the count is never a guess.",
       "acceptance": [
-        "With the reference captured, each pocket is full when its mean absolute difference from the reference (grey, blurred, gain corrected using the board border) is over the threshold in config; count is the number of full pockets",
+        "With the reference captured, each pocket is full when its mean absolute difference from the reference (colour, blurred, gain corrected using the board border) is over the threshold in config; count is the number of full pockets",
         "Take a unit out of a pocket: within 1.5 seconds of the hand leaving, the eye posts a Count with the new pockets array and count, source eye",
         "While anything is moving inside the board quad no count is posted; a count is posted only after 500 ms of stillness",
         "An unchanged count is not posted again, except once every 30 seconds as a keepalive",
@@ -44,7 +44,7 @@
         "For an open zone the eye counts instances of that zone's product found by YOLOE-26 using the product's taught example crop as a visual prompt (check docs.ultralytics.com/models/yoloe for the current way to fix visual prompt classes once, not per frame)",
         "The model size and image size come from config; the detector runs in its own thread so the stream never stutters",
         "GET http://localhost:8089/outlines/board.json returns, per detected item, a simplified polygon in normalized coordinates, refreshed at least 3 times a second",
-        "If ultralytics or the weights are missing, pocket counting and the stream still work and open zones report no count; the log says why in one line"
+        "If ultralytics or the weights are missing, or a part has no taught example yet, pocket counting and the stream still work and open zones are counted as difference blobs against the empty board; the log says why in one line"
       ],
       "tests": ["instances are assigned to the zone that contains their centre", "polygon simplification keeps at most 24 points", "count smoothing: a count must hold for 3 consecutive detections before it is posted", "the detector module is not imported when disabled in config"],
       "screens": ["docs/ui/shelf.html"], "depends": ["F2"]
@@ -384,7 +384,7 @@
       "story": "As the operator, I want the same clean start for every judge.",
       "acceptance": [
         "A seed in apps/hub/src/seed.ts holds the suppliers, and 30 days of sample daily use per seeded product (flagged sample), chosen so the demo product (wood screws, capacity 12) has a rate of 0.56 a day and a reorder point of 4; the demo starts with 6 on the board, so taking two crosses the line",
-        "POST /api/demo/reset cancels open orders, clears runs, quotes older than 10 minutes and activity, restores sample history and policies, and keeps zones, products and current counts",
+        "POST /api/demo/reset cancels open orders, clears runs, quotes older than 10 minutes and activity, restores sample history and policies, and keeps zones, products and current counts. The one exception: a part taught on the teach spot is removed and the spot is freed, so every judge can teach one",
         "POST /api/demo/season sets the season, recomputes every policy and broadcasts them",
         "POST /api/demo/replay stores the replay switches and includes them in jobs"
       ],
