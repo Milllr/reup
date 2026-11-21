@@ -57,10 +57,14 @@ export function partRows(s: Snapshot): PartRow[] {
     const placed = openOrder != null && PLACED.has(openOrder.state);
     const cover = coverText(policy?.daysOfCover ?? null);
     let meta = policy && inUse ? `Reorder at ${policy.reorderPoint} · ${cover}` : policy ? 'Counting · not in use yet' : 'Counting';
-    if (placed && openOrder) meta = `${unitsText(openOrder.units, product.unit)} on the way${openOrder.eta ? ` · arrives ${weekday(openOrder.eta)}` : ''}`;
+    if (placed && openOrder) {
+      // Once some of the delivery is on the board, say how much of it is in.
+      const got = openOrder.unitsReceived ?? 0;
+      meta = got > 0 ? `${got} of ${openOrder.units} in` : `${unitsText(openOrder.units, product.unit)} on the way${openOrder.eta ? ` · arrives ${weekday(openOrder.eta)}` : ''}`;
+    }
     else if (openOrder) meta = `Ordering ${unitsText(openOrder.units, product.unit)}`;
     else if (atLine) meta = `${count === 0 ? 'Out' : 'At the reorder point'} · ${cover}`;
-    return { product, zoneName: s.zones.find((z) => z.id === product.zoneId)?.name ?? product.name, count, capacity: product.capacity, low: atLine && !placed, onTheWay: atLine && placed, meta, openOrder };
+    return { product, zoneName: s.zones.find((z) => z.id === product.zoneId)?.name ?? product.name, count, capacity: product.capacity, low: atLine && !placed, onTheWay: placed, meta, openOrder };
   });
 }
 
