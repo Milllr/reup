@@ -77,7 +77,9 @@ export function openOrder(room: RoomCore, productId: string, trigger: Order['tri
   if (room.s.orders.length > 20) room.s.orders.splice(0, room.s.orders.length - 20);
 
   const markets = marketSuppliers(room);
-  const checkMarket = markets.length > 0 && !freshMarketQuotes(room, productId);
+  // No second price check while one for this part is still running: a box put back and taken again must not shop twice.
+  const checking = room.x.jobs.some((j) => j.kind === 'market' && j.productId === productId);
+  const checkMarket = markets.length > 0 && !checking && !freshMarketQuotes(room, productId);
   if (checkMarket) {
     const job: Job = { id: room.id('j'), kind: 'market', productId, searchPhrase: product.searchPhrase, supplierIds: markets.map((m) => m.id), replay: room.x.replay.market };
     room.emitJob(job);
@@ -92,22 +94,74 @@ export function openOrder(room: RoomCore, productId: string, trigger: Order['tri
   return order;
 }
 
-/** Called after the count of record for a product changed. */
+const NOT_APPROVED = ['pricing', 'carting', 'awaiting_approval'];
+const ON_ITS_WAY = ['placed', 'shipped'];
+
+/** True while an order for this part has been placed and has not all come in. A count that rises then is the delivery. */
+export function deliveryExpected(room: RoomCore, productId: string): boolean {
+  return room.s.orders.some((o) => o.productId === productId && ON_ITS_WAY.includes(o.state));
+}
+
+/** Counts a delivery in as the board fills. The order is done when all of it is in, or when the board is full. */
+function trackDelivery(room: RoomCore, order: Order, capacity: number | null, unit: string, before: number, after: number): void {
+  const mark = (room.x.deliveries[order.id] ??= { low: before });
+  // Someone took one while the delivery was on its way: what comes in is measured from the new low.
+  if (after < mark.low) mark.low = after;
+  const cameIn = Math.max(0, after - mark.low);
+  const full = capacity != null && after >= capacity;
+  order.unitsReceived = Math.min(order.units, cameIn);
+  if (after > before && (cameIn >= order.units || full)) {
+    order.state = 'received';
+    delete room.x.deliveries[order.id];
+    saveOrder(room, order);
+    room.activity('info', cameIn >= order.units ? `All ${unitsText(order.units, unit)} are in. Order ${order.poNumber} is done.` : `The board is full. Order ${order.poNumber} is done.`);
+    return;
+  }
+  saveOrder(room, order);
+}
+
+/** Cancels an order nobody has said yes to, because the board changed under it. */
+function withdraw(room: RoomCore, order: Order, why: string): void {
+  order.state = 'cancelled';
+  room.x.jobs = room.x.jobs.filter((j) => !('orderId' in j) || j.orderId !== order.id);
+  delete room.x.shopAfter[order.id];
+  saveOrder(room, order);
+  room.activity('info', `${why} Order ${order.poNumber} cancelled. ${NOTHING_BOUGHT}`);
+}
+
+/** Called after the count of record for a product changed, up or down. */
 export function afterCountChange(room: RoomCore, productId: string, before: number, after: number): void {
   const product = room.product(productId);
   if (!product) return;
-  const waiting = room.s.orders.find((o) => o.productId === productId && (o.state === 'placed' || o.state === 'shipped'));
-  if (waiting && after > before) {
-    waiting.state = 'received';
-    saveOrder(room, waiting);
-    room.activity('info', `${unitsText(after - before, product.unit)} of ${product.name.toLowerCase()} arrived. Order ${waiting.poNumber} is done.`);
+  const name = room.zone(product.zoneId)?.name ?? product.name;
+  const many = /s$/.test(name);
+
+  // 1. An order is on its way: this is the delivery arriving (or one more taken while waiting for it).
+  const waiting = room.s.orders.find((o) => o.productId === productId && ON_ITS_WAY.includes(o.state));
+  if (waiting) {
+    trackDelivery(room, waiting, product.capacity, product.unit, before, after);
     return;
   }
+
+  // 2. Parts were put back while an order was still being shopped or waiting for a yes.
+  const pending = room.s.orders.find((o) => o.productId === productId && NOT_APPROVED.includes(o.state));
+  if (pending && after > before) {
+    const line = room.policy(productId)?.reorderPoint;
+    if (line != null && after > line) {
+      withdraw(room, pending, `${name} ${many ? 'are' : 'is'} back above the reorder point.`);
+      return;
+    }
+    // Still low, but the order was sized for an emptier board and would no longer fit. Shop again for the right amount.
+    if (product.capacity != null && pending.units > product.capacity - after) {
+      withdraw(room, pending, `The count of ${name.toLowerCase()} changed.`);
+      openOrder(room, productId, pending.trigger);
+      return;
+    }
+  }
+
   const policy = room.policy(productId);
   // A part with no use yet has no reorder point to cross.
   if (!policy || policy.ratePerDay <= 0 || after > policy.reorderPoint || room.openOrderFor(productId)) return;
-  const name = room.zone(product.zoneId)?.name ?? product.name;
-  const many = /s$/.test(name);
   room.activity('attention', after === 0 ? `${name} ran out.` : `${name} ${many ? 'are' : 'is'} at the reorder point.`);
   openOrder(room, productId, 'hub');
 }
@@ -115,6 +169,10 @@ export function afterCountChange(room: RoomCore, productId: string, before: numb
 export function ingestReorder(room: RoomCore, body: IngestReorderBody): void {
   if (!room.firstTime(`reorder:${body.id}`)) return;
   if (!room.product(body.productId)) return;
+  // The call was made offline. If the parts were put back before it got here, there is nothing to order.
+  const line = room.policy(body.productId)?.reorderPoint;
+  const seen = room.count(body.productId);
+  if (line != null && seen && seen.count > line && Date.parse(seen.ts) > Date.parse(body.ts)) return;
   const open = room.openOrderFor(body.productId);
   if (open) {
     // The node's count arrived just before its call and already opened the order. The call was still the node's.
@@ -233,6 +291,8 @@ export function markPlaced(room: RoomCore, order: Order, confirmation: string, e
   if (eta) order.eta = eta;
   if (!first) return saveOrder(room, order);
   order.state = 'placed';
+  order.unitsReceived = 0;
+  room.x.deliveries[order.id] = { low: room.count(order.productId)?.count ?? 0 };
   if (room.x.spend.day !== room.today()) room.x.spend = { day: room.today(), total: 0 };
   room.x.spend.total += order.total ?? 0;
   room.x.jobs = room.x.jobs.filter((j) => !('orderId' in j) || j.orderId !== order.id);

@@ -58,8 +58,8 @@ describe('orders', () => {
 
     // The delivery lands back on the board.
     await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 12)] }, DEVICE);
-    expect(order()?.state).toBe('received');
-    expect(r.room.s.activity.at(-1)?.text).toBe('8 boxes of wood screws #8 x 1-1/4 in arrived. Order RU-1042 is done.');
+    expect(order()).toMatchObject({ state: 'received', unitsReceived: 8 });
+    expect(r.room.s.activity.slice(-2).map((a) => a.text)).toEqual(['8 boxes of wood screws arrived. 12 on the board.', 'All 8 boxes are in. Order RU-1042 is done.']);
   });
 
   it('moves pricing to carting when the cart run starts, and writes the market note when a quote lands', async () => {
@@ -175,5 +175,164 @@ describe('orders', () => {
     await p.call('POST', `/api/orders/${id}/approve`, { by: 'button' }, DEVICE);
     await p.call('POST', '/ingest/placed', { jobId: 'j', orderId: id, ok: true, confirmation: 'OC-1', eta: null, error: null }, DEVICE);
     expect((await p.call('POST', `/api/orders/${id}/cancel`, undefined, OPS)).status).toBe(409);
+  });
+});
+
+describe('restocking', () => {
+  const used = (r: Awaited<ReturnType<typeof rig>>) => r.room.usageDay('p-screws', r.room.today());
+  const put = (r: Awaited<ReturnType<typeof rig>>, n: number) => r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', n)] }, DEVICE);
+  const texts = (r: Awaited<ReturnType<typeof rig>>, n: number) => r.room.s.activity.slice(-n).map((a) => a.text);
+
+  it('cancels an order nobody has said yes to when the parts are put back above the reorder point', async () => {
+    const r = await rig();
+    const id = await toAwaiting(r);
+    expect(r.room.order(id)?.state).toBe('awaiting_approval');
+    r.advance(4000);
+    await put(r, 6);
+    expect(r.room.order(id)?.state).toBe('cancelled');
+    expect(r.room.s.screen).toBe('shelf');
+    expect(r.room.x.jobs.filter((j) => 'orderId' in j && j.orderId === id)).toEqual([]);
+    expect(r.room.x.spend.total).toBe(0);
+    expect(texts(r, 2)).toEqual(['2 boxes of wood screws put back. 6 on the board.', 'Wood screws are back above the reorder point. Order RU-1042 cancelled. Nothing was bought.']);
+    // A yes that comes a moment too late buys nothing.
+    expect((await r.call('POST', `/api/orders/${id}/approve`, { by: 'button' }, DEVICE)).status).toBe(409);
+    // Taken again: a new order, with the next PO number.
+    r.advance(4000);
+    await put(r, 4);
+    expect(r.room.s.orders.at(-1)).toMatchObject({ state: 'pricing', poNumber: 'RU-1043', units: 8 });
+    // The first price check is still running, so the new order does not start a second one.
+    expect(r.jobs().map((j) => j.kind)).toEqual(['market', 'cart', 'cart']);
+    expect(r.room.x.jobs.map((j) => j.kind)).toEqual(['market', 'cart']);
+  });
+
+  it('cancels while the buyer is still shopping, and its late cart buys nothing', async () => {
+    const r = await rig();
+    await put(r, 4);
+    const order = r.room.s.orders.at(-1);
+    const cart = r.jobs().find((j) => j.kind === 'cart');
+    expect(order?.state).toBe('pricing');
+    await put(r, 6);
+    expect(order?.state).toBe('cancelled');
+    expect(r.room.s.screen).toBe('shelf');
+    const late = await r.call('POST', '/ingest/cart', { jobId: cart?.id, orderId: order?.id, ok: true, packSize: 1, packs: 8, unitPrice: 7.49, total: 67.71, deliveryDays: 2, error: null }, DEVICE);
+    expect(late.status).toBe(409);
+    expect(order?.state).toBe('cancelled');
+  });
+
+  it('keeps the order when what was put back still leaves the part at the reorder point', async () => {
+    const r = await rig();
+    await put(r, 2);
+    const id = r.room.s.orders.at(-1)?.id ?? '';
+    expect(r.room.order(id)).toMatchObject({ state: 'pricing', units: 8 });
+    r.advance(4000);
+    await put(r, 4);
+    expect(r.room.order(id)?.state).toBe('pricing');
+    expect(r.room.s.orders).toHaveLength(1);
+  });
+
+  it('shops again when a put back means the order no longer fits on the board', async () => {
+    const r = await rig();
+    // A busy week: the reorder point is 5 and the order wants more than the board has room for.
+    await r.call('POST', '/api/demo/season', { factor: 1.4, label: 'Busy week' }, OPS);
+    expect(r.room.policy('p-screws')?.reorderPoint).toBe(5);
+    await put(r, 2);
+    const first = r.room.s.orders.at(-1);
+    expect(first).toMatchObject({ state: 'pricing', units: 10 });
+    r.advance(4000);
+    await put(r, 4);
+    expect(first?.state).toBe('cancelled');
+    const again = r.room.s.orders.at(-1);
+    expect(again).toMatchObject({ state: 'pricing', units: 8, poNumber: 'RU-1043' });
+    expect(r.room.s.activity.some((a) => a.text === 'The count of wood screws changed. Order RU-1042 cancelled. Nothing was bought.')).toBe(true);
+  });
+
+  it('counts a delivery in as it arrives, and is done only when all of it is in', async () => {
+    const r = await rig();
+    const id = await toAwaiting(r);
+    await r.call('POST', `/api/orders/${id}/approve`, { by: 'button' }, DEVICE);
+    await r.call('POST', '/ingest/placed', { jobId: 'j', orderId: id, ok: true, confirmation: 'OC-1', eta: null, error: null }, DEVICE);
+    expect(r.room.order(id)).toMatchObject({ state: 'placed', unitsReceived: 0 });
+    // The judge's two boxes go back. That is not the delivery of 8.
+    r.advance(5000);
+    await put(r, 6);
+    expect(r.room.order(id)).toMatchObject({ state: 'placed', unitsReceived: 2 });
+    expect(texts(r, 1)).toEqual(['2 boxes of wood screws arrived. 6 on the board.']);
+    // The box arrives and goes in a few at a time.
+    r.advance(5000);
+    await put(r, 9);
+    expect(r.room.order(id)).toMatchObject({ state: 'placed', unitsReceived: 5 });
+    r.advance(5000);
+    await put(r, 12);
+    expect(r.room.order(id)).toMatchObject({ state: 'received', unitsReceived: 8 });
+    expect(texts(r, 1)).toEqual(['All 8 boxes are in. Order RU-1042 is done.']);
+    expect(r.room.x.deliveries).toEqual({});
+    // Nothing that arrived counts as use, and nothing came off the use either.
+    expect(used(r)).toMatchObject({ used: 2, restocked: 8 });
+  });
+
+  it('measures a delivery from the lowest count, so a box taken while waiting does not hide it', async () => {
+    const r = await rig();
+    const id = await toAwaiting(r);
+    await r.call('POST', `/api/orders/${id}/approve`, { by: 'button' }, DEVICE);
+    await r.call('POST', '/ingest/placed', { jobId: 'j', orderId: id, ok: true, confirmation: 'OC-1', eta: null, error: null }, DEVICE);
+    r.advance(5000);
+    await put(r, 3);
+    expect(r.room.order(id)).toMatchObject({ state: 'placed', unitsReceived: 0 });
+    expect(r.room.s.orders).toHaveLength(1);
+    r.advance(5000);
+    await put(r, 10);
+    expect(r.room.order(id)).toMatchObject({ state: 'placed', unitsReceived: 7 });
+    r.advance(5000);
+    await put(r, 11);
+    expect(r.room.order(id)?.state).toBe('received');
+  });
+
+  it('is done when the board is full, even if fewer came in than were ordered', async () => {
+    const r = await rig();
+    const id = await toAwaiting(r);
+    await r.call('POST', `/api/orders/${id}/approve`, { by: 'button' }, DEVICE);
+    r.advance(5000);
+    await put(r, 6); // put back while the buyer was placing it: before it is placed, so not part of the delivery
+    await r.call('POST', '/ingest/placed', { jobId: 'j', orderId: id, ok: true, confirmation: 'OC-1', eta: null, error: null }, DEVICE);
+    r.advance(5000);
+    await put(r, 12);
+    expect(r.room.order(id)).toMatchObject({ state: 'received', unitsReceived: 6 });
+    expect(texts(r, 1)).toEqual(['The board is full. Order RU-1042 is done.']);
+  });
+
+  it('does not count parts as used when they are put straight back', async () => {
+    const r = await rig();
+    await put(r, 6);
+    r.advance(1000);
+    await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-brackets', 3)] }, DEVICE);
+    const brackets = () => r.room.usageDay('p-brackets', r.room.today());
+    expect(brackets()).toMatchObject({ used: 2, restocked: 0 });
+    r.advance(60_000);
+    await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-brackets', 5)] }, DEVICE);
+    expect(brackets()).toMatchObject({ used: 0, restocked: 0 });
+    expect(texts(r, 1)).toEqual(['2 bags of corner brackets put back. 5 on the board.']);
+    // One more than was taken: that one came from somewhere else.
+    r.advance(60_000);
+    await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-brackets', 6)] }, DEVICE);
+    expect(brackets()).toMatchObject({ used: 0, restocked: 1 });
+    expect(texts(r, 1)).toEqual(['1 bag of corner brackets added. 6 on the board.']);
+  });
+
+  it('treats parts that come back much later as a restock, not as never used', async () => {
+    const r = await rig();
+    await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-brackets', 4)] }, DEVICE);
+    r.advance(11 * 60_000);
+    await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-brackets', 5)] }, DEVICE);
+    expect(r.room.usageDay('p-brackets', r.room.today())).toMatchObject({ used: 1, restocked: 1 });
+    expect(texts(r, 1)).toEqual(['1 bag of corner brackets added. 5 on the board.']);
+  });
+
+  it('ignores a reorder call from the node when the hub has since seen the parts put back', async () => {
+    const r = await rig();
+    const called = r.room.iso();
+    r.advance(30_000);
+    await put(r, 6);
+    await r.call('POST', '/ingest/reorder', { id: 'ro-late', productId: 'p-screws', countAfter: 4, ts: called }, DEVICE);
+    expect(r.room.s.orders).toHaveLength(0);
   });
 });

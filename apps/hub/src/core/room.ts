@@ -47,6 +47,8 @@ export interface Internal {
   recentChanges: Record<string, { countAfter: number; at: number; pickId: string }>;
   recentReaches: { zoneId: string | null; at: number }[];
   recentPicks: { pick: PickEvent; at: number }[];
+  /** For each order that is on its way: the lowest count seen since it was placed. What has come in is measured from there. */
+  deliveries: Record<string, { low: number }>;
   spend: { day: string; total: number };
   catalog: { at: number; items: CatalogItem[] } | null;
   lastHeartbeat: number;
@@ -71,7 +73,7 @@ export const OPEN_STATES: ReadonlySet<Order['state']> = new Set(['pricing', 'car
 export function freshInternal(): Internal {
   return {
     seq: 0, poSeq: 1041, seenIds: [], eyeCounts: {}, nodeCounts: {}, disagree: {}, usage: {}, leadDays: {}, jobs: [],
-    replay: { market: false, cart: false, place: false }, screenOverride: null, screenUntil: {}, shopAfter: {}, recentChanges: {}, recentReaches: [], recentPicks: [],
+    replay: { market: false, cart: false, place: false }, screenOverride: null, screenUntil: {}, shopAfter: {}, recentChanges: {}, recentReaches: [], recentPicks: [], deliveries: {},
     spend: { day: '', total: 0 }, catalog: null, lastHeartbeat: 0,
   };
 }
