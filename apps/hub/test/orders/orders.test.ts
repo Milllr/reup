@@ -14,7 +14,11 @@ describe('orders', () => {
     expect(order).toMatchObject({ state: 'pricing', units: 8, poNumber: 'RU-1042', trigger: 'hub', reason: '8 boxes fills the board and arrives before it runs out.' });
     expect(r.jobs().map((j) => j.kind)).toEqual(['market', 'cart']);
     expect(r.jobs()[1]).toMatchObject({ kind: 'cart', orderId: order.id, sku: 'OC-1008-114', units: 8 });
-    expect(r.room.s.screen).toBe('shop');
+    // The Shelf keeps the screen for a beat so the drop is seen, then Shop takes over.
+    expect(r.room.s.screen).toBe('shelf');
+    expect(r.room.nextDeadline()).toBe(r.clock.now + 2501);
+    r.advance(2600);
+    expect(r.room.s).toMatchObject({ screen: 'shop', focusProductId: 'p-screws' });
     expect(r.room.s.activity.map((a) => a.text)).toContain('Wood screws are at the reorder point.');
     expect(r.room.s.activity.map((a) => a.text)).toContain('Checking 2 retailers and filling a cart at Offcut Supply.');
   });

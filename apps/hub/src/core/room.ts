@@ -41,6 +41,8 @@ export interface Internal {
   screenOverride: { screen: Screen; focusProductId: string | null } | null;
   /** orderId to the time until which a finished order keeps the Order screen. */
   screenUntil: Record<string, number>;
+  /** orderId to the time the Shop screen may take over. Until then the Shelf shows the count that crossed the line. */
+  shopAfter: Record<string, number>;
   /** zoneId to the last change of its count of record, so one physical take is one pick. */
   recentChanges: Record<string, { countAfter: number; at: number; pickId: string }>;
   recentReaches: { zoneId: string | null; at: number }[];
@@ -61,12 +63,15 @@ export interface Deps {
   waitUntil?: (p: Promise<unknown>) => void;
 }
 
+/** How long the Shelf keeps the screen after a count crosses the reorder point: the judge sees the drop, then the shopping. */
+export const REORDER_BEAT_MS = 2500;
+
 export const OPEN_STATES: ReadonlySet<Order['state']> = new Set(['pricing', 'carting', 'awaiting_approval', 'approved', 'placing', 'placed', 'shipped']);
 
 export function freshInternal(): Internal {
   return {
     seq: 0, poSeq: 1041, seenIds: [], eyeCounts: {}, nodeCounts: {}, disagree: {}, usage: {}, leadDays: {}, jobs: [],
-    replay: { market: false, cart: false, place: false }, screenOverride: null, screenUntil: {}, recentChanges: {}, recentReaches: [], recentPicks: [],
+    replay: { market: false, cart: false, place: false }, screenOverride: null, screenUntil: {}, shopAfter: {}, recentChanges: {}, recentReaches: [], recentPicks: [],
     spend: { day: '', total: 0 }, catalog: null, lastHeartbeat: 0,
   };
 }
@@ -236,7 +241,7 @@ export class RoomCore {
     const newestFirst = [...this.s.orders].reverse();
     const deciding = newestFirst.find((o) => o.state === 'awaiting_approval' || o.state === 'approved' || o.state === 'placing');
     if (deciding) return { screen: 'order', focusProductId: deciding.productId };
-    const shopping = newestFirst.find((o) => o.state === 'pricing' || o.state === 'carting');
+    const shopping = newestFirst.find((o) => (o.state === 'pricing' || o.state === 'carting') && (this.x.shopAfter[o.id] ?? 0) <= now);
     if (shopping) return { screen: 'shop', focusProductId: shopping.productId };
     const lingering = newestFirst.find((o) => (this.x.screenUntil[o.id] ?? 0) > now);
     if (lingering) return { screen: 'order', focusProductId: lingering.productId };
@@ -249,6 +254,11 @@ export class RoomCore {
     this.s.screen = want.screen;
     this.s.focusProductId = want.focusProductId;
     this.emit({ type: 'screen', screen: want.screen, focusProductId: want.focusProductId });
+  }
+
+  /** Let the Shelf show the drop for a moment before the Shop screen takes over. */
+  holdShelf(orderId: string, ms = REORDER_BEAT_MS): void {
+    this.x.shopAfter[orderId] = this.nowMs() + ms;
   }
 
   /** Keep a finished order on the Order screen for 20 seconds. */
@@ -284,6 +294,7 @@ export class RoomCore {
       this.activity('attention', `The eye and the shelf node disagree on ${this.zone(zoneId)?.name ?? zoneId}: ${eye.count} and ${node.count}.`);
     }
     for (const [orderId, until] of Object.entries(this.x.screenUntil)) if (until <= now) delete this.x.screenUntil[orderId];
+    for (const [orderId, after] of Object.entries(this.x.shopAfter)) if (after <= now) delete this.x.shopAfter[orderId];
     this.refreshScreen();
   }
 
@@ -293,6 +304,7 @@ export class RoomCore {
     if (this.s.node.online && this.x.lastHeartbeat > 0) times.push(this.x.lastHeartbeat + 15_001);
     for (const d of Object.values(this.x.disagree)) if (!d.raised) times.push(d.since + 3001);
     for (const until of Object.values(this.x.screenUntil)) times.push(until + 1);
+    for (const after of Object.values(this.x.shopAfter)) times.push(after + 1);
     return times.length > 0 ? Math.min(...times) : null;
   }
 }

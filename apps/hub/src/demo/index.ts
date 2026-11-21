@@ -30,6 +30,7 @@ export function reset(room: RoomCore): Snapshot {
   room.x.jobs = [];
   room.x.screenOverride = null;
   room.x.screenUntil = {};
+  room.x.shopAfter = {};
   room.x.spend = { day: room.today(), total: 0 };
   room.x.disagree = {};
   room.x.recentChanges = {};

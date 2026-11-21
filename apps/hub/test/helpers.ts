@@ -66,6 +66,7 @@ export async function toAwaiting(r: Rig, total = 67.71): Promise<string> {
   await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 4)] }, DEVICE);
   const order = r.room.s.orders.at(-1);
   if (!order) throw new Error('no order opened');
+  r.advance(2600); // the Shelf keeps the screen for a moment first
   const cart = r.jobs().find((j) => j.kind === 'cart');
   await r.call('POST', '/ingest/cart', { jobId: cart?.id ?? 'j', orderId: order.id, ok: true, packSize: 1, packs: 8, unitPrice: 7.49, total, deliveryDays: 2, error: null }, DEVICE);
   return order.id;

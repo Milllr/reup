@@ -297,9 +297,9 @@
         "With `?mock=1` the app runs from contracts/mocks/snapshot.json and plays server-messages.json on a timer, with no hub",
         "/ shows the screen named by snapshot.screen inside the Stage, a 1920 by 1080 box scaled to fit the window; a screen change is a cut (120 ms on the plate colour), never a fade; /m is the phone view; /ops is the operator page",
         "With `?ops=<token>` on /, keys 1 to 4 force Shelf, Shop, Order, Why and 0 hands control back, through POST /api/demo/screen",
-        "The Stage, Plate, Word, Frame, Zone, Tag, Figure, Units and Button components exist and match docs/UI.md; Word measures its text and sets --size so the word spans the plate, between 320 and 540"
+        "The Stage, Plate, Word, Frame, Zone, Tag, Figure, Units and Button components exist and match docs/UI.md; Word measures its text and sets --size so the word spans the plate, between 260 and 540"
       ],
-      "tests": ["reducer applies each ServerMessage type from the mock", "an invalid message is dropped and logged, not applied", "reconnect backoff", "screen switch follows the snapshot", "plate and word for each moment in the docs/UI.md table", "Word sets --size from the measured width and clamps it to 320 and 540", "Units renders full and hollow squares by count and capacity"],
+      "tests": ["reducer applies each ServerMessage type from the mock", "an invalid message is dropped and logged, not applied", "reconnect backoff", "screen switch follows the snapshot", "plate and word for each moment in the docs/UI.md table", "Word sets --size from the measured width and clamps it to 260 and 540", "Units renders full and hollow squares by count and capacity"],
       "screens": ["docs/ui/shelf.html"], "depends": []
     },
     {

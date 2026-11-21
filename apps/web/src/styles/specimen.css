@@ -1,0 +1,174 @@
+/* reup Specimen. The source for every reup screen.
+   Copy this file and the fonts folder to apps/web/src/styles/ unchanged and build on its classes.
+   The rules are in docs/UI.md. The reference is the third video in anagram's "Design recap" post:
+   https://x.com/anagramclub/status/2123754233723863164
+   We take its system. We never take its words, products, pictures or logos.
+   Offcut Supply does not use this file.
+
+   Five parts, and nothing else:
+   1. a plate: one flat colour for the whole screen
+   2. a word: enormous, running off an edge, behind everything
+   3. a frame: a flat box with four square handles, holding the one thing to look at
+   4. tags: small pills in mono capitals
+   5. type set straight on the plate */
+
+@font-face { font-family: 'Inter Tight Variable'; font-style: normal; font-weight: 100 900; font-display: block; src: url('fonts/inter-tight-latin-wght-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Geist Mono Variable'; font-style: normal; font-weight: 100 900; font-display: block; src: url('fonts/geist-mono-latin-wght-normal.woff2') format('woff2'); }
+
+:root {
+  /* colours, measured from the reference frames */
+  --olive: #5A5F1E;
+  --wine: #6D1229;
+  --paper: #EFF0E8;
+  --cream: #F7FBE2;
+  --lime: #E0EF3D;
+  --orange: #FA4B05;
+  --charcoal: #40373A;
+  --moss: #59573F;
+  --stone: #80867C;
+  --ink: #1E1A19;
+  --white: #FFFFFF;
+  --tag-blue: #BFEBF3;
+  --tag-pink: #E5A8E2;
+  --tag-cream: #FBFCE5;
+
+  --sans: 'Inter Tight Variable', 'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, Consolas, monospace;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: #000; }
+body.tv { overflow: hidden; height: 100vh; } /* the TV never scrolls */
+body { font-family: var(--sans); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+p, h1, h2 { margin: 0; }
+svg text { text-rendering: geometricPrecision; } /* keeps SVG labels in place when the stage is rescaled */
+
+/* ---------- the stage: the TV is drawn at 1920 by 1080 and scaled to fit, so every size below is a TV pixel ---------- */
+.stage { width: 1920px; height: 1080px; transform-origin: 0 0; transform: scale(var(--fit, 1)); }
+
+/* ---------- 1. plates. Flat colour only: no gradient, no shadow, no blur, no border, no rounded box ---------- */
+.plate {
+  position: relative; overflow: hidden; width: 100%; height: 100%;
+  background: var(--ground); color: var(--text);
+  transition: background-color 120ms linear; /* a plate change is a cut, not a fade */
+}
+.plate.olive { --ground: var(--olive); --word: var(--lime); --frame: var(--cream); --handle: var(--white); --text: var(--cream); --tag: var(--tag-blue); --line: var(--ink); }
+.plate.wine  { --ground: var(--wine); --word: var(--orange); --frame: var(--stone); --handle: var(--white); --text: var(--cream); --tag: var(--tag-cream); --line: var(--cream); }
+.plate.paper { --ground: var(--paper); --word: var(--charcoal); --frame: var(--moss); --handle: var(--orange); --text: var(--ink); --tag: var(--tag-pink); --line: var(--cream); }
+
+/* grain over the whole plate, so flat colour reads as print */
+.plate::after {
+  content: ''; position: absolute; inset: 0; z-index: 40; pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>");
+  opacity: 0.14; mix-blend-mode: multiply;
+}
+
+/* ---------- 2. the word. One per plate. --size is set by the Word component so the word spans the plate ---------- */
+.word {
+  position: absolute; left: 28px; z-index: 1; margin: 0; white-space: nowrap; pointer-events: none;
+  font-weight: 600; font-size: calc(var(--size, 480) * 1px); line-height: 0.78; letter-spacing: -0.055em;
+  color: var(--word);
+  transition: color 240ms linear;
+}
+.word.bottom { bottom: calc(var(--size, 480) * -0.105px); } /* olive and wine: the baseline falls just under the edge */
+.word.bottom.tails { bottom: calc(var(--size, 480) * 0.07px); } /* a word with g j p q or y sits higher, so its tails still read */
+.word.top { top: calc(var(--size, 480) * -0.085px); }       /* paper: the top edge shaves the caps */
+.word.quiet { color: var(--text); }                          /* not live yet: connecting, offline */
+
+/* ---------- 3. the frame. A selection in a design tool: flat box, four square handles ---------- */
+.frame { position: absolute; z-index: 2; background: var(--frame); }
+.frame > .h, .zone > .h { position: absolute; z-index: 5; background: var(--handle); }
+.frame > .h { width: 22px; height: 22px; margin: -11px; }
+.h.tl { left: 0; top: 0; } .h.tr { right: 0; top: 0; } .h.bl { left: 0; bottom: 0; } .h.br { right: 0; bottom: 0; }
+.frame.settle { animation: settle 800ms var(--ease) both; }       /* a frame arrives turned a little, then sits */
+.frame.waiting > .h { animation: blink 900ms steps(2, jump-none) infinite; } /* not settled: loading, or waiting for a yes */
+.frame > .fill { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; object-fit: cover; }
+.frame > .fill.mat { inset: 18px; width: calc(100% - 36px); height: calc(100% - 36px); } /* the frame colour shows as a mat */
+.frame > .tag { position: absolute; left: 30px; top: 0; transform: translateY(-50%); z-index: 6; }
+.subject { position: absolute; z-index: 3; transition: transform 900ms var(--ease); } /* the thing itself. It always crosses the frame edge */
+
+/* a zone on the live feed is a small selection of its own */
+.zone { position: absolute; z-index: 3; border: 2px solid var(--cream); --handle: var(--cream); }
+.zone > .h { width: 12px; height: 12px; margin: -7px; }
+.zone > .tag { position: absolute; left: 16px; top: 0; transform: translateY(-50%); z-index: 6; }
+.zone.low { border-color: var(--orange); --handle: var(--orange); }
+.zone.reach { border-color: var(--lime); --handle: var(--lime); }
+.outline { fill: none; stroke: var(--cream); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+
+/* ---------- 4. tags. The only rounded thing. They say who did what, or what a thing is ---------- */
+.tag {
+  display: inline-block; white-space: nowrap;
+  font-family: var(--mono); font-weight: 500; font-size: 15px; line-height: 1; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 11px 20px 10px; border-radius: 999px; background: var(--tag); color: var(--ink);
+}
+.tag.blue { background: var(--tag-blue); } .tag.pink { background: var(--tag-pink); } .tag.cream { background: var(--tag-cream); }
+.tag.alert { background: var(--orange); }
+.tag.center { position: absolute; left: 50%; transform: translateX(-50%); z-index: 6; }
+
+/* ---------- 5. type, straight on the plate ---------- */
+.copy { font-weight: 500; font-size: 26px; line-height: 1.14; letter-spacing: -0.014em; max-width: 24em; }
+.copy.small { font-size: 20px; line-height: 1.16; }
+.figure { font-weight: 600; font-size: 112px; line-height: 0.82; letter-spacing: -0.055em; white-space: nowrap; }
+.figure.mid { font-size: 68px; line-height: 0.92; letter-spacing: -0.045em; white-space: normal; }
+.name { font-weight: 600; font-size: 26px; line-height: 1.06; letter-spacing: -0.02em; }
+.meta { font-family: var(--mono); font-weight: 500; font-size: 15px; line-height: 1.3; letter-spacing: 0.04em; text-transform: uppercase; }
+.plate.wine .low { color: var(--orange); } /* orange type only on wine. On olive and paper, say it with an alert tag */
+.mark { height: 40px; width: auto; display: block; }
+
+/* stock as squares: one per unit, hollow where one was taken. The same square as a handle */
+.units { display: flex; flex-wrap: wrap; gap: 5px; }
+.units > i { width: 13px; height: 13px; background: currentColor; }
+.units > i.gone { background: transparent; box-shadow: inset 0 0 0 2px currentColor; opacity: 0.55; }
+
+/* ---------- controls: flat rectangles with square corners ---------- */
+.btn {
+  font: inherit; font-weight: 600; font-size: 22px; letter-spacing: -0.01em;
+  min-height: 56px; padding: 12px 26px; border: 0; border-radius: 0; cursor: pointer;
+  background: var(--text); color: var(--ground);
+  transition: transform 120ms ease-out;
+}
+.btn:active { transform: scale(0.98); }
+.btn:focus-visible, .field input:focus-visible, .field select:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+.btn.quiet { background: transparent; color: var(--text); box-shadow: inset 0 0 0 2px currentColor; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.seg { display: inline-flex; }
+.seg > .btn { background: transparent; color: var(--text); box-shadow: inset 0 0 0 2px currentColor; margin-left: -2px; min-height: 48px; font-size: 20px; padding: 8px 20px; }
+.seg > .btn:first-child { margin-left: 0; }
+.seg > .btn[aria-pressed='true'] { background: var(--text); color: var(--ground); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field input, .field select { font: inherit; font-weight: 500; font-size: 18px; min-height: 48px; padding: 8px 12px; border-radius: 0; border: 2px solid currentColor; background: transparent; color: inherit; }
+
+/* ---------- the chart, drawn inside a frame ---------- */
+.chart { position: absolute; inset: 18px; width: calc(100% - 36px); height: calc(100% - 36px); overflow: visible; }
+.chart .bar { fill: var(--line); opacity: 0.32; }
+.chart .stock { fill: none; stroke: var(--line); stroke-width: 4; stroke-linejoin: miter; }
+.chart .band { fill: var(--line); opacity: 0.16; }
+.chart .rop { stroke: var(--orange); stroke-width: 4; transition: transform 300ms var(--ease); }
+.chart .today { stroke: var(--line); stroke-width: 2; stroke-dasharray: 2 8; }
+.chart text { font-family: var(--mono); font-size: 15px; letter-spacing: 0.04em; text-transform: uppercase; fill: var(--line); }
+
+/* helpers */
+.abs { position: absolute; z-index: 6; }
+.row { display: flex; align-items: flex-end; gap: 22px; }
+.stack { display: flex; flex-direction: column; }
+
+@keyframes settle { from { transform: rotate(-2.5deg) scale(0.96); } to { transform: none; } }
+@keyframes blink { from { opacity: 1; } to { opacity: 0.2; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .frame.settle, .frame.waiting > .h { animation: none; }
+  .subject, .chart .rop { transition: none; }
+}
+
+/* ---------- phones: the same plates stacked as bands, each with its own word ---------- */
+.band { height: auto; padding: 0 16px 28px; container-type: inline-size; }
+.band > .word { position: relative; left: -6px; top: auto; bottom: auto; display: block; font-size: calc(var(--w, 28) * 1cqw); margin: -0.13em 0 0.1em; } /* --w is set by the Word component so the word spans the band */
+.band > .frame { position: relative; }
+.band .copy { font-size: 18px; } .band .copy.small { font-size: 16px; }
+.band .figure { font-size: 60px; } .band .figure.mid { font-size: 38px; }
+.band .name { font-size: 19px; } .band .meta, .band .tag { font-size: 12px; }
+.band .tag { padding: 8px 14px 7px; }
+.band .frame > .h { width: 14px; height: 14px; margin: -7px; }
+.band .btn { width: 100%; font-size: 18px; }
+.band .mark { height: 26px; }

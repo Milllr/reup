@@ -84,6 +84,7 @@ export function openOrder(room: RoomCore, productId: string, trigger: Order['tri
   }
   room.emitJob({ id: room.id('j'), kind: 'cart', orderId: order.id, productId, supplierId: supplier.id, sku: product.sku, searchPhrase: product.searchPhrase, units: qty, replay: room.x.replay.cart });
 
+  if (trigger === 'hub') room.holdShelf(order.id);
   saveOrder(room, order);
   const retailers = `${markets.length} ${markets.length === 1 ? 'retailer' : 'retailers'}`;
   room.activity('working', checkMarket ? `Checking ${retailers} and filling a cart at ${supplier.name}.` : `Filling a cart at ${supplier.name}.`);

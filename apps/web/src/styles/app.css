@@ -1,0 +1,30 @@
+/* The few things the app draws that the mockups only sketched: the feed, the stand in board, a finished browser pane, the zone editor.
+   Everything else is specimen.css. Colours here are for what sits inside a frame. */
+.feed { background: #262320; overflow: hidden; }
+.feed > img, .feed > svg.outlines { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.feed > img { object-fit: fill; }
+.pockets { position: absolute; inset: 12px; display: grid; gap: 10px; }
+.pocket { border: 2px dashed rgba(247, 251, 226, 0.22); }
+.pocket.full { border: 0; background: #B08A62; }
+.pile { position: absolute; inset: 16px; display: flex; gap: 12px; align-items: flex-end; }
+.pile > i { flex: 1 1 0; max-width: 84px; height: 72%; background: #D9A441; }
+.level { position: absolute; left: 0; right: 0; bottom: 0; background: #B08A62; }
+.frame > .pane { background: #F4F5F1; color: #1E1A19; padding: 22px 24px; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; overflow: hidden; }
+.pane > .meta { opacity: 0.55; }
+.pane > .meta:last-child { opacity: 1; }
+.crop { background: #262320; object-fit: contain; }
+.index .figure { min-width: 74px; }
+.index.dense .figure { font-size: 84px; min-width: 58px; }
+.index.dense .name { font-size: 22px; }
+.zone.editing { cursor: move; touch-action: none; }
+.zone.editing > .h { cursor: nwse-resize; width: 22px; height: 22px; margin: -11px; touch-action: none; }
+.zone.editing.selected { border-color: var(--orange); --handle: var(--orange); }
+.ops { display: grid; grid-template-columns: 1064px 1fr; gap: 56px; padding: 200px 48px 60px; min-height: 100vh; height: auto; }
+.ops > div, .ops > form, .ops > p { position: relative; z-index: 2; }
+.ops table { border-collapse: collapse; width: 100%; }
+.ops td, .ops th { text-align: left; padding: 6px 14px 6px 0; vertical-align: top; }
+.ops .frame { position: relative; }
+.ops .btn { min-height: 44px; font-size: 18px; padding: 8px 16px; }
+.wrap { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.line { display: flex; align-items: flex-end; gap: 14px; padding: 12px 0; }
+.line .figure { min-width: 40px; }

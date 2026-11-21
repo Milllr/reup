@@ -56,7 +56,7 @@ While the hub is unreachable the plate and the word stay as they were and the wo
 | --- | --- |
 | Sans | Inter Tight (variable, bundled in docs/ui/fonts, OFL). Weights 500 and 600 only |
 | Mono | Geist Mono (variable, bundled, OFL). Weight 500, capitals, tracking 0.04em |
-| Word | weight 600, line height 0.78, tracking minus 0.055em. The Word component sets `--size` so the word spans the plate less 28 a side, never under 320 or over 540 |
+| Word | weight 600, line height 0.78, tracking minus 0.055em. The Word component sets `--size` so the word spans the plate less 28 a side, never under 260 or over 540 |
 | TV type | figure 112, mid figure 68, name 26 weight 600, copy 26 weight 500, small copy 20, tag and meta 15 mono |
 | Phone type | figure 60, mid figure 38, name 19, copy 18, small copy 16, tag and meta 12 |
 | Figures | tabular everywhere |
@@ -71,7 +71,7 @@ While the hub is unreachable the plate and the word stay as they were and the wo
 
 1. One plate, one word, per screen. Never two words, never a second ground colour.
 2. Flat colour only. No gradient, shadow, blur, glow, border radius, outline card or divider line. Space separates things.
-3. The word is behind everything and is cut by the edge it sits on. The main frame overlaps it by 40 to 90.
+3. The word is behind everything and is cut by the edge it sits on. The main frame overlaps it by 40 to 90. A bottom word with letters that hang below the line (g, j, p, q, y) sits a little higher (`.word.tails`), so "On the way" does not read as "On the wav".
 4. Something always crosses a frame's edge: its tag on the top edge, a zone tag, or the product picture.
 5. Orange is the only alarm. It is the word on wine, the handles on paper, the alert tag, a low zone's outline and a low figure on wine. Never orange type on olive or paper: use an alert tag there.
 6. A colour is never the only cue. A word or a tag always says it too.
@@ -89,7 +89,7 @@ All in apps/web/src/components, styled only with specimen.css classes.
 | --- | --- | --- |
 | Stage | `.stage` | The 1920 by 1080 box, scaled to the window by setting `--fit` on resize. Phones do not use it |
 | Plate | `.plate.olive`, `.plate.wine`, `.plate.paper` | The ground. Sets every colour role for what is inside it |
-| Word | `.word.bottom`, `.word.top`, `.word.quiet` | Measures its text and sets `--size` (TV) or `--w` (phone band) so it spans the plate |
+| Word | `.word.bottom`, `.word.top`, `.word.quiet`, `.word.tails` | Measures its text and sets `--size` (TV) or `--w` (phone band) so it spans the plate |
 | Frame | `.frame`, `.frame.settle`, `.frame.waiting`, four `<i class="h tl">` handles | The specimen box. Content goes in `.fill` or `.fill.mat`; a `.tag` child sits on its top edge |
 | Subject | `.subject` | The drawn box (PartBox) or a product picture, placed over a frame so it crosses the edge |
 | Zone | `.zone`, `.zone.low`, `.zone.reach` | A selection on the feed, placed from the zone's quad, with handles and a tag |

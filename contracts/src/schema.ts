@@ -163,6 +163,8 @@ export const Run = z.object({
   steps: z.array(z.object({ ts: IsoTime, purpose: z.string() })),
   /** True when this is a recording of an earlier good run. The screen must show the word Replay. */
   replay: z.boolean(),
+  /** What drove the browser. Missing means TinyFish. "local" is the development stand in, and the screen says so. */
+  engine: z.enum(['tinyfish', 'local']).optional(),
   error: z.string().nullable(),
   startedAt: IsoTime,
   finishedAt: IsoTime.nullable(),
@@ -334,3 +336,4 @@ export type ZoneKind = z.infer<typeof ZoneKind>;
 export type CountSource = z.infer<typeof CountSource>;
 export type RunStatus = z.infer<typeof RunStatus>;
 export type SupplierKind = z.infer<typeof SupplierKind>;
+export type Point = z.infer<typeof Point>;

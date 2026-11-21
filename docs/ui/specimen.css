@@ -72,6 +72,7 @@ svg text { text-rendering: geometricPrecision; } /* keeps SVG labels in place wh
   transition: color 240ms linear;
 }
 .word.bottom { bottom: calc(var(--size, 480) * -0.105px); } /* olive and wine: the baseline falls just under the edge */
+.word.bottom.tails { bottom: calc(var(--size, 480) * 0.07px); } /* a word with g j p q or y sits higher, so its tails still read */
 .word.top { top: calc(var(--size, 480) * -0.085px); }       /* paper: the top edge shaves the caps */
 .word.quiet { color: var(--text); }                          /* not live yet: connecting, offline */
 

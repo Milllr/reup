@@ -7,7 +7,7 @@ Each step names the screen and the data. Shapes are in contracts/.
 1. Shelf. The TV shows `/`. Snapshot: 4 products, wood screws at 6 of 12, reorder point 4. Olive plate, the word "Stocked". Sentence: "Watching the board. Every part is above its reorder point."
 2. Shelf. A judge reaches in. Node posts a Reach start: that zone's outline and handles turn lime until the reach ends.
 3. Shelf. The judge takes 2 boxes. Reach end. Node (level 2) or eye posts the Count: 4. Hub writes a PickEvent, recomputes the Policy, broadcasts count, pick, policy. The figure cuts from 6 to 4, two squares go hollow, the plate cuts from olive to wine and the word becomes "Reorder". Sentence: "2 boxes of wood screws taken. 4 left, about 7 days of cover. Getting prices for 8 boxes."
-4. Hub opens Order o-1 (pricing), PO RU-1042, sends a market job and a cart job to the buyer. `screen` becomes shop.
+4. Hub opens Order o-1 (pricing), PO RU-1042, sends a market job and a cart job to the buyer. The Shelf keeps the screen for 2.5 seconds so the drop is seen, then `screen` becomes shop.
 5. Shop. Three frames settle in with blinking handles, then hold live iframes as each Run gets its streamingUrl. The newest step shows above each frame.
 6. Shop. Market runs finish: a result above each frame and its handles stop blinking. The cart run reaches the review page: "8 boxes in the cart. $67.71 with tax." Buyer posts IngestCartBody. Order becomes awaiting_approval. `screen` becomes order.
 7. Order. Paper plate, the word "8 boxes", the part in the frame. "$67.71" total with tax, $7.49 a box, arrives Tuesday, from Offcut Supply. Reason and market note below. "Press the button to approve."
