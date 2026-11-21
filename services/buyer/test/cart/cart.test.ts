@@ -77,4 +77,29 @@ describe('filling the cart', () => {
     expect(never.calls).toHaveLength(0);
     expect(posts[0]?.body).toMatchObject({ ok: false, error: PRICE_CHECK_ONLY });
   });
+
+  it('runs cart jobs one at a time, and skips one whose order was cancelled while it waited', async () => {
+    const posts: { path: string; body: unknown }[] = [];
+    const states: Record<string, string> = { 'o-1': 'pricing', 'o-2': 'pricing' };
+    const snap = () => ({ orders: Object.entries(states).map(([id, state]) => ({ id, state })), products: [] });
+    const link = { post: async (path: string, body: unknown) => (posts.push({ path, body }), true), supplier: async () => offcut, snapshot: async () => snap() as never };
+    let running = 0;
+    let most = 0;
+    const order: string[] = [];
+    const agent = fakeAgent(async (p) => {
+      running += 1;
+      most = Math.max(most, running);
+      order.push(`start ${p.task.kind === 'cart' ? p.task.units : ''}`);
+      await new Promise((r) => setTimeout(r, 15));
+      // The parts are put back while the first run is still going: the hub cancels the second order.
+      states['o-2'] = 'cancelled';
+      running -= 1;
+      return completed(review);
+    });
+    const buyer = new Buyer(config({ TINYFISH_PROFILE_ID: 'prof-1' }), link, deps(agent).d, (async () => new Response(JSON.stringify(catalog))) as unknown as typeof fetch, () => {});
+    await Promise.all([buyer.handle(cartJob), buyer.handle({ ...cartJob, id: 'j-9', orderId: 'o-2', units: 3 }), buyer.handle({ ...cartJob, id: 'j-10', orderId: 'o-1', units: 5 })]);
+    expect(most).toBe(1);
+    expect(order).toEqual(['start 8', 'start 5']);
+    expect(posts.map((p) => (p.body as { jobId: string }).jobId)).toEqual(['j-2', 'j-10']);
+  });
 });
