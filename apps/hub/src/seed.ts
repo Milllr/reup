@@ -28,6 +28,9 @@ export function suppliersFor(config: Config): Supplier[] {
   return [offcut, ...(config.MARKET_SUPPLIERS.length > 0 ? config.MARKET_SUPPLIERS : MARKET)];
 }
 
+/** The zone a new part is taught on. reset frees it, so every judge can teach one. */
+export const TEACH_ZONE = 'z-teach';
+
 const pockets = (full: number, total: number) => Array.from({ length: total }, (_, i) => i < full);
 
 export function seedSnapshot(config: Config, now: string): Snapshot {
@@ -41,7 +44,7 @@ export function seedSnapshot(config: Config, now: string): Snapshot {
       { id: 'z-glue', name: 'Wood glue', kind: 'open', camera: 'board', quad: [[0.04, 0.55], [0.45, 0.55], [0.45, 0.92], [0.04, 0.92]], rows: null, cols: null, productId: 'p-glue' },
       { id: 'z-discs', name: 'Sanding discs', kind: 'open', camera: 'board', quad: [[0.51, 0.55], [0.9, 0.55], [0.9, 0.92], [0.51, 0.92]], rows: null, cols: null, productId: 'p-discs' },
       // The teach spot: a new part is put here, named, and then counted here.
-      { id: 'z-teach', name: 'Teach spot', kind: 'open', camera: 'aux', quad: [[0.2, 0.15], [0.8, 0.15], [0.8, 0.85], [0.2, 0.85]], rows: null, cols: null, productId: null },
+      { id: TEACH_ZONE, name: 'Teach spot', kind: 'open', camera: 'aux', quad: [[0.2, 0.15], [0.8, 0.15], [0.8, 0.85], [0.2, 0.85]], rows: null, cols: null, productId: null },
     ],
     products: [
       { id: 'p-screws', name: 'Wood screws #8 x 1-1/4 in', unit: 'box of 100', sku: 'OC-1008-114', zoneId: 'z-screws', capacity: 12, searchPhrase: '#8 x 1-1/4 wood screws box of 100', imageUrl: null, createdAt: now },

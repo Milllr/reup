@@ -51,6 +51,20 @@ describe('seed, season, reset, replay', () => {
     expect(r.room.s.orders[0]?.poNumber).toBe('RU-1043');
   });
 
+  it('reset frees the teach spot: the part the last judge taught goes, a part taught elsewhere stays', async () => {
+    const r = await rig();
+    r.room.s.products.push({ id: 'p-tape', name: 'Masking tape', unit: 'roll', sku: null, zoneId: 'z-teach', capacity: null, searchPhrase: 'masking tape', imageUrl: null, createdAt: r.room.iso() });
+    r.room.s.counts.push({ productId: 'p-tape', zoneId: 'z-teach', count: 1, level: null, pockets: null, source: 'manual', ts: r.room.iso() });
+    const spot = r.room.zone('z-teach');
+    if (spot) spot.productId = 'p-tape';
+    r.room.recomputePolicy('p-tape');
+    const snap = Snapshot.parse(await (await r.call('POST', '/api/demo/reset', undefined, OPS)).json());
+    expect(snap.products.map((p) => p.id)).toEqual(['p-screws', 'p-brackets', 'p-glue', 'p-discs']);
+    expect(snap.zones.find((z) => z.id === 'z-teach')?.productId).toBeNull();
+    expect(snap.counts.some((c) => c.productId === 'p-tape')).toBe(false);
+    expect(snap.policies.some((p) => p.productId === 'p-tape')).toBe(false);
+  });
+
   it('testing the day before does not move the demo numbers after a reset', async () => {
     const r = await rig();
     for (const n of [5, 3, 1, 0]) await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-brackets', n)] }, DEVICE);

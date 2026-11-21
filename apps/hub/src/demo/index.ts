@@ -1,7 +1,7 @@
 // Operator tools: season, reset, the screen override, replay switches and the zone editor's save.
 import type { ReplayBody, ScreenBody, Season, Snapshot, ZonesBody } from '@reup/contracts';
 import type { RoomCore } from '../core/room';
-import { applySampleHistory } from '../seed';
+import { TEACH_ZONE, applySampleHistory } from '../seed';
 
 const TEN_MINUTES = 10 * 60 * 1000;
 
@@ -34,6 +34,20 @@ export function reset(room: RoomCore): Snapshot {
   room.x.spend = { day: room.today(), total: 0 };
   room.x.disagree = {};
   room.x.recentChanges = {};
+  // A part taught on the teach spot belongs to the last judge. It goes, and the spot is free again.
+  for (const taught of room.s.products.filter((p) => p.zoneId === TEACH_ZONE)) {
+    room.s.products = room.s.products.filter((p) => p.id !== taught.id);
+    room.s.counts = room.s.counts.filter((c) => c.productId !== taught.id);
+    room.s.policies = room.s.policies.filter((p) => p.productId !== taught.id);
+    delete room.x.usage[taught.id];
+    delete room.x.leadDays[taught.id];
+  }
+  const spot = room.zone(TEACH_ZONE);
+  if (spot) {
+    spot.productId = null;
+    delete room.x.eyeCounts[TEACH_ZONE];
+    delete room.x.nodeCounts[TEACH_ZONE];
+  }
   const today = room.today();
   for (const byDay of Object.values(room.x.usage)) delete byDay[today];
   applySampleHistory(room);
