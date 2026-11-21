@@ -27,7 +27,7 @@ Every error is `ApiError`: `{ ok: false, code, message }` with status 400 bad_re
 | GET | /api/state | | Snapshot | snapshot.json |
 | GET | /api/products/:id/history | | HistoryResult | history.json |
 | GET | /api/jobs | | JobsResult | jobs.json |
-| POST | /ingest/counts | IngestCountsBody | Ok | ingest-counts.json |
+| POST | /ingest/counts | IngestCountsBody (counts may be empty when cameras is sent) | Ok | ingest-counts.json |
 | POST | /ingest/picks | IngestPicksBody | IngestPicksResult | ingest-picks.json |
 | POST | /ingest/reaches | IngestReachesBody | Ok | ingest-reaches.json |
 | POST | /ingest/node | IngestNodeBody | IngestNodeResult | ingest-node.json, ingest-node-result.json |

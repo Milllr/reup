@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, conlist
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, conlist, model_validator
 
 Point = conlist(float, min_length=2, max_length=2)
 CameraId = Literal["board", "aux", "node"]
@@ -61,8 +61,16 @@ class Camera(Wire):
 
 
 class IngestCountsBody(Wire):
-    counts: conlist(Count, min_length=1)
+    """Changed, settled counts. Camera health can ride along, or go alone with an empty counts list."""
+
+    counts: list[Count]
     cameras: Optional[list[Camera]] = None
+
+    @model_validator(mode="after")
+    def something_to_say(self):
+        if not self.counts and not self.cameras:
+            raise ValueError("counts or cameras must have at least one entry")
+        return self
 
 
 class IngestPicksBody(Wire):

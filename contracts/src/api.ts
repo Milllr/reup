@@ -15,8 +15,10 @@ export const ApiError = z.object({
 
 // ---------- ingest: eye, node, buyer ----------
 
-/** POST /ingest/counts (eye, node). Only changed, settled counts. */
-export const IngestCountsBody = z.object({ counts: z.array(Count).min(1), cameras: z.array(Camera).optional() });
+/** POST /ingest/counts (eye, node). Only changed, settled counts. Camera health can ride along, or go alone with an empty counts list. */
+export const IngestCountsBody = z
+  .object({ counts: z.array(Count), cameras: z.array(Camera).optional() })
+  .refine((b) => b.counts.length > 0 || (b.cameras?.length ?? 0) > 0, { message: 'counts or cameras must have at least one entry', path: ['counts'] });
 /** POST /ingest/picks (node, eye). Safe to resend: ids already seen are skipped. */
 export const IngestPicksBody = z.object({ picks: z.array(PickEvent).min(1) });
 export const IngestPicksResult = z.object({ ok: z.literal(true), accepted: z.number().int().nonnegative(), duplicates: z.number().int().nonnegative() });

@@ -57,6 +57,13 @@ describe('the Room', () => {
     expect((await r.call('GET', '/api/nope')).status).toBe(404);
   });
 
+  it('takes camera health posted alone, with no counts', async () => {
+    const r = await rig();
+    const res = await r.call('POST', '/ingest/counts', { counts: [], cameras: [{ id: 'board', online: true, fps: 28.5, streamUrl: 'http://localhost:8089/stream/board.mjpg' }] }, DEVICE);
+    expect(res.status).toBe(200);
+    expect(r.room.s.cameras.find((c) => c.id === 'board')).toMatchObject({ online: true, fps: 28.5 });
+  });
+
   it('marks the buyer online and offline', async () => {
     const r = await rig();
     r.room.setBuyerOnline(true);
