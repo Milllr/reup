@@ -56,14 +56,24 @@ check('The reorder point for screws is 4', policy?.reorderPoint === 4, `rate ${p
 await post('/ingest/counts', { counts: [count(4)] });
 s = await state();
 check('Take: two boxes gone, the count is 4 and the Shelf holds the screen', s.counts.find((c) => c.productId === 'p-screws')?.count === 4 && s.screen === 'shelf');
-s = await until('Shop: the screen moves to Shop', (x) => x.screen === 'shop', 6);
+// The judge changes their mind and puts both boxes back before anyone says yes.
+const first = s.orders.at(-1);
+await sleep(1200);
+await post('/ingest/counts', { counts: [count(6)] });
+s = await state();
+check('Put back: the count is 6 again, the order is cancelled and the Shelf is back', s.counts.find((c) => c.productId === 'p-screws')?.count === 6 && s.orders.find((o) => o.id === first?.id)?.state === 'cancelled' && s.screen === 'shelf', s.activity.at(-1)?.text ?? '');
+check('Nothing was bought for the cancelled order', !heard.some((m) => m.type === 'order' && m.order.id === first?.id && ['approved', 'placing', 'placed'].includes(m.order.state)));
+// Then they take them after all.
+await sleep(1200);
+await post('/ingest/counts', { counts: [count(4)] });
+s = await until('Take again: a new order opens, and the Shop screen follows', (x) => x.screen === 'shop' && x.orders.at(-1)?.id !== first?.id, 8);
 const order = s.orders.at(-1);
 s = await until('Shop: one retailer answers with a price', (x) => x.quotes.some((q) => q.ok) && `$${x.quotes.find((q) => q.ok).unitPrice}`, 30);
 s = await until('Decide: the cart is ready and the order waits for a yes', (x) => x.orders.at(-1)?.state === 'awaiting_approval' && `${x.orders.at(-1).units} units, $${x.orders.at(-1).total}`, 45);
 const waiting = s.orders.at(-1);
 check('The order is 8 boxes for $67.71 with a reason', waiting?.units === 8 && waiting?.total === 67.71 && typeof waiting?.reason === 'string' && waiting.reason.length > 0, waiting?.reason ?? '');
 check('The screen shows the order card', s.screen === 'order');
-check('Nothing was placed before a yes', !heard.some((m) => m.type === 'order' && ['placing', 'placed'].includes(m.order.state)));
+check('Nothing was placed before a yes', !heard.some((m) => m.type === 'order' && m.order.id === order.id && ['placing', 'placed'].includes(m.order.state)));
 
 const yes = await post(`/api/orders/${order.id}/approve`, { by: 'button' });
 check('Approve: the wooden button is accepted', yes.status === 200, `state ${yes.json?.state ?? yes.json?.order?.state ?? yes.status}`);
@@ -80,8 +90,13 @@ console.log(`${at()}        price check: ${kinds('market') ? 'run for this order
 const engines = [...new Set(runs.map((r) => r.engine ?? 'tinyfish'))].join(', ');
 console.log(`${at()}        engine: ${engines}${engines.includes('local') ? '  (the development stand in, not the live web)' : ''}`);
 
+// The delivery goes onto the board a few boxes at a time.
+await post('/ingest/counts', { counts: [count(7)] });
+s = await state();
+check('Restock: 3 of 8 are in and the order is still on its way', s.orders.at(-1)?.unitsReceived === 3 && ['placed', 'shipped'].includes(s.orders.at(-1)?.state), `${s.orders.at(-1)?.unitsReceived} of ${s.orders.at(-1)?.units} in`);
+await sleep(600);
 await post('/ingest/counts', { counts: [count(12)] });
-s = await until('Receive: the boxes are back on the board and the order is received', (x) => x.orders.at(-1)?.state === 'received', 10);
+s = await until('Receive: all 8 are in and the order is done', (x) => x.orders.at(-1)?.state === 'received' && x.orders.at(-1)?.unitsReceived === 8, 10);
 const reset = await post('/api/demo/reset', undefined, ops);
 s = await state();
 check('Reset: one call puts the demo back', reset.status === 200 && s.orders.length === 0 && s.screen === 'shelf');

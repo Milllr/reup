@@ -19,6 +19,18 @@ Each step names the screen and the data. Shapes are in contracts/.
 13. Teach (operator presses 1, then puts a new part on the teach spot). Eye posts the crop. Overlay: "Looks like: Wood screws #8 x 2 in, box of 100." Confirm on the phone. "Counting it now."
 14. Reset. Parts go back: counts rise, order o-1 becomes received. Operator presses Reset demo.
 
+## Restock flow
+
+Parts come back as well as go. Every rise in a count is one of three things, and the hub says which.
+
+1. **Put back, before a yes.** A judge takes 2 boxes, the order opens, and they put them back. Count is above the reorder point again. An order that is still shopping or waiting for a yes is cancelled: "Wood screws are back above the reorder point. Order RU-1042 cancelled. Nothing was bought." The Shelf returns, olive, "Stocked". The buyer skips any job of that order still in its queue, and a cart that lands late is refused.
+2. **Put back, still low.** If the count rises but stays at or under the reorder point, the order stands. If the order was sized for an emptier board and would no longer fit, it is cancelled and shopped again for the right amount.
+3. **Delivery.** Once an order is placed, a rising count is the delivery. The hub counts it in from the lowest count seen since the order was placed: "3 of 8 in" on the Shelf row, the word "On the way" until all of it is in, then "All 8 boxes are in. Order RU-1042 is done." If the board fills first, the order is done there. A box taken while waiting moves the starting point down, so it does not hide the delivery.
+4. **Use is use.** Parts put back within 10 minutes of being taken were borrowed, not used: they come off the day's use, so the forecast does not drift. Parts that arrive on an order, or that come back later, are a restock and never change the use.
+5. **Offline.** A reorder call the shelf node made while offline is ignored if the hub has since seen the parts put back.
+
+In the demo: the 8 bags in the Delivery box go into the pockets after "Ordered". The row counts them in and the plate stays olive.
+
 ## QNX judge flow
 
 1. Show the Pi, the C270 and the button. Operator page shows node level and "online".

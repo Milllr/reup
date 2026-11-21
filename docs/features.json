@@ -114,13 +114,17 @@
         "POST /api/orders/:id/approve moves awaiting_approval to approved, sends a place job, and sets approvedBy; any other state gets 409",
         "POST /ingest/placed moves the order to placed with the confirmation and eta, or to failed",
         "A spend cap (ORDER_CAP_CAD, default 150, and DAY_CAP_CAD, default 400) fails an order with a clear error before the place job is sent",
-        "When the count of record for the product rises by at least 1 after the order is placed or shipped, the order becomes received and an activity line says so",
+        "After an order is placed or shipped, a rising count of record is the delivery: Order.unitsReceived counts it in from the lowest count seen since the order was placed, and the order becomes received when all of it is in or the board is full, with an activity line that says so",
         "POST /ingest/reorder from the node creates the order with trigger node if none is open",
         "POST /api/orders (ops) starts one by hand; POST /api/orders/:id/cancel cancels any order that is not placed",
         "The hub sets snapshot.screen: shop when an order enters pricing or carting, order from awaiting_approval until 20 seconds after placed, then shelf. POST /api/demo/screen overrides it until it is set to null",
-        "Jobs not finished are listed by GET /api/jobs, oldest first"
+        "Jobs not finished are listed by GET /api/jobs, oldest first",
+        "When parts are put back and the count of record rises above the reorder point, an order that is still pricing, carting or awaiting approval is cancelled with a line that says why, its jobs are dropped, and the Shelf returns",
+        "When a put back leaves the part at or under the reorder point but the order no longer fits on the board, the order is cancelled and opened again for the right amount",
+        "Parts put back within 10 minutes of being taken come off that day's use. Parts that arrive on an order, or come back later, are counted as restocked and never change the use",
+        "A reorder call from the node is ignored when the hub has a newer count that is above the reorder point"
       ],
-      "tests": ["an order opens once at the reorder point and not again while one is open", "the full happy path through every state", "approve in the wrong state is 409", "the spend caps", "received on restock", "cart failure and place failure", "screen follows order state and the override", "node triggered reorder"],
+      "tests": ["a put back above the reorder point cancels an order that has no yes", "a delivery is counted in and done only when all of it is in, or the board is full", "a box taken while waiting does not hide the delivery", "parts put straight back are not use, parts that come back later are a restock", "an order opens once at the reorder point and not again while one is open", "the full happy path through every state", "approve in the wrong state is 409", "the spend caps", "received on restock", "cart failure and place failure", "screen follows order state and the override", "node triggered reorder"],
       "screens": ["docs/ui/order.html", "docs/ui/shop.html"], "depends": ["F8"]
     },
     {
@@ -168,9 +172,10 @@
         "The goal, as numbered steps: search for the SKU (or the phrase when the SKU is null), open the product, choose the pack option that gives the lowest total for the units, set the quantity, add to cart, open the cart, go to checkout review, read the totals, and stop without placing the order",
         "It returns {pack_label, pack_size, packs, unit_price, total, delivery_days, cart_ok}; the buyer posts POST /ingest/cart",
         "If the item is out of stock it returns cart_ok false with the reason and the buyer reports the failure",
-        "A second cart job for the same order first empties the cart"
+        "A second cart job for the same order first empties the cart",
+        "Cart and place jobs run one at a time, because they share one cart at the store. A job whose order was cancelled while it waited is skipped"
       ],
-      "tests": ["goal text for a SKU and for a phrase", "the goal forbids placing the order", "result mapping to IngestCartBody, ok and failed", "out of stock is reported as a failure"],
+      "tests": ["cart jobs run one at a time, and a cancelled order's job is skipped", "goal text for a SKU and for a phrase", "the goal forbids placing the order", "result mapping to IngestCartBody, ok and failed", "out of stock is reported as a failure"],
       "screens": ["docs/ui/shop.html", "docs/ui/order.html"], "depends": ["F15"]
     },
     {
