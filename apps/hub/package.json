@@ -9,8 +9,20 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --passWithNoTests",
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "migrate": "wrangler d1 migrations apply reup-hub --remote",
+    "migrate:local": "wrangler d1 migrations apply reup-hub --local"
   },
-  "dependencies": { "@reup/contracts": "*", "@reup/brain": "*", "hono": "^4.13.0", "zod": "^4.6.0" },
-  "devDependencies": { "typescript": "^7.0.0", "vitest": "^5.1.0", "wrangler": "^4.166.0", "@cloudflare/workers-types": "^5.20261121.0" }
+  "dependencies": {
+    "@reup/contracts": "*",
+    "@reup/brain": "*",
+    "hono": "^4.13.0",
+    "zod": "^4.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.0",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.166.0",
+    "@cloudflare/workers-types": "^5.20261121.0"
+  }
 }

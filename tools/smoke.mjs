@@ -1,6 +1,6 @@
 // Walks the demo loop against a running stack (node tools/dev.mjs) and checks each beat.
 // Usage: node tools/smoke.mjs [hub url]     exits 1 if any beat fails
-// It plays the part of the camera and the wooden button. The buyer does its own work.
+// It plays the part of the camera and the wooden button, so stop the eye first: two cameras would argue. The buyer does its own work.
 import WebSocket from 'ws';
 
 const hub = (process.argv[2] ?? process.env.HUB_URL ?? 'http://localhost:3000').replace(/\/$/, '');

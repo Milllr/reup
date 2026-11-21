@@ -18,6 +18,10 @@
     "test:py": "python -m pytest",
     "check": "npm run typecheck && npm run test && npm run test:py && npm run test:cpp",
     "dev": "npm run dev -w apps/web",
-    "test:cpp": "node edge/qnx/tests/run_cpp_tests.mjs"
+    "test:cpp": "node edge/qnx/tests/run_cpp_tests.mjs",
+    "build": "npm run build -w apps/web",
+    "stack": "node tools/dev.mjs",
+    "smoke": "node tools/smoke.mjs",
+    "deploy": "npm run build && npm run migrate -w apps/hub && npm run deploy -w apps/hub && npm run migrate -w apps/supply && npm run deploy -w apps/supply"
   }
 }
