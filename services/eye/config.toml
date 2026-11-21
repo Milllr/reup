@@ -1,0 +1,66 @@
+# The eye's settings. Every key here is optional: reup_eye/config.py holds the same defaults.
+# Run it with: python -m reup_eye --hub http://localhost:3000
+
+[eye]
+hub = "http://localhost:3000"
+port = 8089
+# The host the TV's browser uses to reach the stream. Keep localhost when the TV is plugged into this laptop:
+# a page served over https may only load local video from localhost. Use this laptop's LAN address otherwise.
+public_host = "localhost"
+analysis_hz = 10
+small_factor = 4
+stream_width = 1280
+stream_fps = 30
+stream_quality = 72
+zones_every_s = 2
+
+# Camera choice: name is tried first (Windows, needs pygrabber), then index. List them with: python -m reup_eye --list-cameras
+[cameras.board]
+name = "Elgato Facecam"
+index = 0
+width = 1920
+height = 1080
+fps = 30
+# The wooden board in this camera's frame, clockwise from the top left. Motion is watched inside it.
+board = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
+
+[cameras.aux]
+name = "C920"
+index = 1
+width = 1920
+height = 1080
+fps = 30
+board = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
+
+[pockets]
+# A pocket is full when its mean difference from the empty board is over this (grey levels, 0 to 255).
+threshold = 18.0
+inset = 0.18
+samples = 12
+
+[settle]
+still_ms = 500
+motion_pixel = 10.0
+motion_limit = 0.004
+keepalive_s = 30
+
+[open]
+# auto: YOLOE-26 for parts that have a taught example and ultralytics installed, difference blobs for the rest.
+# Or yoloe, blobs, off.
+detector = "auto"
+model = "yoloe-26s-seg.pt"
+imgsz = 960
+conf = 0.25
+hz = 4
+hold = 3
+grid = 64
+blob_pixel = 26.0
+min_area = 0.012
+
+[teach]
+zone = "z-teach"
+camera = "aux"
+quad = [[0.2, 0.15], [0.8, 0.15], [0.8, 0.85], [0.2, 0.85]]
+hold_s = 1.0
+clear_s = 2.0
+share = 0.02
