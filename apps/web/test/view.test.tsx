@@ -37,6 +37,13 @@ describe('the plate and the word for each moment', () => {
     expect(partRows(mockSnapshot('low'))[0]).toMatchObject({ low: true, meta: 'At the reorder point · 7 days of cover' });
     expect(partRows(mockSnapshot('ontheway'))[0]).toMatchObject({ low: false, onTheWay: true, meta: '8 boxes on the way · arrives Tuesday' });
     expect(partRows(mockSnapshot('order'))[0]?.meta).toBe('Ordering 8 boxes');
+    // A delivery that is partly in: the row says how much, and the Shelf still says it is on the way.
+    const arriving = mockSnapshot('ontheway');
+    const coming = arriving.orders.find((o) => o.productId === 'p-screws');
+    if (coming) coming.unitsReceived = 5;
+    arriving.counts = arriving.counts.map((c) => (c.productId === 'p-screws' ? { ...c, count: 9 } : c));
+    expect(partRows(arriving)[0]).toMatchObject({ low: false, onTheWay: true, meta: '5 of 8 in' });
+    expect(shelfMoment(arriving).word).toBe('On the way');
     // A part that was only just taught has no use yet: counted, never low, even at zero.
     const taught = mockSnapshot('shelf');
     taught.products.push({ ...taught.products[0]!, id: 'p-tape', name: 'Masking tape', zoneId: 'z-teach', capacity: null });

@@ -38,7 +38,26 @@ export class Buyer {
     }
   }
 
+  private account: Promise<void> = Promise.resolve();
+
+  /** Cart and place runs share one cart at the store, so they run one at a time, in the order they came. Price checks do not wait. */
   async handle(job: Job): Promise<void> {
+    if (job.kind === 'market' || job.kind === 'track') return this.run(job);
+    const turn = this.account.then(() => this.run(job));
+    this.account = turn.catch(() => undefined);
+    return turn;
+  }
+
+  /** False when the hub says this order is no longer waiting for this job: it was cancelled while the job sat in the queue. */
+  private async stillWanted(job: Job): Promise<boolean> {
+    if (job.kind !== 'cart' && job.kind !== 'place') return true;
+    const order = (await this.link.snapshot())?.orders.find((o) => o.id === job.orderId);
+    if (!order) return true; // the hub could not be asked: let the run go, the hub decides when the result lands
+    return job.kind === 'cart' ? order.state === 'pricing' || order.state === 'carting' : order.state === 'approved' || order.state === 'placing';
+  }
+
+  private async run(job: Job): Promise<void> {
+    if (!(await this.stillWanted(job))) return this.log(`Job ${job.id}: skipped. Its order is no longer waiting for a ${job.kind}.`);
     this.log(`Job ${job.id}: ${job.kind}`);
     try {
       if (job.kind === 'market') await this.market(job);

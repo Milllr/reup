@@ -4,7 +4,7 @@ import { TEACH_ZONE } from '../seed';
 import type { Count, IngestCountsBody, IngestNodeBody, IngestNodeResult, IngestPicksBody, IngestPicksResult, IngestReachesBody, PickEvent, Zone } from '@reup/contracts';
 import type { RoomCore } from '../core/room';
 import { dayIn } from '../core/time';
-import { afterCountChange } from '../orders';
+import { deliveryExpected, afterCountChange } from '../orders';
 
 /** For a pocket zone the node's count wins while the node is online at level 2 or more. Otherwise the eye's. */
 export function nodeIsRecord(room: RoomCore, zone: Zone): boolean {
@@ -23,13 +23,28 @@ function reachNear(room: RoomCore, zoneId: string, at: number): boolean {
 
 const same = (a: Count, b: Count) => a.count === b.count && a.level === b.level && JSON.stringify(a.pockets) === JSON.stringify(b.pockets) && a.source === b.source;
 
+/** Parts that come back within this long of being taken were borrowed, not used. */
+const PUT_BACK_MS = 10 * 60 * 1000;
+
 /** Writes one pick: use for its local day, the log, the screens, one sentence. */
 function recordPick(room: RoomCore, pick: PickEvent): void {
   const product = room.product(pick.productId);
   const zone = room.zone(pick.zoneId);
   const day = room.usageDay(pick.productId, dayIn(new Date(pick.ts), room.config.TIME_ZONE));
+  const delivery = pick.delta > 0 && deliveryExpected(room, pick.productId);
+  let putBack = 0;
   if (pick.delta < 0) day.used += -pick.delta;
-  else day.restocked += pick.delta;
+  else if (delivery) day.restocked += pick.delta;
+  else {
+    // Parts put back soon after they were taken were never used, so they come off today's use.
+    // Anything beyond that came from somewhere else and is a restock.
+    const at = Date.parse(pick.ts);
+    const recent = room.x.recentPicks.filter((r) => r.pick.productId === pick.productId && at >= r.at && at - r.at <= PUT_BACK_MS);
+    const stillOut = Math.max(0, -recent.reduce((sum, r) => sum + r.pick.delta, 0));
+    putBack = Math.min(pick.delta, stillOut, day.used);
+    day.used -= putBack;
+    day.restocked += pick.delta - putBack;
+  }
   room.deps.history.pick(pick);
   room.emit({ type: 'pick', pick });
   room.x.recentPicks.push({ pick, at: Date.parse(pick.ts) });
@@ -39,7 +54,7 @@ function recordPick(room: RoomCore, pick: PickEvent): void {
   const named = zone && zone.id !== TEACH_ZONE ? zone.name : product.name;
   const what = `${unitsText(Math.abs(pick.delta), product.unit)} of ${named.toLowerCase()}`;
   if (pick.delta < 0) room.activity('info', `${what} taken. ${pick.countAfter} left.`);
-  else room.activity('info', `${what} added. ${pick.countAfter} on the board.`);
+  else room.activity('info', `${what} ${delivery ? 'arrived' : putBack === pick.delta ? 'put back' : 'added'}. ${pick.countAfter} on the board.`);
 }
 
 /** Makes a count the count of record. A change makes exactly one pick, then the policy and the orders follow. */

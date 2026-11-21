@@ -190,6 +190,8 @@ export const Order = z.object({
   state: OrderState,
   /** Units ordered. */
   units: z.number().int().positive(),
+  /** How many of those units the cameras have seen come in since the order was placed. Absent until it is placed. */
+  unitsReceived: z.number().int().nonnegative().optional(),
   /** Listing packs bought: ceil(units / packSize). */
   packs: z.number().int().positive(),
   packSize: z.number().int().positive(),

@@ -28,6 +28,7 @@ export function reset(room: RoomCore): Snapshot {
   room.s.teach = null;
   room.s.season = { factor: 1, label: 'Normal' };
   room.x.jobs = [];
+  room.x.deliveries = {};
   room.x.screenOverride = null;
   room.x.screenUntil = {};
   room.x.shopAfter = {};

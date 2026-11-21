@@ -67,9 +67,18 @@ describe('placing the order', () => {
     expect(posts.at(-1)).toEqual({ path: '/ingest/placed', body: { jobId: 'j-3', orderId: 'o-1', ok: true, confirmation: 'OC-58213', eta: '2026-11-24T12:00:00-05:00', error: null } });
 
     const restarted = fakeAgent(() => completed(result));
-    const fresh = buyer(restarted, snapshot);
+    // The hub sends a place job only once the order is approved, and the buyer checks that before it runs one.
+    const fresh = buyer(restarted, { ...snapshot, orders: snapshot.orders.map((o) => ({ ...o, state: 'approved' })) });
     await fresh.buyer.handle(placeJob);
     expect(restarted.calls[0]?.task).toEqual({ kind: 'place', poNumber: 'RU-1042', sku: 'OC-1008-114', units: 8, packIndex: 0 });
     expect(restarted.calls[0]?.goal).toContain('exactly 8 of SKU OC-1008-114');
+
+    // An order that was cancelled while its job waited is never placed.
+    const never = fakeAgent(() => completed(result));
+    const stale = buyer(never, { ...snapshot, orders: snapshot.orders.map((o) => ({ ...o, state: 'cancelled' })) });
+    await stale.buyer.handle(placeJob);
+    expect(never.calls).toHaveLength(0);
+    expect(stale.posts).toEqual([]);
+    expect(stale.logs.join(' ')).toContain('skipped');
   });
 });
