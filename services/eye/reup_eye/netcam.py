@@ -54,6 +54,7 @@ class MjpegCapture:
         self.decode = decode
         self.sock: Optional[socket.socket] = None
         self.file = None
+        self.first: Optional[np.ndarray] = None
         last: Optional[Exception] = None
         for family, kind, proto, _name, address in addresses(parts.hostname, parts.port or 80, resolve):
             for source in sources(family, address, own):
@@ -83,6 +84,12 @@ class MjpegCapture:
             if " 200" not in status:
                 raise OSError(f"The camera answered {status.strip() or 'nothing'}.")
             self._headers()
+            # A stream that answers and then sends nothing is no camera. Say so now, so the next way in line (the
+            # laptop's own USB) is tried. Seen on the station: the Pi's node kept its port open with its camera
+            # unplugged, the eye kept choosing it, and the board had no camera until the address was cleared.
+            ok, self.first = self.read()
+            if not ok:
+                raise OSError(f"{parts.hostname}:{parts.port or 80} answers and sends no picture.")
         except Exception:
             self.release()
             raise
@@ -102,6 +109,9 @@ class MjpegCapture:
                 out[name.strip().lower().decode("latin-1")] = value.strip().decode("latin-1")
 
     def read(self) -> tuple[bool, Optional[np.ndarray]]:
+        if self.first is not None:
+            frame, self.first = self.first, None
+            return True, frame
         if self.file is None:
             return False, None
         try:

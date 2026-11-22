@@ -60,10 +60,19 @@ def test_a_stream_that_goes_quiet_is_not_waited_on_for_ever():
 
 
 def test_bytes_that_are_no_picture_and_a_camera_that_says_no_are_not_frames():
-    url, _seen, _ = serve([b"bad bytes", b"\x40" * 20])
+    url, _seen, _ = serve([b"\x40" * 20, b"bad bytes", b"\x41" * 20])
     cam = MjpegCapture(url, decode)
+    assert cam.read()[0]
     assert cam.read() == (False, None)
     cam.release()
+    # No picture at all, from the first one on, is no camera: opening it fails, so the next way in line is tried.
+    url, _seen, _ = serve([b"bad bytes"])
+    with pytest.raises(OSError, match="no picture"):
+        MjpegCapture(url, decode)
+    url, _seen, stop = serve([], hold=True)
+    with pytest.raises(OSError, match="no picture"):
+        MjpegCapture(url, decode, timeout=0.3)
+    stop.set()
     url, _seen, _ = serve([], status=b"HTTP/1.1 503 Service Unavailable")
     with pytest.raises(OSError):
         MjpegCapture(url, decode)
