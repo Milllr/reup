@@ -61,7 +61,8 @@ function part(room: RoomCore, productId: string, catalog: readonly CatalogItem[]
 /** catalog is the store's list when the caller has it. Without it a price comes from quotes alone. */
 export function analyticsResult(room: RoomCore, catalog: readonly CatalogItem[] = room.x.catalog?.items ?? []): AnalyticsResult {
   const since = room.nowMs() - A_DAY;
-  const onBoard = room.s.products.filter((p) => p.zoneId != null);
+  // Every item that is counted: on a zone a camera sees, or by hand. A product that lost its zone and has no count is history.
+  const onBoard = room.s.products.filter((p) => p.zoneId != null || room.count(p.id) != null);
   return {
     now: room.iso(),
     today: room.today(),

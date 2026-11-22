@@ -1,4 +1,4 @@
-import { ApiError, Catalog, Count, Product, ProductAddBody, ROUTES, ServerMessage, Snapshot } from '@reup/contracts';
+import { AnalyticsResult, ApiError, Catalog, Count, Product, ProductAddBody, ROUTES, ServerMessage, Snapshot } from '@reup/contracts';
 import { describe, expect, it } from 'vitest';
 import catalogMock from '../../../../contracts/mocks/catalog.json';
 import { APPROVE, count, DEVICE, OPS, rig } from '../helpers';
@@ -32,6 +32,12 @@ describe('items in the dashboard', () => {
     expect(policy?.reorderPoint).toBeLessThan(6);
     expect(r.room.x.leadDays[product.id]).toBe(catalogMock.items.find((i) => i.sku === 'OC-3473')?.leadDays);
     expect(r.room.s.activity.at(-1)?.text).toBe("Blue painter's tape 1 in added. Counted by hand.");
+    // It is on the dashboard like any other item: 30 days behind it, 60 ahead, with the store's price.
+    const analytics = AnalyticsResult.parse(await (await r.call('GET', '/api/analytics')).json());
+    const part = analytics.parts.find((p) => p.productId === product.id);
+    expect(part).toMatchObject({ name: tape.name, count: 6, capacity: 6 });
+    expect(part?.unitPrice).toBeGreaterThan(0);
+    expect(part?.projection.length).toBe(60);
     expect(r.of('product').at(-1)?.product.id).toBe(product.id);
     for (const m of r.sent) ServerMessage.parse(m.msg);
     // The same name twice is refused, and so is a caller with no key or the camera's token.
