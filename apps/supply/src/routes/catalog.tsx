@@ -62,6 +62,11 @@ catalog.get('/p/:sku', async (c) => {
   const item = await c.get('shop').item(c.req.param('sku'));
   if (!item) return page(c, 'Not found', <><h1>Item not found</h1><p>There is no item with that SKU. <a href="/search">See all items</a>.</p></>, { status: 404 });
   const error = c.req.query('error');
+  // A link to a product can carry the pack and the quantity, so "2 boxes of these" is one link: /p/OC-7009?pack=0&qty=2
+  const asked = Number(c.req.query('pack') ?? '0');
+  const pick = Number.isInteger(asked) && item.packs[asked] ? asked : 0;
+  const count = Number(c.req.query('qty') ?? '1');
+  const qty = Number.isInteger(count) && count >= 1 && count <= 999 ? count : 1;
   return page(c, item.name, (
     <>
       <p class="muted"><a href="/">Home</a> / <a href={`/search?q=${encodeURIComponent(item.category)}`}>{item.category}</a></p>
@@ -74,11 +79,11 @@ catalog.get('/p/:sku', async (c) => {
           <fieldset>
             <legend>Pack size</legend>
             {item.packs.map((pack, i) => (
-              <label><input type="radio" name="pack" value={String(i)} checked={i === 0} />{` ${pack.label}, ${money(pack.price)}`}</label>
+              <label><input type="radio" name="pack" value={String(i)} checked={i === pick} />{` ${pack.label}, ${money(pack.price)}`}</label>
             ))}
           </fieldset>
           <label for="qty">Quantity</label>
-          <input type="number" id="qty" name="qty" min="1" max="999" step="1" value="1" required />
+          <input type="number" id="qty" name="qty" min="1" max="999" step="1" value={String(qty)} required />
           <div><button type="submit">Add to cart</button></div>
         </form>
       ) : (

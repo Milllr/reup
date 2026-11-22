@@ -4,7 +4,7 @@ import catalog from '../../../../contracts/mocks/catalog.json';
 import snapshot from '../../../../contracts/mocks/snapshot.json';
 import { planCart } from '../../src/cart';
 import { Buyer, PRICE_CHECK_ONLY } from '../../src/jobs';
-import { parseDeliveryDate, placeCheck, placeGoal, toPlacedBody, type Basket } from '../../src/place';
+import { basketLink, parseDeliveryDate, placeCheck, placeGoal, placeParams, toPlacedBody, type Basket } from '../../src/place';
 import { cartJob, completed, config, deps, fakeAgent, offcut, placeJob, retailerA } from '../helpers';
 
 const items = catalog.items as CatalogItem[];
@@ -38,6 +38,21 @@ describe('placing the order', () => {
     expect(goal).toContain('It must hold exactly 8 of SKU OC-1008-114 in the pack size "Box of 100" and nothing else');
     expect(goal).toContain('press "Place order" only once');
     expect(placeGoal(placeJob, null, profile)).toContain('If it is empty, stop');
+  });
+
+  it('starts on sign in, which leads straight to the saved cart at checkout, and rebuilds the cart only when it is not what was approved', () => {
+    const fresh = { profile: false, email: 'shop@reup.test', password: 'pw-1' };
+    const params = placeParams(offcut, placeJob, basket, fresh, '');
+    expect(params.url).toBe('https://offcut.test/signin?next=/checkout');
+    expect(basketLink(offcut, basket)).toBe('https://offcut.test/p/OC-1008-114?pack=0&qty=8');
+    expect(params.goal).toContain('1. You start on the sign in page. Sign in with the email shop@reup.test and the password pw-1.');
+    expect(params.goal).toContain('If it does, go on to step 3. Only if it does not, or the store says the cart is empty: open the cart, press "Empty cart" if it has anything in it, open https://offcut.test/p/OC-1008-114?pack=0&qty=8, press "Add to cart", and press "Checkout".');
+    expect(params.goal).toContain('3. On the page titled "Review your order", type RU-1042 into the field labelled "PO number".');
+    // A saved profile is already signed in, and never gets a password.
+    const saved = placeParams(offcut, placeJob, basket, profile, 'prof-1');
+    expect(saved.goal).toContain('1. You should already be signed in.');
+    expect(saved.goal).not.toContain('password');
+    expect(basketLink(offcut, null)).toBeNull();
   });
 
   it('treats a missing or made up confirmation as a failure, never a guess', () => {

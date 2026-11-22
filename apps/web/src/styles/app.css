@@ -60,7 +60,7 @@
 
 
 /* ---------- saying yes on the Order screen: one button, big enough to find from across a table ---------- */
-.btn.yes { font-size: 40px; min-height: 104px; padding: 20px 64px; letter-spacing: -0.02em; }
+.btn.yes { font-size: 40px; min-height: 104px; padding: 20px 44px; letter-spacing: -0.02em; white-space: nowrap; }
 
 /* ---------- the menu: three bars in the top right corner of every page ---------- */
 /* On the board it sits inside the stage and scales with it. On a page that scrolls it is fixed to the window. */

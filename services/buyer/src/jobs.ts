@@ -73,16 +73,36 @@ export class Buyer {
     }
   }
 
-  /** One run per retailer, all at once. One site failing never stops the others. */
+  private prices: Promise<void> = Promise.resolve();
+
+  /** False when nothing is being bought for this part any more: the price would be for an order that is gone, and its browser is needed. */
+  private async priceWanted(job: Extract<Job, { kind: 'market' }>): Promise<boolean> {
+    const snapshot = await this.link.snapshot();
+    if (!snapshot) return true; // the hub could not be asked: check the price anyway
+    return snapshot.orders.some((o) => o.productId === job.productId && (o.state === 'pricing' || o.state === 'carting' || o.state === 'awaiting_approval'));
+  }
+
+  /**
+   * One run per retailer. Live price checks go one at a time, across every job: the TinyFish account runs two browsers
+   * at once, and with two price checks holding both, the cart run waited 7 minutes for one. This way one browser is
+   * always free for the cart or the order. A recording needs no browser and plays at once. One site failing never stops the others.
+   */
   private async market(job: Extract<Job, { kind: 'market' }>): Promise<void> {
     let posted = 0;
-    await Promise.allSettled(job.supplierIds.map(async (id) => {
+    const check = async (id: string, live: boolean) => {
       const supplier = await this.supplier(id);
       if (!supplier || supplier.kind !== 'market') return this.log(`Market job ${job.id}: no market supplier ${id}.`);
+      if (live && !(await this.priceWanted(job))) return this.log(`Market job ${job.id}: skipped ${supplier.name}. Nothing is being bought for that part any more.`);
       const out = await runAgent(this.deps, marketSpec(supplier, job));
       const quote = toQuote(`q-${this.deps.id()}`, job, supplier, out.run.id, out.ok, out.result, this.deps.iso(this.deps.now()));
       if (await this.link.post('/ingest/quotes', { jobId: job.id, quotes: [quote] })) posted += 1;
       this.log(`  ${supplier.name}: ${quote.ok ? `$${quote.unitPrice} a unit` : (out.error ?? 'no price')}${out.replayed ? ' (replay)' : ''}`);
+    };
+    await Promise.allSettled(job.supplierIds.map((id) => {
+      if (job.replay === true) return check(id, false);
+      const turn = this.prices.then(() => check(id, true));
+      this.prices = turn.catch(() => undefined);
+      return turn;
     }));
     if (posted === 0) await this.link.post('/ingest/quotes', { jobId: job.id, quotes: [] });
   }

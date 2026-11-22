@@ -30,6 +30,8 @@ At startup the buyer prints whether each secret is set. It never prints a value.
 * Retailers are for prices only. A cart or a place job for a supplier that is not kind `account` is refused and logged.
 * A place job runs only when the hub sends one, and the hub sends one only after a person said yes.
 * A run that ends without a confirmation number is a failure, never a guess.
+* Live price checks take turns, one browser for all of them. The TinyFish account runs two browsers at once, and the other one is kept for the cart or the order. A price check for a part nobody is buying any more is skipped.
+* The cart run starts on the product's own page, with the pack and the quantity in the link. The place run starts on the store's sign in page: the store keeps the cart with the account, so the cart the cart run filled is at checkout after the sign in. It is rebuilt only when it is not what was approved.
 * Every good run is saved to `recordings/<kind>-<supplier>.json` (gitignored). A failed price check or cart falls back to the last good recording, marked Replay on the screen. A failed place run does not: only the operator's replay switch plays a recording of placing an order.
 * `output_schema` uses only the keywords TinyFish accepts (no `description`, no `additionalProperties`, `nullable: true` for nulls). A test checks every schema, because TinyFish answers 400 before the run starts.
 

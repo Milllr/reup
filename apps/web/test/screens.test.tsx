@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import history from '../../../contracts/mocks/history.json';
 import type { Reply } from '../src/lib/hub';
 import { Menu, pageHref } from '../src/screens/menu';
-import { ApproveHere, howToSayYes, Order as OrderScreen } from '../src/screens/order';
+import { APPROVE, ApproveHere, howToSayYes, Order as OrderScreen } from '../src/screens/order';
 import { Controls, ZoneEditor } from '../src/screens/ops';
 import { ApproveBand, NO_KEY, TeachForm } from '../src/screens/phone';
 import { NO_FEED, NO_PARTS, Shelf, WATCHING } from '../src/screens/shelf';
@@ -150,8 +150,9 @@ describe('Order', () => {
     expect(screen.getByText('Tuesday')).toBeTruthy();
     // The sample shelf node is connected, and the test page is on localhost so it holds the local key: the plate has one button, Approve.
     expect(screen.getByText('Press the wooden button to place the order.')).toBeTruthy();
-    expect(screen.getByText('Or click Approve, press Enter, or say yes from a phone. Nothing is bought until then.')).toBeTruthy();
-    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Approve']);
+    expect(screen.getByText('Or click Approve below, press Enter, or say yes from a phone. Nothing is bought until then.')).toBeTruthy();
+    expect(APPROVE).toBe('Approve to place order');
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([APPROVE]);
     expect(screen.getByText('8 boxes fills the board and arrives before it runs out. Retailer A is $1.20 more per box.')).toBeTruthy();
     expect(screen.getByText('Waiting for a yes · PO RU-1042 · spend cap $150 an order')).toBeTruthy();
     expect(container.querySelector('.frame.waiting')).not.toBeNull();
@@ -369,7 +370,7 @@ describe('saying yes and naming a part on the TV itself', () => {
     const order = s.orders[0] as Order;
     const send = vi.fn(async () => ok(order));
     const { unmount, container } = render(<ApproveHere order={order} k="key-1" send={send as never} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+    fireEvent.click(screen.getByRole('button', { name: APPROVE }));
     await waitFor(() => expect(send).toHaveBeenCalledWith('POST', `/api/orders/${order.id}/approve`, { by: 'keyboard' }, 'key-1'));
     expect(send).toHaveBeenCalledTimes(1);
     await waitFor(() => {
@@ -381,7 +382,7 @@ describe('saying yes and naming a part on the TV itself', () => {
     fireEvent.keyDown(field, { key: 'Enter' });
     fireEvent.keyDown(window, { key: 'a' });
     fireEvent.keyDown(window, { key: 'Enter', repeat: true });
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Approve' }), { key: 'Enter' });
+    fireEvent.keyDown(screen.getByRole('button', { name: APPROVE }), { key: 'Enter' });
     expect(send).toHaveBeenCalledTimes(2);
     field.remove();
     unmount();
@@ -397,7 +398,7 @@ describe('saying yes and naming a part on the TV itself', () => {
     let answer: (r: Reply<Order>) => void = () => undefined;
     const send = vi.fn(() => new Promise<Reply<Order>>((resolve) => { answer = resolve; }));
     render(<ApproveHere order={order} k="key-1" send={send as never} />);
-    const button = screen.getByRole('button', { name: 'Approve' }) as HTMLButtonElement;
+    const button = screen.getByRole('button', { name: APPROVE }) as HTMLButtonElement;
     fireEvent.click(button);
     await waitFor(() => expect(button.disabled).toBe(true));
     fireEvent.click(button);
@@ -417,8 +418,9 @@ describe('saying yes and naming a part on the TV itself', () => {
 
   it('the line names only what can say yes right now', () => {
     expect(howToSayYes(true, false).line).toBe('Press the wooden button to place the order.');
-    expect(howToSayYes(true, true)).toEqual({ line: 'Press the wooden button to place the order.', also: 'Or click Approve, press Enter, or say yes from a phone. Nothing is bought until then.' });
-    expect(howToSayYes(false, true)).toEqual({ line: 'Approve to place the order.', also: 'Click it or press Enter. A phone can say yes too. Nothing is bought until then.' });
+    expect(howToSayYes(true, true)).toEqual({ line: 'Press the wooden button to place the order.', also: 'Or click Approve below, press Enter, or say yes from a phone. Nothing is bought until then.' });
+    // With a key and no shelf node the button is the line: nothing is written above it.
+    expect(howToSayYes(false, true)).toEqual({ line: null, also: 'Or press Enter. A phone can say yes too. Nothing is bought until then.' });
     expect(howToSayYes(false, false)).toEqual({ line: 'Say yes from a phone to place the order.', also: 'Nothing is bought until then.' });
   });
 });

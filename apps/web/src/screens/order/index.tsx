@@ -41,11 +41,15 @@ export function orderTag(o: OrderT, s: Snapshot): string {
  * How a person says yes, as one line and one smaller line. It names only what can say yes right now: the wooden
  * button when the shelf node is connected, the Approve button on a screen that holds a key, a phone otherwise.
  */
-export function howToSayYes(nodeOnline: boolean, hasKey: boolean): { line: string; also: string } {
-  if (nodeOnline) return { line: 'Press the wooden button to place the order.', also: hasKey ? 'Or click Approve, press Enter, or say yes from a phone. Nothing is bought until then.' : 'Or say yes from a phone. Nothing is bought until then.' };
-  if (hasKey) return { line: 'Approve to place the order.', also: 'Click it or press Enter. A phone can say yes too. Nothing is bought until then.' };
+export function howToSayYes(nodeOnline: boolean, hasKey: boolean): { line: string | null; also: string } {
+  if (nodeOnline) return { line: 'Press the wooden button to place the order.', also: hasKey ? 'Or click Approve below, press Enter, or say yes from a phone. Nothing is bought until then.' : 'Or say yes from a phone. Nothing is bought until then.' };
+  // On a screen that holds a key the Approve button says it all, so there is no line above it.
+  if (hasKey) return { line: null, also: 'Or press Enter. A phone can say yes too. Nothing is bought until then.' };
   return { line: 'Say yes from a phone to place the order.', also: 'Nothing is bought until then.' };
 }
+
+/** The words on the button. Miller's wording. */
+export const APPROVE = 'Approve to place order';
 
 /**
  * Saying yes on this screen: one Approve button to click, and Enter does the same. Only a screen that holds a key
@@ -75,7 +79,7 @@ export function ApproveHere({ order, k = token('k') ?? token('ops'), send = call
   if (!k) return null;
   return (
     <div className="stack" style={{ gap: 18, alignItems: 'flex-start' }}>
-      <button className="btn yes" type="button" disabled={busy} onClick={() => void approve()}>Approve</button>
+      <button className="btn yes" type="button" disabled={busy} onClick={() => void approve()}>{APPROVE}</button>
       {error ? <Tag tone="alert" style={{ whiteSpace: 'normal', borderRadius: 14, lineHeight: 1.3 }}>{error}</Tag> : null}
     </div>
   );
@@ -120,7 +124,7 @@ export function Order({ live }: { live: LiveState }) {
           <p className="copy small" style={{ maxWidth: '21em' }}>{[order.reason, order.marketNote].filter(Boolean).join(' ')}</p>
         </div>
         <div className="abs stack" style={{ left: 1280, top: 420, width: 580, gap: 22 }}>
-          <p className="figure mid">{waiting ? yes.line : order.state === 'cancelled' ? 'Nothing was bought.' : 'Getting the cart ready.'}</p>
+          {waiting && yes.line == null ? null : <p className="figure mid">{waiting ? yes.line : order.state === 'cancelled' ? 'Nothing was bought.' : 'Getting the cart ready.'}</p>}
           {waiting ? <ApproveHere key={order.id} order={order} /> : null}
           {waiting ? <p className="copy small" style={{ maxWidth: '19em' }}>{yes.also}</p> : null}
         </div>

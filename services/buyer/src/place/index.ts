@@ -1,7 +1,7 @@
 // Place: only ever run when the hub sends the job, and the hub sends it only after a person said yes.
 import type { IngestPlacedBody, Job, Supplier } from '@reup/contracts';
 import type { AgentParams } from '../agent';
-import { signInStep, type CartPlan, type SignIn } from '../cart';
+import { COOKIE_NOTE, signInStep, type CartPlan, type SignIn } from '../cart';
 import type { RunSpec } from '../runner';
 
 export type PlaceJob = Extract<Job, { kind: 'place' }>;
@@ -25,30 +25,45 @@ export interface Basket {
   plan: CartPlan;
 }
 
-export function placeGoal(job: PlaceJob, basket: Basket | null, signIn: SignIn): string {
+/** The product page that puts the basket back in a cart, for the rare time the saved cart is not what was approved. */
+export function basketLink(supplier: Supplier, basket: Basket | null): string | null {
+  const plan = basket?.plan;
+  if (!plan?.item || plan.packIndex == null) return null;
+  return `${supplier.baseUrl.replace(/\/$/, '')}/p/${encodeURIComponent(plan.item.sku)}?pack=${plan.packIndex}&qty=${plan.packs}`;
+}
+
+/**
+ * The store keeps the cart with the account, so the cart the cart run filled is at checkout as soon as this run signs
+ * in: sign in, check the cart, PO number, place. It is rebuilt only when it is not what was approved.
+ */
+export function placeGoal(job: PlaceJob, basket: Basket | null, signIn: SignIn, link: string | null = null): string {
   const want = basket ? `${basket.plan.packs} of ${basket.sku ? `SKU ${basket.sku}` : `"${basket.phrase}"`}${basket.plan.packLabel ? ` in the pack size "${basket.plan.packLabel}"` : ''}` : null;
+  const first = signIn.password !== ''
+    ? `You start on the sign in page. Sign in with the email ${signIn.email} and the password ${signIn.password}.`
+    : 'You should already be signed in. If the store asks you to sign in, stop and return confirmation null with the reason "The store asked for a sign in."';
+  const rebuild = `open the cart, press "Empty cart" if it has anything in it, ${link ? `open ${link}` : 'find that product, choose that pack size and quantity'}, press "Add to cart", and press "Checkout"`;
   return [
-    'Place an order that a person has already approved. The cart should be ready.',
-    '1. If a cookie notice covers the page, accept it.',
+    'Place an order that a person has already approved. The cart was filled earlier and is saved with the account.',
+    COOKIE_NOTE,
+    `1. ${first}`,
     want
-      ? `2. Open the cart. It must hold exactly ${want} and nothing else. If it does not, press "Empty cart", find that product, add it in that quantity, and open the cart again.`
-      : '2. Open the cart. If it is empty, stop and return confirmation null with the reason "The cart was empty."',
-    '3. Press "Checkout".',
-    `4. ${signInStep(signIn).replace(/cart_ok false/g, 'confirmation null')}`,
-    `5. On the page titled "Review your order", type ${job.poNumber} into the field labelled "PO number".`,
-    '6. Payment must read "Bill to account". Never enter a card number. If the page asks for one, stop and return confirmation null with the reason.',
-    '7. Press "Place order" once.',
+      ? `2. The page titled "Review your order" opens with the saved cart. It must hold exactly ${want} and nothing else. If it does, go on to step 3. Only if it does not, or the store says the cart is empty: ${rebuild}.`
+      : '2. The page titled "Review your order" opens with the saved cart. If it is empty, stop and return confirmation null with the reason "The cart was empty."',
+    `3. On the page titled "Review your order", type ${job.poNumber} into the field labelled "PO number".`,
+    '4. Payment must read "Bill to account". Never enter a card number. If the page asks for one, stop and return confirmation null with the reason.',
+    '5. Press "Place order" once.',
     // The first real run read the page 3 seconds after the press, before the order page had loaded, and reported no number for an order the store had taken.
-    '8. Wait for the next page to finish loading. It is headed "Order" and a number, and says "Thank you. Your order is placed." If the page still says "Review your order" and shows no error, wait 5 seconds and look again, up to 3 times. Do not press "Place order" again.',
-    '9. From that page return confirmation (the number beside "Confirmation number", exactly as shown, for example OC-58213), delivery_date (the date beside "Delivery date", exactly as shown) and reason (null).',
+    '6. Wait for the next page to finish loading. It is headed "Order" and a number, and says "Thank you. Your order is placed." If the page still says "Review your order" and shows no error, wait 5 seconds and look again, up to 3 times. Do not press "Place order" again.',
+    '7. From that page return confirmation (the number beside "Confirmation number", exactly as shown, for example OC-58213), delivery_date (the date beside "Delivery date", exactly as shown) and reason (null).',
     'Rules: press "Place order" only once. If after waiting no confirmation number appears, return confirmation null and the reason in one plain sentence. Never guess a number.',
   ].join('\n');
 }
 
 export function placeParams(supplier: Supplier, job: PlaceJob, basket: Basket | null, signIn: SignIn, profileId: string): AgentParams {
   return {
-    url: `${supplier.baseUrl.replace(/\/$/, '')}/cart`,
-    goal: placeGoal(job, basket, signIn),
+    // Signing in sends the browser straight on to checkout. A profile that is already signed in is sent there at once.
+    url: `${supplier.baseUrl.replace(/\/$/, '')}/signin?next=/checkout`,
+    goal: placeGoal(job, basket, signIn, basketLink(supplier, basket)),
     outputSchema: PLACE_SCHEMA,
     browserProfile: 'lite',
     proxyCountry: null,

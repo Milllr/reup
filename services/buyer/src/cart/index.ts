@@ -52,21 +52,41 @@ export function signInStep(s: SignIn): string {
   return 'If the store asks you to sign in, stop and return cart_ok false with the reason "The store asked for a sign in."';
 }
 
+/**
+ * Where the cart run starts. When the store's catalog has the SKU it is the product's own page, with the pack and the
+ * quantity in the link, so the agent does not search, choose or type. Otherwise it is the search results.
+ */
+export function cartStart(supplier: Supplier, job: CartJob, plan: CartPlan): string {
+  const base = supplier.baseUrl.replace(/\/$/, '');
+  if (plan.item && plan.packIndex != null) return `${base}/p/${encodeURIComponent(plan.item.sku)}?pack=${plan.packIndex}&qty=${plan.packs}`;
+  return `${base}/search?q=${encodeURIComponent(job.sku ?? job.searchPhrase)}`;
+}
+
+/** A line every goal at the store carries: the notice is a bar, not an overlay, and accepting it costs a step. */
+export const COOKIE_NOTE = 'A yellow cookie notice may sit at the top of the page. Leave it alone: it covers nothing.';
+
 export function cartGoal(job: CartJob, plan: CartPlan, signIn: SignIn): string {
-  const find = job.sku ? `Search the store for the SKU ${job.sku} and open that product.` : `Search the store for "${job.searchPhrase}" and open the product that matches best.`;
-  const pack = plan.packLabel ? `Choose the pack size "${plan.packLabel}" and set the quantity to ${plan.packs}.` : `Choose the pack size that gives the lowest total for ${job.units} units, and set the quantity to match.`;
+  const steps: string[] = [];
+  // A saved profile is already signed in, and the account's cart may still hold what an earlier run left.
+  // A fresh browser starts with an empty cart, and the cart it brings to the sign in replaces the saved one.
+  if (signIn.profile) steps.push('Open the cart. If it has anything in it, press "Empty cart". Then go back to the page you started on.');
+  if (plan.item && plan.packIndex != null && plan.packLabel) {
+    steps.push(`You start on the product page for SKU ${plan.item.sku}. If it says "Out of stock", stop and return cart_ok false with the reason "The item is out of stock."`);
+    steps.push(`The pack size "${plan.packLabel}" should already be chosen and the quantity should already read ${plan.packs}. Change them only if they are not.`);
+  } else {
+    steps.push(job.sku ? `You start on the search results for the SKU ${job.sku}. Open that product.` : `You start on the search results for "${job.searchPhrase}". Open the product that matches best.`);
+    steps.push('If the product page says "Out of stock", stop and return cart_ok false with the reason "The item is out of stock."');
+    steps.push(plan.packLabel ? `Choose the pack size "${plan.packLabel}" and set the quantity to ${plan.packs}.` : `Choose the pack size that gives the lowest total for ${job.units} units, and set the quantity to match.`);
+  }
+  steps.push('Press "Add to cart" once. The cart page opens with the item in it.');
+  steps.push(`On the cart page press "Checkout".${signIn.profile ? '' : ' Never press "Empty cart".'}`);
+  steps.push(`${signInStep(signIn)} The cart is kept through the sign in.`);
+  steps.push('On the page titled "Review your order", read the pack, the quantity, the price, the total and the delivery date.');
+  steps.push('Stop here. Do not type a PO number. Do not press "Place order". Return what you read with cart_ok true:');
   return [
     'Fill a cart at this store and stop at the order review page. Do not place the order.',
-    '1. If a cookie notice covers the page, accept it.',
-    '2. Open the cart. If it has anything in it, press "Empty cart".',
-    `3. ${find}`,
-    '4. If the product page says "Out of stock", stop and return cart_ok false with the reason "The item is out of stock."',
-    `5. ${pack}`,
-    '6. Press "Add to cart".',
-    '7. Open the cart and press "Checkout".',
-    `8. ${signInStep(signIn)}`,
-    '9. On the page titled "Review your order", read the pack, the quantity, the price, the total and the delivery date.',
-    '10. Stop here. Do not type a PO number. Do not press "Place order". Return what you read with cart_ok true:',
+    COOKIE_NOTE,
+    ...steps.map((step, i) => `${i + 1}. ${step}`),
     '   pack_label: the pack size as shown. pack_size: units in one pack, 1 for a single box. packs: the quantity in the cart.',
     '   unit_price: the price of one pack. total: the order total with tax and shipping, as a number.',
     '   delivery_date: the delivery date exactly as shown. delivery_days: business days until delivery if the page says, else null.',
@@ -76,12 +96,13 @@ export function cartGoal(job: CartJob, plan: CartPlan, signIn: SignIn): string {
 
 export function cartParams(supplier: Supplier, job: CartJob, plan: CartPlan, signIn: SignIn, profileId: string): AgentParams {
   return {
-    url: `${supplier.baseUrl.replace(/\/$/, '')}/cart`,
+    url: cartStart(supplier, job, plan),
     goal: cartGoal(job, plan, signIn),
     outputSchema: CART_SCHEMA,
     browserProfile: 'lite',
     proxyCountry: null,
-    maxDurationSeconds: 240,
+    // About 8 steps when the link carries the pack and the quantity. A run that is still going after this is lost, and the recording answers.
+    maxDurationSeconds: 150,
     profileId: profileId !== '' ? profileId : null,
     task: { kind: 'cart', sku: job.sku, phrase: job.searchPhrase, units: job.units, packIndex: plan.packIndex },
   };

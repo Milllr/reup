@@ -54,6 +54,9 @@ export interface StoreOrder extends Totals {
 interface OrderRow { confirmation: string; po_number: string; lines: string; subtotal: number; tax: number; shipping: number; total: number; status: OrderStatus; eta: string; created_at: string }
 const toOrder = (r: OrderRow): StoreOrder => ({ confirmation: r.confirmation, poNumber: r.po_number, lines: JSON.parse(r.lines) as CartLine[], subtotal: r.subtotal, tax: r.tax, shipping: r.shipping, total: r.total, status: r.status, eta: r.eta, createdAt: r.created_at });
 
+/** The key of the account's one cart in cart_lines. A browser's own cart is keyed by its session id, which is a UUID. */
+export const ACCOUNT_CART = 'account';
+
 export class ShopError extends Error {}
 
 const norm = (s: string) => s.toLowerCase().replace(/[,;]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -144,6 +147,12 @@ export class Shop {
   async signIn(sessionId: string, email: string, password: string): Promise<boolean> {
     if (email.trim().toLowerCase() !== this.config.ACCOUNT_EMAIL.toLowerCase() || password !== this.config.ACCOUNT_PASSWORD) return false;
     await this.sql.run('UPDATE sessions SET signed_in = 1 WHERE id = ?', sessionId);
+    // The cart follows the account. What this browser put in its cart before signing in becomes the account's cart,
+    // in place of what was saved there. With nothing brought along, the saved cart is the one shown.
+    if ((await this.sql.first<{ n: number }>('SELECT COUNT(*) AS n FROM cart_lines WHERE session_id = ?', sessionId))?.n) {
+      await this.sql.run('DELETE FROM cart_lines WHERE session_id = ?', ACCOUNT_CART);
+      await this.sql.run('UPDATE cart_lines SET session_id = ? WHERE session_id = ?', ACCOUNT_CART, sessionId);
+    }
     return true;
   }
 
@@ -159,8 +168,17 @@ export class Shop {
 
   // ---------- cart ----------
 
+  /**
+   * Whose cart a browser sees. Signed in, it is the account's one cart, so a cart filled in one browser is there in
+   * the next one after signing in. Signed out, it is that browser's own.
+   */
+  private async cartOf(sessionId: string): Promise<string> {
+    const row = await this.sql.first<{ signed_in: number }>('SELECT signed_in FROM sessions WHERE id = ?', sessionId);
+    return row?.signed_in === 1 ? ACCOUNT_CART : sessionId;
+  }
+
   async cart(sessionId: string): Promise<CartLine[]> {
-    const rows = await this.sql.all<ItemRow & { pack_index: number; qty: number }>('SELECT i.*, c.pack_index, c.qty FROM cart_lines c JOIN items i ON i.sku = c.sku WHERE c.session_id = ? ORDER BY i.position, c.pack_index', sessionId);
+    const rows = await this.sql.all<ItemRow & { pack_index: number; qty: number }>('SELECT i.*, c.pack_index, c.qty FROM cart_lines c JOIN items i ON i.sku = c.sku WHERE c.session_id = ? ORDER BY i.position, c.pack_index', await this.cartOf(sessionId));
     return rows.flatMap((r) => {
       const item = toItem(r);
       const pack = item.packs[r.pack_index];
@@ -169,7 +187,7 @@ export class Shop {
   }
 
   async cartCount(sessionId: string): Promise<number> {
-    return (await this.sql.first<{ n: number | null }>('SELECT SUM(qty) AS n FROM cart_lines WHERE session_id = ?', sessionId))?.n ?? 0;
+    return (await this.sql.first<{ n: number | null }>('SELECT SUM(qty) AS n FROM cart_lines WHERE session_id = ?', await this.cartOf(sessionId)))?.n ?? 0;
   }
 
   async add(sessionId: string, sku: string, packIndex: number, qty: number): Promise<void> {
@@ -178,20 +196,20 @@ export class Shop {
     if (!item.inStock) throw new ShopError(`${item.name} is out of stock.`);
     if (!item.packs[packIndex]) throw new ShopError('Choose a pack size.');
     if (!Number.isInteger(qty) || qty < 1 || qty > 999) throw new ShopError('Quantity must be a whole number from 1 to 999.');
-    await this.sql.run('INSERT INTO cart_lines (session_id, sku, pack_index, qty) VALUES (?, ?, ?, ?) ON CONFLICT (session_id, sku, pack_index) DO UPDATE SET qty = MIN(999, qty + excluded.qty)', sessionId, item.sku, packIndex, qty);
+    await this.sql.run('INSERT INTO cart_lines (session_id, sku, pack_index, qty) VALUES (?, ?, ?, ?) ON CONFLICT (session_id, sku, pack_index) DO UPDATE SET qty = MIN(999, qty + excluded.qty)', await this.cartOf(sessionId), item.sku, packIndex, qty);
   }
 
   async setQty(sessionId: string, sku: string, packIndex: number, qty: number): Promise<void> {
     if (!Number.isInteger(qty) || qty < 1) return this.remove(sessionId, sku, packIndex);
-    await this.sql.run('UPDATE cart_lines SET qty = ? WHERE session_id = ? AND sku = ? AND pack_index = ?', Math.min(999, qty), sessionId, sku, packIndex);
+    await this.sql.run('UPDATE cart_lines SET qty = ? WHERE session_id = ? AND sku = ? AND pack_index = ?', Math.min(999, qty), await this.cartOf(sessionId), sku, packIndex);
   }
 
   async remove(sessionId: string, sku: string, packIndex: number): Promise<void> {
-    await this.sql.run('DELETE FROM cart_lines WHERE session_id = ? AND sku = ? AND pack_index = ?', sessionId, sku, packIndex);
+    await this.sql.run('DELETE FROM cart_lines WHERE session_id = ? AND sku = ? AND pack_index = ?', await this.cartOf(sessionId), sku, packIndex);
   }
 
   async empty(sessionId: string): Promise<void> {
-    await this.sql.run('DELETE FROM cart_lines WHERE session_id = ?', sessionId);
+    await this.sql.run('DELETE FROM cart_lines WHERE session_id = ?', await this.cartOf(sessionId));
   }
 
   /** The day everything in the cart can arrive: the slowest line decides. */

@@ -131,6 +131,54 @@ describe('account, cart, checkout and orders', () => {
     expect(ok.text).toContain('Review your order');
   });
 
+  it('the cart follows the account: filled in one browser, it is there in the next one after signing in', async () => {
+    const r = rig();
+    const account = { email: 'shop@reup.test', password: 'dev-shop-password', next: '/checkout' };
+    // The cart run: a fresh browser fills a cart, signs in at checkout and reads the review page.
+    const first = r.browser();
+    await first.post('/cart', { sku: 'OC-7009', pack: '0', qty: '2' });
+    expect((await first.submit('/signin', account)).text).toContain('Review your order');
+    // The place run, minutes later, in another fresh browser: sign in, and the same cart is at checkout.
+    const second = r.browser();
+    expect((await second.get('/cart')).text).toContain('Your cart is empty');
+    const review = await second.submit('/signin', account);
+    expect(review.path).toBe('/checkout');
+    expect(review.text).toContain('Review your order');
+    expect(review.text).toContain('OC-7009');
+    const done = await second.submit('/checkout', { po: 'RU-2001' });
+    expect(done.text).toContain('Your order is placed');
+    // Placing emptied the account's cart, in every signed in browser.
+    expect((await first.get('/cart')).text).toContain('Your cart is empty');
+  });
+
+  it('a cart brought to sign in replaces the saved one, so a cart left by an order nobody approved is never bought', async () => {
+    const r = rig();
+    const account = { email: 'shop@reup.test', password: 'dev-shop-password', next: '/cart' };
+    const old = r.browser();
+    await old.post('/cart', { sku: 'OC-1008-114', pack: '0', qty: '8' });
+    await old.submit('/signin', account);
+    const next = r.browser();
+    await next.post('/cart', { sku: 'OC-7009', pack: '0', qty: '1' });
+    const cart = (await next.submit('/signin', account)).text;
+    expect(cart).toContain('OC-7009');
+    expect(cart).not.toContain('OC-1008-114');
+    expect(cart).toContain('Cart (1)');
+    // Signed out, a browser is back to its own cart, which is empty.
+    expect((await next.submit('/signout')).text).toContain('Cart (0)');
+  });
+
+  it('a product link can carry the pack and the quantity', async () => {
+    const b = rig().browser();
+    const page = (await b.get('/p/OC-1008-114?pack=1&qty=3')).text;
+    expect(page).toMatch(/name="pack" value="1" checked/);
+    expect(page).not.toMatch(/name="pack" value="0" checked/);
+    expect(page).toMatch(/id="qty"[^>]*value="3"/);
+    // Nonsense in the link falls back to the first pack and one.
+    const plain = (await b.get('/p/OC-1008-114?pack=9&qty=-2')).text;
+    expect(plain).toMatch(/name="pack" value="0" checked/);
+    expect(plain).toMatch(/id="qty"[^>]*value="1"/);
+  });
+
   it('shows the review page the buyer reads: lines, tax, shipping, total, delivery, PO field, bill to account', async () => {
     const r = rig();
     const b = await signedIn(r);

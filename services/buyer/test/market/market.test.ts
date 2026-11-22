@@ -38,7 +38,44 @@ describe('the market check', () => {
     expect(toQuote('q-2', marketJob, retailerB, 'r-2', false, null, '2026-11-21T09:14:40-05:00')).toMatchObject({ ok: false, price: null, unitPrice: null });
   });
 
-  it('runs every retailer at once, and one failing or throwing does not stop the others', async () => {
+  it('checks live prices one at a time, across jobs, so a browser stays free for the cart', async () => {
+    const order: string[] = [];
+    let open = 0;
+    let most = 0;
+    const agent = fakeAgent(async (p) => {
+      open += 1;
+      most = Math.max(most, open);
+      order.push(`start ${new URL(p.url).host}`);
+      await new Promise((r) => setTimeout(r, 15));
+      order.push(`end ${new URL(p.url).host}`);
+      open -= 1;
+      return completed(good);
+    });
+    const { buyer: b } = buyer(agent);
+    await Promise.all([b.handle(marketJob), b.handle({ ...marketJob, id: 'j-9', productId: 'p-glue' })]);
+    expect(agent.calls).toHaveLength(4);
+    expect(most).toBe(1);
+    expect(order.slice(0, 4)).toEqual(['start a.test', 'end a.test', 'start b.test', 'end b.test']);
+  });
+
+  it('skips a live price check when nothing is being bought for that part any more', async () => {
+    const agent = fakeAgent(() => completed(good));
+    const posts: { path: string; body: unknown }[] = [];
+    const logs: string[] = [];
+    const orders = [{ productId: 'p-screws', state: 'cancelled' }];
+    const link = { post: async (path: string, body: unknown) => (posts.push({ path, body }), true), supplier: async (id: string) => suppliers[id as keyof typeof suppliers] ?? null, snapshot: async () => ({ orders }) as never };
+    const b = new Buyer(config(), link, deps(agent).d, (async () => new Response('{}')) as unknown as typeof fetch, (l) => logs.push(l));
+    await b.handle(marketJob);
+    expect(agent.calls).toHaveLength(0);
+    expect(logs.join('\n')).toContain('skipped Retailer A. Nothing is being bought for that part any more.');
+    // The job is still closed on the hub, with no quotes.
+    expect(IngestQuotesBody.parse(posts.at(-1)?.body)).toMatchObject({ jobId: 'j-1', quotes: [] });
+    orders[0] = { productId: 'p-screws', state: 'awaiting_approval' };
+    await b.handle({ ...marketJob, id: 'j-8' });
+    expect(agent.calls).toHaveLength(2);
+  });
+
+  it('one retailer failing or throwing does not stop the others', async () => {
     const agent = fakeAgent(async (p) => {
       if (p.url.startsWith('https://b.test')) throw new Error('boom');
       return completed(good);

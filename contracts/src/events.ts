@@ -11,7 +11,7 @@ export const Job = z.discriminatedUnion('kind', [
     kind: z.literal('market'),
     productId: Id,
     searchPhrase: z.string(),
-    /** Market suppliers to check, one run each, all at once. */
+    /** Market suppliers to check, one run each. The buyer runs live checks one at a time, so a browser stays free for the cart. */
     supplierIds: z.array(Id).min(1),
     /** True when the operator asked for the last good recording in place of a live run. */
     replay: z.boolean().optional(),

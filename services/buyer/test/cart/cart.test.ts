@@ -1,7 +1,7 @@
 import { IngestCartBody, type CatalogItem } from '@reup/contracts';
 import { describe, expect, it } from 'vitest';
 import catalog from '../../../../contracts/mocks/catalog.json';
-import { cartCheck, cartGoal, cartParams, planCart, toCartBody } from '../../src/cart';
+import { cartCheck, cartGoal, cartParams, cartStart, planCart, toCartBody } from '../../src/cart';
 import { Buyer, PRICE_CHECK_ONLY } from '../../src/jobs';
 import { cartJob, completed, config, deps, fakeAgent, offcut, retailerA } from '../helpers';
 
@@ -16,27 +16,48 @@ describe('filling the cart', () => {
     expect(planCart({ ...cartJob, sku: null }, items)).toMatchObject({ item: null, packLabel: null, packs: 8 });
   });
 
-  it('writes the goal as numbered steps for a SKU, and for a phrase when there is no SKU', () => {
+  const fresh = { profile: false, email: 'shop@reup.test', password: 'pw-1' };
+
+  it('starts on the product page with the pack and the quantity in the link, so the agent does not search or type them', () => {
     const plan = planCart(cartJob, items);
-    const goal = cartGoal(cartJob, plan, profile);
-    expect(goal).toContain('3. Search the store for the SKU OC-1008-114 and open that product.');
-    expect(goal).toContain('5. Choose the pack size "Box of 100" and set the quantity to 8.');
-    expect(goal).toContain('Out of stock');
-    const byPhrase = cartGoal({ ...cartJob, sku: null }, planCart({ ...cartJob, sku: null }, items), profile);
-    expect(byPhrase).toContain('3. Search the store for "#8 x 1-1/4 wood screws box of 100" and open the product that matches best.');
-    expect(byPhrase).toContain('lowest total for 8 units');
+    expect(cartStart(offcut, cartJob, plan)).toBe('https://offcut.test/p/OC-1008-114?pack=0&qty=8');
+    expect(cartStart(offcut, { ...cartJob, units: 10 }, planCart({ ...cartJob, units: 10 }, items))).toBe('https://offcut.test/p/OC-1008-114?pack=1&qty=1');
+    const goal = cartGoal(cartJob, plan, fresh);
+    expect(goal).toContain('1. You start on the product page for SKU OC-1008-114. If it says "Out of stock"');
+    expect(goal).toContain('2. The pack size "Box of 100" should already be chosen and the quantity should already read 8.');
+    expect(goal).toContain('3. Press "Add to cart" once.');
+    expect(goal).toContain('4. On the cart page press "Checkout". Never press "Empty cart".');
+    expect(goal).toContain('5. If the store asks you to sign in, use the email shop@reup.test and the password pw-1, then carry on. The cart is kept through the sign in.');
+    expect(goal).toContain('6. On the page titled "Review your order"');
+    // Eight lines of work, and nothing about searching or the cookie notice as a step.
+    expect(goal).not.toContain('Search the store');
+    expect(goal).toContain('Leave it alone');
   });
 
-  it('forbids placing the order, and always empties the cart first', () => {
+  it('starts on the search results when the catalog does not have the SKU, or there is none', () => {
+    const noSku = { ...cartJob, sku: null };
+    expect(cartStart(offcut, noSku, planCart(noSku, items))).toBe(`https://offcut.test/search?q=${encodeURIComponent(cartJob.searchPhrase)}`);
+    const byPhrase = cartGoal(noSku, planCart(noSku, items), fresh);
+    expect(byPhrase).toContain('1. You start on the search results for "#8 x 1-1/4 wood screws box of 100". Open the product that matches best.');
+    expect(byPhrase).toContain('lowest total for 8 units');
+    const unknown = { ...cartJob, sku: 'OC-0000' };
+    expect(cartStart(offcut, unknown, planCart(unknown, items))).toBe('https://offcut.test/search?q=OC-0000');
+    expect(cartGoal(unknown, planCart(unknown, items), fresh)).toContain('1. You start on the search results for the SKU OC-0000. Open that product.');
+  });
+
+  it('forbids placing the order, and empties the cart first only for a saved profile, whose cart may hold an older run', () => {
     const goal = cartGoal(cartJob, planCart(cartJob, items), profile);
     expect(goal).toContain('Do not place the order.');
     expect(goal).toContain('Do not press "Place order"');
-    expect(goal).toContain('2. Open the cart. If it has anything in it, press "Empty cart".');
+    expect(goal).toContain('1. Open the cart. If it has anything in it, press "Empty cart".');
+    const noProfile = cartGoal(cartJob, planCart(cartJob, items), fresh);
+    expect(noProfile).not.toContain('If it has anything in it');
+    expect(noProfile).toContain('Do not press "Place order"');
   });
 
   it('uses the saved profile with no proxy on the lite browser, and only sends a password when there is no profile', () => {
     const plan = planCart(cartJob, items);
-    expect(cartParams(offcut, cartJob, plan, profile, 'prof-1')).toMatchObject({ url: 'https://offcut.test/cart', browserProfile: 'lite', proxyCountry: null, profileId: 'prof-1' });
+    expect(cartParams(offcut, cartJob, plan, profile, 'prof-1')).toMatchObject({ url: 'https://offcut.test/p/OC-1008-114?pack=0&qty=8', browserProfile: 'lite', proxyCountry: null, profileId: 'prof-1', maxDurationSeconds: 150 });
     expect(cartGoal(cartJob, plan, profile)).not.toContain('password');
     expect(cartGoal(cartJob, plan, { profile: false, email: 'shop@reup.test', password: 'pw-1' })).toContain('use the email shop@reup.test and the password pw-1');
     expect(cartGoal(cartJob, plan, { profile: false, email: 'shop@reup.test', password: '' })).toContain('The store asked for a sign in.');
