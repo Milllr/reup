@@ -143,7 +143,7 @@
         "The hub fetches Offcut's /catalog.json (cached 5 minutes) and asks the Gemini API (model from GEMINI_MODEL, structured JSON output) to pick the best matching catalog item or none, with a confidence of sure, fairly_sure or not_sure. Search the Gemini docs for the current model name and request shape before writing the call",
         "The suggestion uses the catalog item's name, unit and sku; with no match it uses Gemini's own name and a null sku. State becomes needs_confirm",
         "POST /api/teach/:id/confirm creates the Product, attaches it to the zone, seeds a starting rate of 0.5 a day flagged sampleHistory, and broadcasts product, policy and teach null",
-        "GEMINI_MODEL may list several models with commas between: they are asked in order, each for at most 7 seconds, and the first that answers names the part. If none does within 18 seconds the state is failed with a plain error and a typed name still confirms"
+        "GEMINI_MODEL may list several models with commas between. The first is asked, the next is asked too after 2.5 seconds without an answer or at once after a failure, each gets at most 7 seconds, and the first good answer names the part. If none does within 18 seconds the state is failed with a plain error and a typed name still confirms"
       ],
       "tests": ["the prompt lists every catalog item with its sku", "a returned sku that is not in the catalog is treated as no match", "confirm creates the product and a policy", "timeout leads to failed, and confirm still works"],
       "screens": ["docs/ui/phone.html"], "depends": ["F7"]

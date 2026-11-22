@@ -32,8 +32,9 @@ The two D1 databases exist and their ids are in `apps/hub/wrangler.jsonc` and `a
 Done Sat Nov 21, 8 PM: the repo is linked to the Infisical project hw13, and `GEMINI_API_KEY` and `TINYFISH_API_KEY` are in it at the root path. The Gemini key is on the deployed hub.
 
 * A key only a person has: `node tools/secrets.mjs` asks for it with hidden input, stores it in Infisical and sets it on the hub. Already in Infisical: `infisical run -- node tools/secrets.mjs --push`
-* Then deploy once more, `npm run deploy`. A secret that changes does not reach the hub that is already running. It keeps its old settings until the next deploy.
-* `GEMINI_MODEL` in `apps/hub/wrangler.jsonc` lists several models with commas between. The hub asks them in that order, each for at most 7 seconds, so one overloaded model does not stop a part being named.
+* Then deploy once more, `npm run deploy`. A secret that changes does not reach the hub that is already running until a deploy restarts it.
+* A deploy now reaches the running hub at once (`code_update_strategy` is `immediate` in `apps/hub/wrangler.jsonc`). Cloudflare's default since Oct 30 2026 lets a busy Durable Object keep its old code for up to 5 minutes, which is how a fix looked like it had not worked.
+* `GEMINI_MODEL` in `apps/hub/wrangler.jsonc` lists several models with commas between. The hub asks the first, asks the next as well after 2.5 seconds without an answer, and takes the first good answer, so one slow or overloaded model does not stop a part being named.
 
 Still to do:
 

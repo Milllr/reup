@@ -5,7 +5,10 @@
   "name": "offcut-supply",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-01",
-  "compatibility_flags": ["nodejs_compat"],
+  // global_fetch_strictly_public: the store tells the hub about an order with a fetch, and both Workers sit on the same
+  // workers.dev zone. Without the flag Cloudflare refuses that fetch from a request (error 1042), so "order confirmed"
+  // never reached the hub. Only "shipped", sent from the Shipper's alarm 20 seconds later, did.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "durable_objects": { "bindings": [{ "name": "SHIPPER", "class_name": "Shipper" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Shipper"] }],
   "d1_databases": [{ "binding": "DB", "database_name": "offcut-supply", "migrations_dir": "migrations" }],

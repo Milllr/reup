@@ -51,8 +51,10 @@ export function parseAnswer(text: string): NameResult {
   return { sku, name, unit: typeof raw.unit === 'string' && raw.unit.trim() !== '' ? raw.unit.trim() : 'each', confidence };
 }
 
-/** How long one model gets before the next one is asked. A good answer takes 1 to 7 seconds. */
+/** How long one model gets to answer. A good answer takes 1 to 7 seconds. */
 export const ATTEMPT_MS = 7000;
+/** With no answer after this long the next model is asked as well, and the first good answer wins. A model that fails hands over at once. */
+export const HEDGE_MS = 2500;
 
 /** "a, b , c" as a list. GEMINI_MODEL may name several models: the first that answers names the part. */
 export const modelList = (models: string) => models.split(',').map((m) => m.trim()).filter((m) => m !== '');
@@ -64,7 +66,7 @@ export class GeminiNamer implements Namer {
    * models is one model or several with commas between, in the order to ask them. A model that is overloaded, slow
    * or gone is skipped: on Sat Nov 21 2026 the newest Flash answered 503 or took two minutes while the others took 2 seconds.
    */
-  constructor(private apiKey: string, models: string, private fetcher: typeof fetch = fetch, private attemptMs = ATTEMPT_MS, private log: (line: string) => void = (line) => console.error(line)) {
+  constructor(private apiKey: string, models: string, private fetcher: typeof fetch = fetch, private attemptMs = ATTEMPT_MS, private log: (line: string) => void = (line) => console.error(line), private hedgeMs = HEDGE_MS) {
     this.models = modelList(models);
   }
 
@@ -89,26 +91,74 @@ export class GeminiNamer implements Namer {
     return parseAnswer(text);
   }
 
-  async name(jpegBase64: string, catalog: readonly CatalogItem[], signal: AbortSignal): Promise<NameResult> {
+  /**
+   * Asks the first model. If it has not answered after hedgeMs the next is asked too, and so on down the list, and a
+   * model that fails hands over to the next at once. The first good answer wins and the others are dropped. So one
+   * slow or overloaded model costs a couple of seconds, not the part's name.
+   */
+  name(jpegBase64: string, catalog: readonly CatalogItem[], signal: AbortSignal): Promise<NameResult> {
     const contents = [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: jpegBase64 } }, { text: buildPrompt(catalog) }] }];
-    let last: unknown = new Error('No Gemini model is set.');
-    for (const model of this.models) {
-      if (signal.aborted) break;
-      // Each model has its own clock, and the caller's signal still stops everything.
-      const attempt = new AbortController();
-      const stop = () => attempt.abort();
-      signal.addEventListener('abort', stop);
-      const timer = setTimeout(stop, this.attemptMs);
-      try {
-        return await this.ask(model, contents, attempt.signal);
-      } catch (err) {
-        last = attempt.signal.aborted && !signal.aborted ? new Error(`${model} took longer than ${Math.round(this.attemptMs / 1000)} seconds.`) : err;
-        this.log(`naming with ${model} failed: ${last instanceof Error ? last.message : String(last)}`);
-      } finally {
-        clearTimeout(timer);
-        signal.removeEventListener('abort', stop);
-      }
-    }
-    throw last;
+    const models = this.models;
+    return new Promise<NameResult>((resolve, reject) => {
+      if (models.length === 0) return reject(new Error('No Gemini model is set.'));
+      if (signal.aborted) return reject(new Error('Naming was stopped.'));
+      const running = new Set<AbortController>();
+      let asked = 0;
+      let failed = 0;
+      let over = false;
+      let hedge: ReturnType<typeof setTimeout> | null = null;
+      let last: unknown = null;
+
+      const finish = () => {
+        over = true;
+        if (hedge != null) clearTimeout(hedge);
+        signal.removeEventListener('abort', stopAll);
+        for (const attempt of running) attempt.abort();
+      };
+      const stopAll = () => {
+        if (over) return;
+        finish();
+        reject(new Error('Naming was stopped.'));
+      };
+      const askNext = () => {
+        if (over || asked >= models.length) return;
+        const model = models[asked] as string;
+        asked += 1;
+        const attempt = new AbortController();
+        running.add(attempt);
+        let late = false;
+        const clock = setTimeout(() => {
+          late = true;
+          attempt.abort();
+        }, this.attemptMs);
+        if (hedge != null) clearTimeout(hedge);
+        hedge = asked < models.length ? setTimeout(askNext, this.hedgeMs) : null;
+        this.ask(model, contents, attempt.signal).then(
+          (result) => {
+            clearTimeout(clock);
+            running.delete(attempt);
+            if (over) return;
+            finish();
+            resolve(result);
+          },
+          (err: unknown) => {
+            clearTimeout(clock);
+            running.delete(attempt);
+            if (over) return;
+            last = late ? new Error(`${model} took longer than ${Math.round(this.attemptMs / 1000)} seconds.`) : err;
+            this.log(`naming with ${model} failed: ${last instanceof Error ? last.message : String(last)}`);
+            failed += 1;
+            if (failed >= models.length) {
+              finish();
+              reject(last);
+            } else {
+              askNext();
+            }
+          },
+        );
+      };
+      signal.addEventListener('abort', stopAll);
+      askNext();
+    });
   }
 }

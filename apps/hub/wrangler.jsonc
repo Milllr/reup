@@ -12,7 +12,9 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/ingest/*", "/hooks/*", "/live"]
   },
-  "durable_objects": { "bindings": [{ "name": "ROOM", "class_name": "Room" }] },
+  // The Room is busy all day (the eye posts every few seconds), so it never goes idle. By default Cloudflare lets a busy
+  // Durable Object keep its old code for up to 5 minutes after a deploy. immediate makes a deploy apply at once.
+  "durable_objects": { "bindings": [{ "name": "ROOM", "class_name": "Room" }], "code_update_strategy": { "mode": "immediate" } },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
   "d1_databases": [{ "binding": "DB", "database_name": "reup-hub", "migrations_dir": "migrations" }],
   "vars": {

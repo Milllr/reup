@@ -38,8 +38,10 @@ export function placeGoal(job: PlaceJob, basket: Basket | null, signIn: SignIn):
     `5. On the page titled "Review your order", type ${job.poNumber} into the field labelled "PO number".`,
     '6. Payment must read "Bill to account". Never enter a card number. If the page asks for one, stop and return confirmation null with the reason.',
     '7. Press "Place order" once.',
-    '8. From the page that follows, return confirmation (the confirmation number exactly as shown, for example OC-58213), delivery_date (exactly as shown) and reason (null).',
-    'Rules: press "Place order" only once. If no confirmation number appears, return confirmation null and the reason in one plain sentence. Never guess a number.',
+    // The first real run read the page 3 seconds after the press, before the order page had loaded, and reported no number for an order the store had taken.
+    '8. Wait for the next page to finish loading. It is headed "Order" and a number, and says "Thank you. Your order is placed." If the page still says "Review your order" and shows no error, wait 5 seconds and look again, up to 3 times. Do not press "Place order" again.',
+    '9. From that page return confirmation (the number beside "Confirmation number", exactly as shown, for example OC-58213), delivery_date (the date beside "Delivery date", exactly as shown) and reason (null).',
+    'Rules: press "Place order" only once. If after waiting no confirmation number appears, return confirmation null and the reason in one plain sentence. Never guess a number.',
   ].join('\n');
 }
 

@@ -62,24 +62,53 @@ describe('naming a new part', () => {
       expect(logs).toEqual(['naming with new-flash failed: Gemini answered 503.']);
     });
 
-    it('gives a slow model 7 seconds, then asks the next', async () => {
+    it('asks the next model too when the first has not answered in 2.5 seconds, takes the first answer and drops the rest', async () => {
+      vi.useFakeTimers();
+      try {
+        const asked: string[] = [];
+        const dropped: string[] = [];
+        const logs: string[] = [];
+        const fake = ((url: string, init: RequestInit) => {
+          const model = modelOf(url);
+          asked.push(model);
+          if (model === 'fast') return Promise.resolve(good());
+          // Never answers. It ends only when its own request is aborted.
+          return new Promise<Response>((_, reject) => init.signal?.addEventListener('abort', () => {
+            dropped.push(model);
+            reject(new Error('aborted'));
+          }));
+        }) as unknown as typeof fetch;
+        const naming = new GeminiNamer('k', 'slow,fast,spare', fake, 7000, (l) => logs.push(l), 2500).name('abc', items, new AbortController().signal);
+        await vi.advanceTimersByTimeAsync(2400);
+        expect(asked).toEqual(['slow']);
+        await vi.advanceTimersByTimeAsync(200);
+        expect((await naming).sku).toBe('OC-2202');
+        expect(asked).toEqual(['slow', 'fast']);
+        expect(dropped).toEqual(['slow']);
+        // The slow one was dropped because another answered, not because it failed: nothing to log, and the spare is never asked.
+        await vi.advanceTimersByTimeAsync(20_000);
+        expect(logs).toEqual([]);
+        expect(asked).toEqual(['slow', 'fast']);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('gives each model 7 seconds, and says so when that was the reason', async () => {
       vi.useFakeTimers();
       try {
         const asked: string[] = [];
         const logs: string[] = [];
         const fake = ((url: string, init: RequestInit) => {
           asked.push(modelOf(url));
-          if (asked.length > 1) return Promise.resolve(good());
-          // Never answers. It ends only when its own request is aborted.
           return new Promise<Response>((_, reject) => init.signal?.addEventListener('abort', () => reject(new Error('aborted'))));
         }) as unknown as typeof fetch;
-        const naming = new GeminiNamer('k', 'slow,fast', fake, 7000, (l) => logs.push(l)).name('abc', items, new AbortController().signal);
-        await vi.advanceTimersByTimeAsync(6900);
-        expect(asked).toEqual(['slow']);
-        await vi.advanceTimersByTimeAsync(200);
-        expect((await naming).sku).toBe('OC-2202');
-        expect(asked).toEqual(['slow', 'fast']);
-        expect(logs).toEqual(['naming with slow failed: slow took longer than 7 seconds.']);
+        const naming = new GeminiNamer('k', 'a,b', fake, 7000, (l) => logs.push(l), 2500).name('abc', items, new AbortController().signal);
+        const failed = expect(naming).rejects.toThrow('b took longer than 7 seconds.');
+        await vi.advanceTimersByTimeAsync(9600);
+        await failed;
+        expect(asked).toEqual(['a', 'b']);
+        expect(logs).toEqual(['naming with a failed: a took longer than 7 seconds.', 'naming with b failed: b took longer than 7 seconds.']);
       } finally {
         vi.useRealTimers();
       }
@@ -95,8 +124,19 @@ describe('naming a new part', () => {
       expect(asked).toEqual(['a', 'b']);
       const gone = new AbortController();
       gone.abort();
-      await expect(new GeminiNamer('k', 'a,b', fake, 7000, () => {}).name('abc', items, gone.signal)).rejects.toThrow();
+      await expect(new GeminiNamer('k', 'a,b', fake, 7000, () => {}).name('abc', items, gone.signal)).rejects.toThrow('Naming was stopped.');
       expect(asked).toEqual(['a', 'b']);
+      // Stopped while a model is still thinking: its request is dropped and nothing more is asked.
+      const hanging: string[] = [];
+      const hang = ((url: string, init: RequestInit) => {
+        hanging.push(modelOf(url));
+        return new Promise<Response>((_, reject) => init.signal?.addEventListener('abort', () => reject(new Error('aborted'))));
+      }) as unknown as typeof fetch;
+      const stop = new AbortController();
+      const naming = new GeminiNamer('k', 'a,b', hang, 7000, () => {}).name('abc', items, stop.signal);
+      stop.abort();
+      await expect(naming).rejects.toThrow('Naming was stopped.');
+      expect(hanging).toEqual(['a']);
       await expect(new GeminiNamer('k', ' , ', fake, 7000, () => {}).name('abc', items, new AbortController().signal)).rejects.toThrow('No Gemini model is set.');
     });
   });
