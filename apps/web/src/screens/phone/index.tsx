@@ -1,6 +1,6 @@
 /** The phone view: plates stacked as bands. Approve an order, name a new part, see the counts. */
 import { unitsText } from '@reup/brain';
-import type { Order, Snapshot } from '@reup/contracts';
+import type { CountCheck, Order, Snapshot } from '@reup/contracts';
 import { useState } from 'react';
 import { cx, Frame, Tag, Units, Word, Wordmark } from '../../components';
 import { call, hubUrl, token } from '../../lib/hub';
@@ -50,6 +50,29 @@ export function ApproveBand({ order, s, send = call, k = token('k'), first }: { 
   );
 }
 
+/** A count check: the camera saw a drop far bigger than normal use. A person says whether it is right before reup shops. */
+export function CheckBand({ check, s, send = call, k = token('k') }: { check: CountCheck; s: Snapshot; send?: typeof call; k?: string | null }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const zone = s.zones.find((z) => z.id === check.zoneId);
+  const answer = async (value: 'right' | 'miscount') => {
+    if (!k) return setError(NO_KEY);
+    setBusy(true);
+    const res = await send('POST', `/api/checks/${check.id}`, { answer: value }, k);
+    setBusy(false);
+    setError(res.ok ? null : res.status === 401 ? NO_KEY : (res.message ?? 'Could not answer.'));
+  };
+  return (
+    <Band tone="wine" label="Count check" word="Check">
+      <Tag tone="alert">{`${zone?.name ?? 'Part'} · ${check.before} to ${check.after}`}</Tag>
+      <p className="copy small">{check.text}</p>
+      {error ? <Tag tone="alert" style={{ whiteSpace: 'normal', borderRadius: 14, lineHeight: 1.3 }}>{error}</Tag> : null}
+      <button className="btn" type="button" disabled={busy} onClick={() => void answer('right')}>That is right</button>
+      <button className="btn quiet" type="button" disabled={busy} onClick={() => void answer('miscount')}>Miscount</button>
+    </Band>
+  );
+}
+
 export function Phone() {
   const live = useLive();
   const s = live.snapshot;
@@ -62,6 +85,7 @@ export function Phone() {
   const offline = !live.connected && !live.mock;
   return (
     <div style={{ maxWidth: 520, margin: '0 auto' }}>
+      {(s.checks ?? []).map((check) => <CheckBand key={check.id} check={check} s={s} />)}
       {waiting.map((order, i) => <ApproveBand key={order.id} order={order} s={s} first={i === 0} />)}
       {s.teach ? (
         <section className="plate paper band stack" style={{ gap: 14 }} aria-label="New part to confirm">

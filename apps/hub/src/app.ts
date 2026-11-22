@@ -1,5 +1,5 @@
 // Every hub route: check the token, check the body against the contract, call the Room, answer in the contract's shape.
-import { ApproveBody, BoardBody, IngestCartBody, IngestCountsBody, IngestNodeBody, IngestPicksBody, IngestPlacedBody, IngestQuotesBody, IngestReachesBody, IngestReorderBody, IngestRunsBody, ManualOrderBody, ReplayBody, ScreenBody, Season, SupplyWebhookBody, TeachBody, TeachConfirmBody, ZonesBody, type ApiError } from '@reup/contracts';
+import { ApproveBody, BoardBody, CheckAnswerBody, IngestCartBody, IngestCountsBody, IngestNodeBody, IngestPicksBody, IngestPlacedBody, IngestQuotesBody, IngestReachesBody, IngestReorderBody, IngestRunsBody, ManualOrderBody, ReplayBody, ScreenBody, Season, SupplyWebhookBody, TeachBody, TeachConfirmBody, ZonesBody, type ApiError } from '@reup/contracts';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import type { z } from 'zod';
@@ -9,7 +9,7 @@ import { analyticsResult } from './analytics';
 import { historyResult } from './history';
 import { supplyWebhook } from './hooks';
 import { ingestCounts, ingestNode, ingestPicks, ingestReaches } from './ingest';
-import { approve, cancel, Conflict, ingestCart, ingestPlaced, ingestQuotes, ingestReorder, ingestRuns, NotFound, openOrder } from './orders';
+import { answerCheck, approve, cancel, Conflict, ingestCart, ingestPlaced, ingestQuotes, ingestReorder, ingestRuns, NotFound, openOrder } from './orders';
 import { cancelTeach, catalog, confirmTeach, cropKey, startTeach } from './teach';
 
 class BadRequest extends Error {}
@@ -181,6 +181,15 @@ export function createApp(room: RoomCore, options: AppOptions = {}): Hono {
     const order = cancel(room, c.req.param('id'));
     await done();
     return c.json(order);
+  });
+
+  // ---------- count checks ----------
+  app.post('/api/checks/:id', async (c) => {
+    allow(c, APPROVE_KEY, OPS_TOKEN);
+    const b = await body(c, CheckAnswerBody);
+    answerCheck(room, c.req.param('id'), b.answer);
+    await done();
+    return c.json(OK);
   });
 
   // ---------- operator ----------

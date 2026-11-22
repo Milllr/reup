@@ -255,6 +255,24 @@ export const TeachState = z.object({
   ts: IsoTime,
 });
 
+/**
+ * A count that fell far more than the part is normally used, all at once, and took it to its reorder point.
+ * It is likely a misread (a hand over the zone, glare), so reup holds the order until a person looks.
+ */
+export const CountCheck = z.object({
+  id: Id,
+  productId: Id,
+  zoneId: Id,
+  /** The count of record just before the drop, and just after it. */
+  before: z.number().int().nonnegative(),
+  after: z.number().int().nonnegative(),
+  /** Normal use per day after the season factor, for the sentence. */
+  usualPerDay: z.number().nonnegative(),
+  /** One plain sentence for the screens, for example "8 boxes of wood screws gone at once. Usually about 0.6 a day. Holding the order until someone looks." */
+  text: z.string(),
+  ts: IsoTime,
+});
+
 // ---------- what the screens read ----------
 
 export const Activity = z.object({
@@ -286,6 +304,8 @@ export const Snapshot = z.object({
   /** Newest last, at most 20. */
   activity: z.array(Activity),
   season: Season,
+  /** Count checks waiting for a person, oldest first. Missing means none. */
+  checks: z.array(CountCheck).optional(),
 });
 
 // ---------- Offcut Supply's public catalog ----------
@@ -329,6 +349,7 @@ export type Camera = z.infer<typeof Camera>;
 export type TeachState = z.infer<typeof TeachState>;
 export type TeachSuggestion = z.infer<typeof TeachSuggestion>;
 export type Activity = z.infer<typeof Activity>;
+export type CountCheck = z.infer<typeof CountCheck>;
 export type Screen = z.infer<typeof Screen>;
 export type Snapshot = z.infer<typeof Snapshot>;
 export type CatalogItem = z.infer<typeof CatalogItem>;

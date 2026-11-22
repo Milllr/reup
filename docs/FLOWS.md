@@ -69,3 +69,4 @@ In the demo: the 8 bags in the Delivery box go into the pockets after "Ordered".
 | Camera unplugged | Shelf draws the board from pocket data with an alert tag saying so |
 | Node offline | Alert tag: "Shelf node offline." The Shelf has no top tag. Approve with the button on the Order screen, with Enter, or from a phone |
 | Buyer offline | Orders wait in pricing with the sentence "The buyer is offline." |
+| A camera count drops far more than normal use | At least 5 units and more than 3 days of use in one change, from the eye or the node, to the reorder point: no order. The word is Check, the zone tag says check, and the sentence reads "9 boxes of wood screws gone at once. Usually about 0.6 a day. Holding the order until someone looks." A phone or the operator page answers "That is right" (the order opens as usual) or "Miscount" (nothing bought). A count that comes back above the reorder point clears it. Reset clears it |

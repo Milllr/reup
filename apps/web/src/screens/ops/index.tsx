@@ -212,6 +212,16 @@ export function Controls({ s, ops, send = call }: { s: Snapshot; ops: string; se
         <button type="button" className="btn quiet" disabled={productId === ''} onClick={async () => say(await send('POST', '/api/orders', { productId }, ops), 'Order started.')}>Start order</button>
         {open.map((o) => <button key={o.id} type="button" className="btn quiet" onClick={async () => say(await send('POST', `/api/orders/${o.id}/cancel`, undefined, ops), `Order ${o.poNumber} cancelled.`)}>{`Cancel order ${o.poNumber}`}</button>)}
       </div>
+      {(s.checks ?? []).map((c) => {
+        const zone = s.zones.find((z) => z.id === c.zoneId)?.name ?? 'Part';
+        return (
+          <div key={c.id} className="wrap" style={{ alignItems: 'center' }} aria-label={`Count check for ${zone}`}>
+            <span className="meta">{c.text}</span>
+            <button type="button" className="btn" onClick={async () => say(await send('POST', `/api/checks/${c.id}`, { answer: 'right' }, ops), `${zone}: the count is right.`)}>That is right</button>
+            <button type="button" className="btn quiet" onClick={async () => say(await send('POST', `/api/checks/${c.id}`, { answer: 'miscount' }, ops), `${zone}: marked as a miscount.`)}>Miscount</button>
+          </div>
+        );
+      })}
     </section>
   );
 }

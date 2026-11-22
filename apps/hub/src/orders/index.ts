@@ -1,9 +1,10 @@
 // Orders: from a count at the reorder point to a delivery back on the board.
 // pricing, carting, awaiting_approval, approved, placing, placed, shipped, received. Or failed, or cancelled.
 import { marketNote, money, orderReason, unitsText } from '@reup/brain';
-import type { IngestCartBody, IngestPlacedBody, IngestQuotesBody, IngestReorderBody, IngestRunsBody, Job, Order, Quote } from '@reup/contracts';
+import type { CheckAnswerBody, CountSource, IngestCartBody, IngestPlacedBody, IngestQuotesBody, IngestReorderBody, IngestRunsBody, Job, Order, Quote } from '@reup/contracts';
 import { PLACED_MAX, type RoomCore } from '../core/room';
 import { businessDaysFrom, weekdayIn } from '../core/time';
+import { closeCheck, checks, openCheckFor, raiseCheck, unusualDrop } from '../checks';
 
 export class Conflict extends Error {}
 export class NotFound extends Error {}
@@ -130,12 +131,25 @@ function withdraw(room: RoomCore, order: Order, why: string): void {
   room.activity('info', `${why} Order ${order.poNumber} cancelled. ${NOTHING_BOUGHT}`);
 }
 
-/** Called after the count of record for a product changed, up or down. */
-export function afterCountChange(room: RoomCore, productId: string, before: number, after: number): void {
+/**
+ * Called after the count of record for a product changed, up or down. source is who counted it, when known:
+ * a camera drop far bigger than normal use is held as a count check instead of shopping.
+ */
+export function afterCountChange(room: RoomCore, productId: string, before: number, after: number, source: CountSource | null = null, zoneId: string | null = null): void {
   const product = room.product(productId);
   if (!product) return;
   const name = room.zone(product.zoneId)?.name ?? product.name;
   const many = /s$/.test(name);
+
+  // 0. A count check is open and the count came back above the reorder point: it was a misread.
+  const check = openCheckFor(room, productId);
+  if (check && after > before) {
+    const line = room.policy(productId)?.reorderPoint;
+    if (line == null || after > line) {
+      closeCheck(room, check.id);
+      room.activity('info', `The count of ${name.toLowerCase()} came back. ${NOTHING_BOUGHT}`);
+    }
+  }
 
   // 1. An order is on its way: this is the delivery arriving (or one more taken while waiting for it).
   const waiting = room.s.orders.find((o) => o.productId === productId && ON_ITS_WAY.includes(o.state));
@@ -163,13 +177,44 @@ export function afterCountChange(room: RoomCore, productId: string, before: numb
   const policy = room.policy(productId);
   // A part with no use yet has no reorder point to cross.
   if (!policy || policy.ratePerDay <= 0 || after > policy.reorderPoint || room.openOrderFor(productId)) return;
+  // A check is waiting for a person: no order until they answer.
+  if (openCheckFor(room, productId)) return;
+  if (unusualDrop(room, productId, before, after, source)) {
+    raiseCheck(room, productId, zoneId ?? product.zoneId ?? productId, before, after);
+    return;
+  }
   room.activity('attention', after === 0 ? `${name} ran out.` : `${name} ${many ? 'are' : 'is'} at the reorder point.`);
   openOrder(room, productId, 'hub');
+}
+
+/** A person answered a count check. right: the drop was real, so shop as usual. miscount: close it, buy nothing. */
+export function answerCheck(room: RoomCore, id: string, answer: CheckAnswerBody['answer']): void {
+  const check = checks(room).find((c) => c.id === id);
+  if (!check) throw new NotFound(`No count check ${id}.`);
+  closeCheck(room, id);
+  const product = room.product(check.productId);
+  const name = (room.zone(product?.zoneId)?.name ?? product?.name ?? 'the part').toLowerCase();
+  if (answer === 'miscount') {
+    room.activity('info', `Marked as a miscount of ${name}. ${NOTHING_BOUGHT}`);
+    room.refreshScreen();
+    return;
+  }
+  const policy = room.policy(check.productId);
+  const count = room.count(check.productId)?.count ?? check.after;
+  if (!policy || count > policy.reorderPoint || room.openOrderFor(check.productId)) {
+    room.activity('info', `Checked. The count of ${name} is right.`);
+    room.refreshScreen();
+    return;
+  }
+  room.activity('attention', `Checked. The count of ${name} is right.`);
+  openOrder(room, check.productId, 'hub');
 }
 
 export function ingestReorder(room: RoomCore, body: IngestReorderBody): void {
   if (!room.firstTime(`reorder:${body.id}`)) return;
   if (!room.product(body.productId)) return;
+  // The hub is holding this part for a count check. The node's call waits for the same answer.
+  if (openCheckFor(room, body.productId)) return;
   // The call was made offline. If the parts were put back before it got here, there is nothing to order.
   const line = room.policy(body.productId)?.reorderPoint;
   const seen = room.count(body.productId);

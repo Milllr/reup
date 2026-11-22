@@ -1,5 +1,6 @@
 // Operator tools: season, reset, the screen override, replay switches and the zone editor's save.
 import type { BoardBody, Product, ReplayBody, ScreenBody, Season, Snapshot, ZonesBody } from '@reup/contracts';
+import { clearChecks } from '../checks';
 import type { RoomCore } from '../core/room';
 import { TEACH_ZONE, applySampleFor, applySampleHistory } from '../seed';
 
@@ -36,6 +37,7 @@ function clearDemo(room: RoomCore): void {
   room.x.spend = { day: room.today(), total: 0 };
   room.x.disagree = {};
   room.x.recentChanges = {};
+  clearChecks(room);
 }
 
 /**

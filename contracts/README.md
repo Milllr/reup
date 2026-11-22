@@ -6,7 +6,7 @@ Written Sat Nov 21 at kickoff. Frozen: add fields, do not rename or remove them.
 
 ## Files
 
-* `src/schema.ts`: the things. Zone, Product, Count, PickEvent, Reach, Policy, Supplier, Quote, Run, Order, NodeStatus, Camera, TeachState, Snapshot, Catalog
+* `src/schema.ts`: the things. Zone, Product, Count, PickEvent, Reach, Policy, Supplier, Quote, Run, Order, NodeStatus, Camera, TeachState, CountCheck, Snapshot, Catalog
 * `src/events.ts`: WebSocket messages from the hub (`ServerMessage`) and the buyer's work (`Job`)
 * `src/api.ts`: the body and the result of every hub route, and `ROUTES`
 * `api.md`: the routes as a table, auth, errors, the eye's local routes

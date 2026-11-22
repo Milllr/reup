@@ -10,7 +10,7 @@ Base URL: `HUB_URL`. JSON in and out. Times are ISO 8601 with an offset. Money i
 | --- | --- | --- | --- |
 | DEVICE_TOKEN | `Authorization: Bearer` | eye, node, buyer | `/ingest/*`, `/api/jobs`, `/api/teach`, approve by button |
 | OPS_TOKEN | `Authorization: Bearer` | operator page | `/api/zones`, `/api/demo/*`, manual order, cancel |
-| APPROVE_KEY | `Authorization: Bearer` | phones (from the QR link `?k=`), and a TV or laptop opened with `?k=` | approve by phone or by keyboard, teach confirm and cancel |
+| APPROVE_KEY | `Authorization: Bearer` | phones (from the QR link `?k=`), and a TV or laptop opened with `?k=` | approve by phone or by keyboard, teach confirm and cancel, count check answers |
 | SUPPLY_WEBHOOK_SECRET | `X-Offcut-Secret` | Offcut Supply | `/hooks/supply` |
 
 Reading state needs no token: `/live` for screens, `/api/state`, history, analytics, and a teach crop at `/api/teach/:id/crop.jpg`. The buyer's socket is the exception: `/live?role=buyer&token=DEVICE_TOKEN`, because only the buyer is sent jobs.
@@ -43,6 +43,7 @@ Every error is `ApiError`: `{ ok: false, code, message }` with status 400 bad_re
 | POST | /api/orders | ManualOrderBody | Order | order.json |
 | POST | /api/orders/:id/approve | ApproveBody | Order | order-placed.json |
 | POST | /api/orders/:id/cancel | | Order | |
+| POST | /api/checks/:id | CheckAnswerBody | Ok | check-answer.json |
 | PUT | /api/zones | ZonesBody | Ok | |
 | PUT | /api/board | BoardBody | Snapshot | board.json |
 | POST | /api/demo/season | Season | Ok | |

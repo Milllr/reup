@@ -2,7 +2,7 @@
 // The hub sends a snapshot first, then one message per change. Clients never send state over the socket;
 // they use the REST routes in api.ts. The only client message is a ping.
 import { z } from 'zod';
-import { Activity, Count, Id, NodeStatus, Order, PickEvent, Policy, Product, Quote, Reach, Run, Screen, Season, Snapshot, TeachState, Zone, Camera } from './schema';
+import { Activity, Count, CountCheck, Id, NodeStatus, Order, PickEvent, Policy, Product, Quote, Reach, Run, Screen, Season, Snapshot, TeachState, Zone, Camera } from './schema';
 
 /** Work the hub hands to the buyer. Sent only to sockets with role=buyer, and returned by GET /api/jobs. */
 export const Job = z.discriminatedUnion('kind', [
@@ -64,6 +64,8 @@ export const ServerMessage = z.discriminatedUnion('type', [
   z.object({ type: z.literal('activity'), activity: Activity }),
   z.object({ type: z.literal('job'), job: Job }),
   z.object({ type: z.literal('pong') }),
+  /** Every open count check, each time one opens or closes. */
+  z.object({ type: z.literal('checks'), checks: z.array(CountCheck) }),
 ]);
 
 export const ClientMessage = z.object({ type: z.literal('ping') });

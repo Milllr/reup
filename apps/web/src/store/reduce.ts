@@ -64,6 +64,8 @@ export function apply(state: LiveState, msg: ServerMessage, now = Date.now()): L
       return set({ teach: msg.teach }, msg.teach === null ? {} : { taughtProductId: null });
     case 'season':
       return set({ season: msg.season });
+    case 'checks':
+      return set({ checks: msg.checks });
     case 'activity':
       return set({ activity: [...s.activity, msg.activity].slice(-20) }, { syncedAt: msg.activity.ts });
   }

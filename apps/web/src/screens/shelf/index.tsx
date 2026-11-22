@@ -54,9 +54,9 @@ export function ZoneDrawing({ zone, count }: { zone: ZoneT; count: Count | undef
   return <div className="pile">{Array.from({ length: Math.min(n, 12) }, (_, i) => <i key={i} />)}</div>;
 }
 
-function zoneTag(zone: ZoneT, row: PartRow | undefined): string {
+export function zoneTag(zone: ZoneT, row: PartRow | undefined, checking = false): string {
   if (!row) return zone.name;
-  return `${zone.name} · ${row.count}${row.capacity != null ? ` of ${row.capacity}` : ''}`;
+  return `${zone.name} · ${row.count}${row.capacity != null ? ` of ${row.capacity}` : ''}${checking ? ' · check' : ''}`;
 }
 
 export function sentence(s: Snapshot): string {
@@ -97,10 +97,11 @@ export function Shelf({ live, moment: forced }: { live: LiveState; moment?: Mome
           {zones.map((zone) => {
             const row = rows.find((r) => r.product.id === zone.productId);
             const reaching = live.reaching[zone.id] === true || live.reaching['*'] === true;
+            const checking = s.checks?.some((c) => c.zoneId === zone.id) === true;
             return (
-              <div key={zone.id} className={cx('zone', row?.low && 'low', reaching && 'reach')} style={zoneBox(zone.quad)}>
+              <div key={zone.id} className={cx('zone', (row?.low || checking) && 'low', reaching && 'reach')} style={zoneBox(zone.quad)}>
                 <i className="h tl" /><i className="h tr" /><i className="h bl" /><i className="h br" />
-                <Tag tone={row?.low ? 'alert' : 'cream'}>{zoneTag(zone, row)}</Tag>
+                <Tag tone={row?.low || checking ? 'alert' : 'cream'}>{zoneTag(zone, row, checking)}</Tag>
                 {showFeed ? null : <ZoneDrawing zone={zone} count={s.counts.find((c) => c.zoneId === zone.id)} />}
               </div>
             );

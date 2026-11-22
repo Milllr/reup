@@ -137,6 +137,14 @@ export const OrderResult = Order;
 /** POST /api/orders (ops). Start an order by hand for a product. */
 export const ManualOrderBody = z.object({ productId: Id, units: z.number().int().positive().optional() });
 
+// ---------- count checks ----------
+
+/**
+ * POST /api/checks/:id (phone or ops). right: the drop was real, so the order opens as usual.
+ * miscount: the camera misread, so the check closes and nothing is bought.
+ */
+export const CheckAnswerBody = z.object({ answer: z.enum(['right', 'miscount']) });
+
 // ---------- operator ----------
 
 /** PUT /api/zones (ops). Replaces every zone. */
@@ -198,6 +206,7 @@ export const ROUTES = [
   ['POST', '/api/orders', 'ManualOrderBody -> OrderResult (ops token)'],
   ['POST', '/api/orders/:id/approve', 'ApproveBody -> OrderResult (approve key or device token)'],
   ['POST', '/api/orders/:id/cancel', 'OrderResult (ops token)'],
+  ['POST', '/api/checks/:id', 'CheckAnswerBody -> Ok (approve key or ops token)'],
   ['PUT', '/api/zones', 'ZonesBody -> Ok (ops token)'],
   ['PUT', '/api/board', 'BoardBody -> Snapshot (ops token)'],
   ['POST', '/api/demo/season', 'SeasonBody -> Ok (ops token)'],
@@ -227,6 +236,7 @@ export type TeachBody = z.infer<typeof TeachBody>;
 export type TeachConfirmBody = z.infer<typeof TeachConfirmBody>;
 export type ApproveBody = z.infer<typeof ApproveBody>;
 export type ManualOrderBody = z.infer<typeof ManualOrderBody>;
+export type CheckAnswerBody = z.infer<typeof CheckAnswerBody>;
 export type ZonesBody = z.infer<typeof ZonesBody>;
 export type BoardProduct = z.infer<typeof BoardProduct>;
 export type BoardBody = z.infer<typeof BoardBody>;

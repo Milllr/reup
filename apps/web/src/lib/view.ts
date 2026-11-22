@@ -81,6 +81,8 @@ export function partRows(s: Snapshot): PartRow[] {
 export function shelfMoment(s: Snapshot): Moment {
   const rows = partRows(s);
   if (rows.length === 0) return { plate: 'olive', word: 'Empty', quiet: true };
+  // A count check holds the order: the board asks for a look before anything else.
+  if ((s.checks?.length ?? 0) > 0) return { plate: 'wine', word: 'Check' };
   if (rows.some((r) => r.low)) return { plate: 'wine', word: 'Reorder' };
   if (rows.some((r) => r.onTheWay)) return { plate: 'olive', word: 'On the way' };
   return { plate: 'olive', word: 'Stocked' };

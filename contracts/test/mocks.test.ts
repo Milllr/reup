@@ -37,6 +37,8 @@ const cases: Record<string, z.ZodType> = {
   'supply-webhook': C.SupplyWebhookBody,
   'teach-confirm': C.TeachConfirmBody,
   'api-error': C.ApiError,
+  'count-check': C.CountCheck,
+  'check-answer': C.CheckAnswerBody,
   board: C.BoardBody,
 };
 

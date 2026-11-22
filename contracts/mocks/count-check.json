@@ -1,0 +1,10 @@
+{
+  "id": "ck-1",
+  "productId": "p-screws",
+  "zoneId": "z-screws",
+  "before": 12,
+  "after": 4,
+  "usualPerDay": 0.6,
+  "text": "8 boxes of wood screws gone at once. Usually about 0.6 a day. Holding the order until someone looks.",
+  "ts": "2026-11-21T09:14:03-05:00"
+}

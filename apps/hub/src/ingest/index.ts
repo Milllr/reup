@@ -81,7 +81,7 @@ function applyRecord(room: RoomCore, zone: Zone, record: Count, sent: PickEvent 
   // A ledge part holds what is stocked: more on the ledge than it held before is its new capacity.
   if (learnStock(room, product, next.count)) room.emit({ type: 'product', product });
   room.recomputePolicy(product.id);
-  if (delta !== 0) afterCountChange(room, product.id, prev?.count ?? next.count, next.count);
+  if (delta !== 0) afterCountChange(room, product.id, prev?.count ?? next.count, next.count, next.source, zone.id);
 }
 
 function trackDisagreement(room: RoomCore, zone: Zone): void {
