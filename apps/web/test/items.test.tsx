@@ -113,6 +113,18 @@ describe('items on the dashboard', () => {
     expect(screen.getByText(/is being placed/).className).toContain('alert');
   });
 
+  it('a removed item is just gone: nothing on the page says it was removed', async () => {
+    const send = hub();
+    const { container } = render(<Items live={live()} k="key-1" send={send as never} />);
+    const screws = within(row('Wood screws #8 x 1-1/4 in'));
+    fireEvent.click(screws.getByRole('button', { name: 'Remove' }));
+    fireEvent.click(screws.getByRole('button', { name: 'Press again to remove' }));
+    await waitFor(() => expect(writes(send)).toEqual([['POST', '/api/products/p-screws/remove', undefined, 'key-1']]));
+    await waitFor(() => expect(screws.getByRole('button', { name: 'Remove' })).toBeTruthy());
+    expect(container.textContent).not.toMatch(/removed/i);
+    expect(container.querySelector('[aria-live] .tag')).toBeNull();
+  });
+
   it('adds an item: picking a store item fills its name and unit, and it goes on a free ledge or is counted by hand', async () => {
     const send = hub();
     render(<Items live={live()} k="key-1" send={send as never} />);

@@ -131,7 +131,7 @@ export function BoxMaker({ live, boxes, style, eyeFetch }: { live: LiveState; bo
 
   return (
     <Frame label={WHERE} tag={<Tag>{WHERE}</Tag>} style={style}>
-      <div className="fill mat feed" ref={boxes.box} onPointerMove={boxes.move} onPointerUp={boxes.up} onPointerLeave={boxes.up}>
+      <div className="fill mat feed boxes" ref={boxes.box} onPointerMove={boxes.move} onPointerUp={boxes.up} onPointerLeave={boxes.up}>
         {showFeed && cam?.streamUrl ? <img key={eye.turn} src={feedUrl(cam.streamUrl, eye.turn)} alt="The parts board, live" draggable={false} onError={() => setFailedTurn(eye.turn)} /> : null}
         {all.map((zone) => {
           const mine = zone.id === FRESH;

@@ -117,6 +117,8 @@
 .teach .figure { text-wrap: balance; }
 .pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .pairs .field input { width: 100%; }
+/* A box's name sits above the box, clear of its corners: a small box is all corners. */
+.feed.boxes .zone > .tag { left: -2px; top: -18px; transform: translateY(-100%); pointer-events: none; }
 /* The new part's box is the orange one. The station's own boxes are cream, with smaller corners, and move the same way. */
 .zone.editing.fresh { z-index: 4; }
 .outline.ledge.fresh { fill: rgba(250, 75, 5, 0.18); }
