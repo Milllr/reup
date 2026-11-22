@@ -176,6 +176,27 @@ describe('Shop', () => {
     expect([done?.state, done?.figure, done?.meta]).toEqual(['done', '$67.71', '8 boxes in the cart · with tax']);
   });
 
+  it('does not call a retailer blocked on the strength of an old answer while this order checks again', () => {
+    // An hour ago Retailer B had no price for this part. That is all the hub has when the order opens, so it checks again.
+    const old = '2026-11-21T08:10:00-05:00';
+    const stale: Snapshot = { ...s, quotes: s.quotes.map((q) => ({ ...q, fetchedAt: old })), runs: s.runs.filter((r) => r.kind !== 'market') };
+    // Before any browser opens: both retailers are starting, neither is blocked and neither shows the old price.
+    expect(panes(stale, order, product).slice(0, 2).map((p) => [p.state, p.figure])).toEqual([['loading', 'Starting'], ['loading', 'Starting']]);
+    // The price checks go one at a time. Retailer A's browser is working, with last hour's failed run of B still in the list.
+    const lastHour = { ...s.runs.find((r) => r.supplierId === 's-market-b')!, id: 'r-old', orderId: null, startedAt: old, status: 'failed' as const };
+    const now = { ...s.runs.find((r) => r.supplierId === 's-market-a')!, id: 'r-now', orderId: null, status: 'running' as const, steps: [{ ts: order.createdAt, purpose: 'Opening the search results' }] };
+    const checking: Snapshot = { ...stale, runs: [...stale.runs, lastHour, now] };
+    expect(panes(checking, order, product).slice(0, 2).map((p) => [p.state, p.figure, p.tag])).toEqual([
+      ['live', 'Step 1', 'Price check · Retailer A'],
+      ['loading', 'Starting', 'Price check · Retailer B'],
+    ]);
+    expect(shopSentence(checking, panes(checking, order, product), order)).toBe('Filling a cart at Offcut Supply. 0 of 2 price checks came back.');
+    // Answers no older than ten minutes when the order opened are this order's answers: the hub does not check again.
+    const recent = '2026-11-21T09:08:00-05:00';
+    const cached: Snapshot = { ...s, quotes: s.quotes.map((q) => ({ ...q, fetchedAt: recent })), runs: s.runs.filter((r) => r.kind !== 'market') };
+    expect(panes(cached, order, product).slice(0, 2).map((p) => [p.state, p.figure])).toEqual([['done', '$8.69'], ['failed', 'No price']]);
+  });
+
   it('shows loading before any step, a replay tag for a recording, and says when a local stand in shopped', () => {
     const bare: Snapshot = { ...s, runs: [], quotes: [] };
     expect(panes(bare, order, product).map((p) => [p.state, p.figure, p.meta])).toEqual(Array(3).fill(['loading', 'Starting', 'Opening a browser.']));

@@ -20,16 +20,44 @@ export interface Pane {
 
 const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
 
+const TEN_MINUTES = 10 * 60 * 1000;
+
+/**
+ * The price checks that belong to this order. The hub checks prices again when any retailer's answer is older than ten
+ * minutes at the moment the order opens. Until the new answers are in, an old one says nothing about this order: a
+ * retailer that had no price half an hour ago is not blocked now, its browser is working or waiting for its turn.
+ */
+export function priceChecks(s: Snapshot, order: Order): { runs: Run[]; quote: (supplierId: string) => Quote | undefined } {
+  const opened = Date.parse(order.createdAt);
+  const kept = (supplierId: string) => s.quotes.find((q) => q.supplierId === supplierId && q.productId === order.productId);
+  const markets = s.suppliers.filter((x) => x.kind === 'market').slice(0, 2);
+  const cached = markets.every((m) => {
+    const q = kept(m.id);
+    return q != null && opened - Date.parse(q.fetchedAt) < TEN_MINUTES;
+  });
+  const all = runsFor(s, order, ['market']);
+  if (cached) return { runs: all, quote: kept };
+  return {
+    runs: all.filter((r) => r.orderId === order.id || Date.parse(r.startedAt) >= opened),
+    quote: (supplierId) => {
+      const q = kept(supplierId);
+      return q && Date.parse(q.fetchedAt) >= opened ? q : undefined;
+    },
+  };
+}
+
 /** One pane per price check, then the cart at the account supplier. */
 export function panes(s: Snapshot, order: Order, product: Product | undefined): Pane[] {
-  const marketRuns = runsFor(s, order, ['market']);
+  const checks = priceChecks(s, order);
+  const marketRuns = checks.runs;
   const cartRun = runsFor(s, order, ['cart']).at(-1);
   const out: Pane[] = [];
   for (const supplier of s.suppliers.filter((x) => x.kind === 'market').slice(0, 2)) {
     const run = marketRuns.filter((r) => r.supplierId === supplier.id).at(-1);
-    const quote: Quote | undefined = s.quotes.find((q) => q.supplierId === supplier.id && q.productId === order.productId);
+    const quote = checks.quote(supplier.id);
     const replay = run?.replay ? ' · replay' : '';
-    if ((quote && !quote.ok) || run?.status === 'failed' || run?.status === 'cancelled') {
+    const busy = run?.status === 'running' || run?.status === 'queued';
+    if (!busy && ((quote && !quote.ok) || run?.status === 'failed' || run?.status === 'cancelled')) {
       out.push({ supplier, kind: 'market', run, state: 'failed', tag: `Blocked · ${supplier.name}${replay}`, figure: 'No price', meta: run?.error ?? 'No price from this one' });
     } else if (quote?.ok && quote.unitPrice != null && (!run || run.status === 'completed')) {
       const stock = quote.inStock === false ? 'out of stock' : 'in stock';
