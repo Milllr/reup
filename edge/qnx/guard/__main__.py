@@ -23,8 +23,9 @@ def main() -> None:
     parser.add_argument("--button-pin", type=int, default=int(os.environ.get("GUARD_BUTTON_PIN", "-1")))
     args = parser.parse_args()
     log = lambda text: print(f"[guard] {text}", file=sys.stderr, flush=True)  # noqa: E731
-    guard = Guard(Path(args.data), Hub(args.hub, os.environ.get("DEVICE_TOKEN", "dev-device-token")), log=log, supervised=os.environ.get("GUARD_SUPERVISED") == "1")
-    log(f"Hub: {args.hub}. Ledger: {guard.ledger.path} ({len(guard.ledger.records)} lines). Queued: {len(guard.outbox)}.")
+    relay = os.environ.get("HUB_RELAY", "")
+    guard = Guard(Path(args.data), Hub(args.hub, os.environ.get("DEVICE_TOKEN", "dev-device-token"), relay=relay), log=log, supervised=os.environ.get("GUARD_SUPERVISED") == "1")
+    log(f"Hub: {args.hub}{' by way of ' + relay if relay else ''}. Ledger: {guard.ledger.path} ({len(guard.ledger.records)} lines). Queued: {len(guard.outbox)}.")
 
     def sender() -> None:
         while True:

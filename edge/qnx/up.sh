@@ -5,6 +5,7 @@
 # From the station laptop use pi_up.ps1, which finds the laptop's address for CAMERA_URL and calls this.
 # Usage: ssh reup-pi "HUB_URL=https://wheredidallmyinventorygo.wtf DEVICE_TOKEN=... CAMERA_URL=http://169.254.138.173:8089/stream/board.mjpg ~/reup-node/up.sh"
 #   CAMERA_URL  the camera's pictures, served by the eye on the laptop. Not set: a camera on the Pi's own USB.
+#   HUB_RELAY   the hub by way of the laptop, for example http://169.254.138.173:8089/hub. The Pi then needs no internet of its own.
 #   SITE_URL    also open this page full screen in the Pi's browser, and keep the hand window as an inset over it.
 cd "$(dirname "$0")" || exit 1
 : "${HUB_URL:?Set HUB_URL, for example https://wheredidallmyinventorygo.wtf}"
@@ -14,6 +15,8 @@ SITE="${SITE_URL:-}"
 DATA="${GUARD_DATA:-$PWD/data}"
 mkdir -p "$DATA"
 if [ -n "$CAMERA_URL" ]; then export REUP_CAMERA_URL="$CAMERA_URL"; fi
+# HUB_RELAY: the hub by way of the laptop on the cable (the eye passes the node's calls on). Tried before the Pi's own internet.
+if [ -n "$HUB_RELAY" ]; then export HUB_RELAY; fi
 # With no page beside it the hand model's window is the whole screen. The hand model looks at the picture at the
 # window's own width and the screen scales it up. Measured on the Pi with the laptop's stream: 640 wide, 20 to 25
 # pictures a second. 1024 wide, 10 to 14.
@@ -31,7 +34,10 @@ fi
 running() { pidin ar 2>/dev/null | grep -v grep | grep -q "$1"; }
 
 # The Pi has no clock battery. With the wrong date every https call fails.
-if sudo ntpdate -bs pool.ntp.org 2>/dev/null; then echo "Clock set. $(date)"; else echo "Clock not set, no internet yet. $(date)"; fi
+# With no internet of its own the Pi takes the laptop's clock (LAPTOP_UTC, as yyyymmddhhmm.ss, sent by pi_up.ps1).
+if sudo ntpdate -bs pool.ntp.org 2>/dev/null; then echo "Clock set from the internet. $(date)"
+elif [ -n "$LAPTOP_UTC" ] && sudo date -u "$LAPTOP_UTC" > /dev/null 2>&1; then echo "Clock set from the laptop. $(date)"
+else echo "Clock not set. $(date)"; fi
 
 # A desktop that locks or sleeps after five quiet minutes shows a judge nothing. Both are turned off, once.
 ini="$HOME/.config/weston.ini"
@@ -49,7 +55,7 @@ if ! running "/usr/bin/weston"; then
 fi
 
 # A node that runs on another camera address, or another layout, than the one asked for now is started again.
-want="camera=$CAMERA_URL site=$SITE window=${REUP_WINDOW_WIDTH}x${REUP_WINDOW_HEIGHT} button=${GUARD_BUTTON_PIN}"
+want="camera=$CAMERA_URL relay=$HUB_RELAY site=$SITE window=${REUP_WINDOW_WIDTH}x${REUP_WINDOW_HEIGHT} button=${GUARD_BUTTON_PIN}"
 if running "supervisor.py" && [ "$(cat "$DATA/up.txt" 2>/dev/null)" != "$want" ]; then
   for pid in $(pidin ar 2>/dev/null | grep -v grep | grep -E "supervisor.py|python3 -m guard|handtrack_node" | awk '{ print $1 }'); do kill "$pid" 2>/dev/null; done
   sleep 2

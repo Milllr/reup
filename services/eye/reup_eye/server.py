@@ -1,4 +1,5 @@
-"""The eye's local routes on port 8089: the live stream, outlines, a debug picture, and the empty and full board captures.
+"""The eye's local routes on port 8089: the live stream, outlines, a debug picture, the empty and full board captures,
+and the shelf node's way to the hub (/hub/...).
 
 Standard library only. Every answer allows any origin, because the TV page comes from the hub, not from here.
 """
@@ -7,13 +8,15 @@ from __future__ import annotations
 import json
 import re
 import time
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 BOUNDARY = "reupframe"
 
 
-def make_server(runtime, port: int) -> ThreadingHTTPServer:
+def make_server(runtime, port: int, opener=urllib.request.urlopen) -> ThreadingHTTPServer:
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
@@ -59,6 +62,8 @@ def make_server(runtime, port: int) -> ThreadingHTTPServer:
             url = urlparse(self.path)
             query = {k: v[0] for k, v in parse_qs(url.query).items()}
             length = int(self.headers.get("Content-Length") or 0)
+            if url.path.startswith("/hub/"):
+                return self._relay(url, self.rfile.read(length) if length else b"")
             if length:
                 self.rfile.read(length)
             if m := re.fullmatch(r"/reference/(\w+)", url.path):
@@ -93,6 +98,26 @@ def make_server(runtime, port: int) -> ThreadingHTTPServer:
             if url.path.startswith("/sim/") and runtime.sim is not None:
                 return self._json(200, {"ok": True, **runtime.sim.command(url.path[5:], query)})
             self._json(404, {"ok": False, "code": "not_found", "message": f"No route {url.path}."})
+
+        def _relay(self, url, body: bytes) -> None:
+            """The shelf node's calls to the hub, passed on as they are. POST only, and only to the hub this eye talks to.
+
+            The Pi sits on a direct cable to this laptop and had its internet from a phone's hotspot, which dropped for
+            seconds at a time. Each drop put "Shelf node offline" on the board. Through here the node needs no internet
+            of its own: the laptop's is the one the whole station stands on anyway.
+            """
+            target = runtime.hub.url.rstrip("/") + url.path[len("/hub"):] + (f"?{url.query}" if url.query else "")
+            # Cloudflare turns away Python's own User-Agent before the hub sees the call.
+            headers = {"Content-Type": self.headers.get("Content-Type") or "application/json", "User-Agent": "reup-node/1"}
+            if self.headers.get("Authorization"):
+                headers["Authorization"] = self.headers["Authorization"]
+            try:
+                with opener(urllib.request.Request(target, data=body, method="POST", headers=headers), timeout=2.0) as answer:
+                    return self._send(answer.status, answer.read(), answer.headers.get("Content-Type") or "application/json")
+            except urllib.error.HTTPError as err:
+                return self._send(err.code, err.read() or b"{}", "application/json")
+            except (urllib.error.URLError, OSError, ValueError) as err:
+                return self._json(502, {"ok": False, "code": "upstream_failed", "message": f"The hub did not answer the laptop: {err}"})
 
         def _stream(self, camera_id: str) -> None:
             if camera_id not in runtime.cameras:

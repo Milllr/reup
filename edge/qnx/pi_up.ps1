@@ -24,4 +24,5 @@ foreach ($ip in $mine) {
 }
 if (-not $found) { "The Pi cannot reach the eye on this laptop. Tried: $($mine -join ', '). Is the cable in, and does ssh $Pi work?"; exit 1 }
 "The Pi sees this laptop at $found."
-& ssh @ssh "HUB_URL=$Hub DEVICE_TOKEN=$Token CAMERA_URL=http://${found}:$Port/stream/board.mjpg ~/reup-node/up.sh"
+$utc = (Get-Date).ToUniversalTime().ToString('yyyyMMddHHmm.ss')
+& ssh @ssh "LAPTOP_UTC=$utc HUB_URL=$Hub DEVICE_TOKEN=$Token CAMERA_URL=http://${found}:$Port/stream/board.mjpg HUB_RELAY=http://${found}:$Port/hub ~/reup-node/up.sh"

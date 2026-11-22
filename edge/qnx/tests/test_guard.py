@@ -369,3 +369,64 @@ def test_a_guard_that_starts_with_the_pin_down_says_yes_to_nothing(tmp_path):
         if p.look(True, t / 50):
             g.on_button()
     assert not [route for route, _ in hub.posts if route.endswith("/approve")]
+
+
+class Wire:
+    """Stands in for urlopen: answers by address. An answer is a dict (200), an int (that HTTP error), or an exception."""
+
+    def __init__(self, answers: dict):
+        self.answers = answers
+        self.asked: list[str] = []
+
+    def __call__(self, request, timeout=None):
+        import io
+        import urllib.error
+
+        self.asked.append(request.full_url)
+        base = request.full_url.split("/ingest")[0]
+        answer = self.answers[base]
+        if isinstance(answer, Exception):
+            raise answer
+        if isinstance(answer, int):
+            raise urllib.error.HTTPError(request.full_url, answer, "no", {}, io.BytesIO(b"{}"))
+        return io.BytesIO(json.dumps(answer).encode())
+
+
+def test_the_hub_is_reached_through_the_laptop_first_and_directly_when_the_laptop_is_gone():
+    import urllib.error
+
+    from guard.hub import Hub
+    from guard.outbox import DROP, OK, RETRY
+
+    relay, direct = "http://169.254.138.173:8089/hub", "https://hub.example"
+    now = {"t": 0.0}
+    wire = Wire({relay: {"ok": True, "via": "laptop"}, direct: {"ok": True, "via": "direct"}})
+    hub = Hub(direct, "t", opener=wire, relay=relay, clock=lambda: now["t"])
+    assert hub.post("/ingest/node", {}) == (OK, {"ok": True, "via": "laptop"})
+    assert wire.asked == [relay + "/ingest/node"]
+    # The laptop is off: one call finds that out, the hub is asked directly, and the laptop is left alone for a while.
+    wire.answers[relay] = urllib.error.URLError("refused")
+    assert hub.post("/ingest/node", {})[1] == {"ok": True, "via": "direct"}
+    assert hub.post("/ingest/node", {})[1] == {"ok": True, "via": "direct"}
+    assert wire.asked[1:] == [relay + "/ingest/node", direct + "/ingest/node", direct + "/ingest/node"]
+    # Later it is tried again, and it is back.
+    now["t"] = 30.0
+    wire.answers[relay] = {"ok": True, "via": "laptop"}
+    assert hub.post("/ingest/node", {})[1] == {"ok": True, "via": "laptop"}
+    # The laptop answers, but the hub did not answer the laptop (502): that is the laptop's way failing, not a no from the hub.
+    wire.answers[relay] = 502
+    assert hub.post("/ingest/node", {})[1] == {"ok": True, "via": "direct"}
+    # A real no from the hub comes back as it is, whichever way it came: nothing is asked twice.
+    now["t"] = 60.0
+    wire.answers[relay] = 409
+    before = len(wire.asked)
+    assert hub.post("/ingest/node", {}) == (DROP, None)
+    assert len(wire.asked) == before + 1
+    # Both ways gone: try again later.
+    now["t"] = 90.0
+    wire.answers[relay] = urllib.error.URLError("refused")
+    wire.answers[direct] = urllib.error.URLError("no route")
+    assert hub.post("/ingest/node", {}) == (RETRY, None)
+    # With no relay named it is the hub alone, as before.
+    plain = Hub(direct, "t", opener=Wire({direct: {"ok": True}}))
+    assert plain.post("/ingest/node", {}) == (OK, {"ok": True})
