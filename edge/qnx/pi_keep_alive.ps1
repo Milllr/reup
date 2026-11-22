@@ -28,7 +28,8 @@ $created = $false
 $mutex = New-Object System.Threading.Mutex($true, 'reup-pi-keep-alive', [ref]$created)
 if (-not $created) { Write-Output 'A Pi watchdog is already running. Nothing started.'; exit 0 }
 
-$ssh = @('-o', 'BatchMode=yes', '-o', 'ConnectTimeout=4', '-o', 'ConnectionAttempts=1', $Pi)
+# -n: ssh must not wait on a keyboard. Started with no window there is none, and without -n the first look never came back.
+$ssh = @('-n', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=4', '-o', 'ConnectionAttempts=1', $Pi)
 # How many supervisors of the shelf node run on the Pi. A number is an answer, anything else is no answer.
 $ask = "pidin ar 2>/dev/null | grep -v grep | grep -c supervisor.py"
 

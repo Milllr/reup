@@ -34,9 +34,9 @@ fi
 running() { pidin ar 2>/dev/null | grep -v grep | grep -q "$1"; }
 
 # The Pi has no clock battery. With the wrong date every https call fails.
-# With no internet of its own the Pi takes the laptop's clock (LAPTOP_UTC, as yyyymmddhhmm.ss, sent by pi_up.ps1).
+# With no internet of its own the Pi takes the laptop's clock (LAPTOP_UTC, seconds since 1970, sent by pi_up.ps1).
 if sudo ntpdate -bs pool.ntp.org 2>/dev/null; then echo "Clock set from the internet. $(date)"
-elif [ -n "$LAPTOP_UTC" ] && sudo date -u "$LAPTOP_UTC" > /dev/null 2>&1; then echo "Clock set from the laptop. $(date)"
+elif [ -n "$LAPTOP_UTC" ] && sudo date -u "@$LAPTOP_UTC" > /dev/null 2>&1; then echo "Clock set from the laptop. $(date)"
 else echo "Clock not set. $(date)"; fi
 
 # A desktop that locks or sleeps after five quiet minutes shows a judge nothing. Both are turned off, once.
