@@ -7,7 +7,7 @@ import { Menu, pageHref } from '../src/screens/menu';
 import { APPROVE, ApproveHere, howToSayYes, Order as OrderScreen } from '../src/screens/order';
 import { Controls, ZoneEditor } from '../src/screens/ops';
 import { ApproveBand, NO_KEY, TeachForm } from '../src/screens/phone';
-import { NO_FEED, NO_PARTS, Shelf, WATCHING } from '../src/screens/shelf';
+import { FEED_RETRY_MS, feedUrl, NO_FEED, NO_PARTS, Shelf, WATCHING } from '../src/screens/shelf';
 import { EYE_AWAY, LEDGES_HINT, LEDGES_SAVE, LOOKING, nameTeachSpot } from '../src/screens/shelf/ledges';
 import { panes, Shop, shopSentence } from '../src/screens/shop';
 import { Teach } from '../src/screens/teach';
@@ -67,6 +67,43 @@ describe('Shelf', () => {
     expect(container.querySelector('.feed img')).toBeNull();
     expect(container.querySelectorAll('.pockets')).toHaveLength(2);
     expect(screen.getByText(NO_FEED).className).toContain('alert');
+  });
+
+  it('opens the picture again by itself: when it would not load and the eye still answers, and when the eye was gone and is back', async () => {
+    vi.useFakeTimers();
+    let up = true;
+    const eyeFetch = vi.fn(async () => {
+      if (!up) throw new Error('refused');
+      return new Response(JSON.stringify({ items: [] }));
+    });
+    const { container } = render(<Shelf live={live('shelf', { mock: false })} eyeFetch={eyeFetch as never} />);
+    const src = () => container.querySelector('.feed img')?.getAttribute('src') ?? null;
+    const pass = async (ms: number) => { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); };
+    await pass(100);
+    expect(eyeFetch).toHaveBeenCalledWith('http://192.168.1.20:8089/outlines/board.json');
+    expect(src()).toBe('http://192.168.1.20:8089/stream/board.mjpg');
+    // The picture fails to load. The drawn board stands in, and the eye is still asked.
+    fireEvent.error(container.querySelector('.feed img') as HTMLImageElement);
+    expect(src()).toBeNull();
+    expect(screen.getByText(NO_FEED)).toBeTruthy();
+    await pass(FEED_RETRY_MS - 800);
+    expect(src()).toBeNull();
+    // The eye has answered for three seconds since: the picture is opened again, on a new address.
+    await pass(2100);
+    expect(src()).toBe('http://192.168.1.20:8089/stream/board.mjpg?turn=1');
+    expect(screen.queryByText(NO_FEED)).toBeNull();
+    // The eye stops and is started again. Its old stream said nothing when it ended: the picture is opened again all the same.
+    up = false;
+    await pass(1500);
+    expect(src()).toBe('http://192.168.1.20:8089/stream/board.mjpg?turn=1');
+    up = true;
+    await pass(800);
+    expect(src()).toBe('http://192.168.1.20:8089/stream/board.mjpg?turn=2');
+    // While it answers and the picture is well, nothing is opened again.
+    await pass(10_000);
+    expect(src()).toBe('http://192.168.1.20:8089/stream/board.mjpg?turn=2');
+    expect(feedUrl('http://x/stream/board.mjpg?a=1', 3)).toBe('http://x/stream/board.mjpg?a=1&turn=3');
+    vi.useRealTimers();
   });
 
   it('says so when there are no parts, and when the hub is unreachable', () => {

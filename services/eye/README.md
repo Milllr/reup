@@ -36,6 +36,17 @@ For pockets and difference blobs, the eye compares with the empty board. The tea
 
 The empty board and the size of one unit are saved in `data/` and survive a restart. Save both again whenever the camera or the board moves, and draw the zones again first.
 
+## Keeping it running on the station laptop
+
+The eye is started by a watchdog and never by hand. The watchdog starts it again when it stops, stops answering, or gets no frames from the camera for 20 seconds, and it picks the python that has the eye's packages whatever shell it is run from.
+
+* Start it once and leave it: `powershell -NoProfile -ExecutionPolicy Bypass -File services\eye\keep_alive.ps1`
+* New code: `powershell -NoProfile -ExecutionPolicy Bypass -File services\eye\restart.ps1` puts the checkout on `origin/main`, restarts the eye and prints what it sees. `-Ref` names another branch.
+* Every restart and its reason is a line in `data\watchdog.log`. The eye's own words are in `data\eye.log` and `data\eye.err`, and the run before in the same names with `.last`.
+* Measured on the laptop: killed, the eye answers again after 9 seconds, has the camera after 11, and counts after 37 (the detector loads its model).
+* After a reboot the watchdog has to be started again. It is one process, not a service.
+* The board page opens the picture again by itself when the eye comes back, so nobody has to reload it.
+
 ## When the camera gets bumped
 
 The first time the eye runs with a still picture it saves the edges of that picture as the camera's home position (`data/home-board.npy`). About once a second, and after anything moves, it compares the picture with home and works out the slide and the turn between them. A picture that moved is moved back before the stream, the zones or the detector see it, so nothing has to be drawn again.

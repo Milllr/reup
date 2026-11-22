@@ -1,6 +1,6 @@
 /** Shelf: the live board in the frame, a selection per part, the index of counts, one sentence. */
 import type { Count, Snapshot, Zone as ZoneT } from '@reup/contracts';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cx, Frame, Plate, Tag, Word } from '../../components';
 import { clock, partRows, shelfMoment, zoneBox, type Moment, type PartRow } from '../../lib/view';
 import type { LiveState } from '../../store/reduce';
@@ -13,20 +13,46 @@ export const NO_FEED = 'Camera feed unavailable. Showing counts.';
 
 interface Outline { productId: string | null; points: [number, number][] }
 
-/** The eye serves item outlines next to its stream. They are a nicety: any failure just means none are drawn. */
-function useOutlines(streamUrl: string | null, on: boolean): Outline[] {
+/** How long a picture that would not load is left alone before it is tried again, while the eye answers. */
+export const FEED_RETRY_MS = 3000;
+
+/**
+ * The eye serves item outlines next to its stream, and the same poll says whether the eye is there at all.
+ * The outlines are a nicety: any failure just means none are drawn.
+ *
+ * turn counts the times the picture has to be opened again: the eye was gone and is back, or the picture would not
+ * load (failed) and the eye has answered for a few seconds since. A stream that has ended keeps its last frame and
+ * says nothing, and one that failed to load was never tried again, so the board sat on a stale or missing picture
+ * until someone reloaded the page.
+ */
+export function useEye(streamUrl: string | null, on: boolean, failed: boolean, fetcher: typeof fetch = fetch): { outlines: Outline[]; turn: number } {
   const [items, setItems] = useState<Outline[]>([]);
+  const [turn, setTurn] = useState(0);
+  const failedRef = useRef(failed);
+  failedRef.current = failed;
   useEffect(() => {
     if (!on || !streamUrl) return setItems([]);
     let stop = false;
+    let away = false;
+    let failedSince: number | null = null;
     const url = streamUrl.replace(/\/stream\/(\w+)\.mjpg.*$/, '/outlines/$1.json');
     const tick = async () => {
       try {
-        const res = await fetch(url);
+        const res = await fetcher(url);
         const data = (await res.json()) as { items?: Outline[] };
-        if (!stop && Array.isArray(data.items)) setItems(data.items);
+        if (stop) return;
+        if (Array.isArray(data.items)) setItems(data.items);
+        const now = Date.now();
+        failedSince = failedRef.current ? (failedSince ?? now) : null;
+        if (away || (failedSince != null && now - failedSince >= FEED_RETRY_MS)) {
+          away = false;
+          failedSince = null;
+          setTurn((n) => n + 1);
+        }
       } catch {
-        if (!stop) setItems([]);
+        if (stop) return;
+        away = true;
+        setItems([]);
       }
     };
     void tick();
@@ -35,9 +61,12 @@ function useOutlines(streamUrl: string | null, on: boolean): Outline[] {
       stop = true;
       clearInterval(t);
     };
-  }, [streamUrl, on]);
-  return items;
+  }, [streamUrl, on, fetcher]);
+  return { outlines: items, turn };
 }
+
+/** The stream's address for one opening of it. A new address is what makes the browser connect again. */
+export const feedUrl = (streamUrl: string, turn: number) => (turn === 0 ? streamUrl : `${streamUrl}${streamUrl.includes('?') ? '&' : '?'}turn=${turn}`);
 
 /** A zone drawn from its count, for when there is no picture: pockets full or empty, loose items as blocks, a bin as a level. */
 export function ZoneDrawing({ zone, count }: { zone: ZoneT; count: Count | undefined }) {
@@ -73,14 +102,23 @@ export function sentence(s: Snapshot): string {
 }
 
 /** ledges: the boxes are being moved on this screen. note: one line about what the menu just did, shown where an alert goes. */
-export function Shelf({ live, moment: forced, ledges, note }: { live: LiveState; moment?: Moment; ledges?: LedgeEdit; note?: string | null }) {
+export function Shelf({ live, moment: forced, ledges, note, eyeFetch }: { live: LiveState; moment?: Moment; ledges?: LedgeEdit; note?: string | null; eyeFetch?: typeof fetch }) {
   const s = live.snapshot as Snapshot;
   const rows = partRows(s).slice(0, 6);
   const moment = forced ?? shelfMoment(s);
   const board = s.cameras.find((c) => c.id === 'board');
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const showFeed = !live.mock && board != null && board.online && board.streamUrl != null && failedUrl !== board.streamUrl;
-  const outlines = useOutlines(board?.streamUrl ?? null, showFeed);
+  // The opening of the stream that would not load. The eye is asked whenever there is a stream to show, so a picture
+  // that failed or went stale is opened again by itself.
+  const [failedTurn, setFailedTurn] = useState<number | null>(null);
+  const hasStream = !live.mock && board != null && board.streamUrl != null;
+  const eye = useEye(board?.streamUrl ?? null, hasStream, failedTurn != null, eyeFetch);
+  const failed = failedTurn === eye.turn;
+  const showFeed = hasStream && board.online && !failed;
+  const outlines = showFeed ? eye.outlines : [];
+  useEffect(() => {
+    // A new opening: the old failure is not about this one.
+    setFailedTurn((t) => (t != null && t !== eye.turn ? null : t));
+  }, [eye.turn]);
   const alert = alertText(live) ?? note ?? (!live.mock && !showFeed && s.products.length > 0 ? NO_FEED : null);
   // The tag is there when the shelf node on QNX does the counting. The eye counting is the plain case and gets no tag.
   const credit = s.node.online && s.node.level >= 2 ? 'Counted by the shelf node on QNX' : null;
@@ -93,7 +131,7 @@ export function Shelf({ live, moment: forced, ledges, note }: { live: LiveState;
 
       <Frame settle label="Live parts board" style={{ left: 96, top: 118, width: 1150, height: 662 }} waiting={s.products.length === 0}>
         <div className="fill mat feed" ref={edit.box} onPointerMove={edit.on ? edit.move : undefined} onPointerUp={edit.on ? edit.up : undefined} onPointerLeave={edit.on ? edit.up : undefined}>
-          {showFeed && board?.streamUrl ? <img src={board.streamUrl} alt="The parts board, live" onError={() => setFailedUrl(board.streamUrl)} /> : null}
+          {showFeed && board?.streamUrl ? <img key={eye.turn} src={feedUrl(board.streamUrl, eye.turn)} alt="The parts board, live" onError={() => setFailedTurn(eye.turn)} /> : null}
           {showFeed && outlines.length > 0 ? (
             <svg className="outlines" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
               {outlines.map((o, i) => <polygon key={i} className="outline" points={o.points.map((p) => p.join(',')).join(' ')} />)}

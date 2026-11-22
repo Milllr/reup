@@ -323,6 +323,7 @@
       "acceptance": [
         "Matches docs/ui/shelf.html at 1920 by 1080 in both states (plain and `?low`): wordmark, the top tag, the feed on a mat in the frame with handles, the index of parts, one sentence, the word",
         "The feed is an <img> of cameras[board].streamUrl; if it fails to load it shows the board drawn from the pockets arrays, with an alert tag saying \"Camera feed unavailable. Showing counts.\"",
+        "The picture comes back by itself: when the eye was gone and answers again, or the picture failed to load and the eye has answered for 3 seconds, the stream is opened again on a new address. Nobody reloads the page",
         "Each zone is a selection with handles and a tag with the name, two spaces and the count, no dot (\"Wood screws  6 of 12\") placed from the zone's quad; item outlines come from the eye's outlines JSON when reachable",
         "A product at or under its reorder point with no placed order cuts the plate to wine with the word \"Reorder\", an orange zone with an alert tag and an orange figure; once its order is placed the plate is olive, the word is \"On the way\" and its row reads \"8 boxes on the way · arrives Tuesday\"",
         "A count change cuts the figure to the new value and the taken squares go hollow; a reach turns that zone lime until it ends",
