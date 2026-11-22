@@ -2,7 +2,7 @@ import type { AskResult, HistoryResult, Order, Snapshot, TeachState } from '@reu
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import history from '../../../contracts/mocks/history.json';
-import type { Reply } from '../src/lib/hub';
+import { yesKey, type Reply } from '../src/lib/hub';
 import { Menu, pageHref } from '../src/screens/menu';
 import { APPROVE, ApproveHere, howToSayYes, Order as OrderScreen } from '../src/screens/order';
 import { Controls, ZoneEditor } from '../src/screens/ops';
@@ -27,8 +27,11 @@ describe('Shelf', () => {
     const { container } = render(<Shelf live={live('shelf')} />);
     expect(plate(container)).toContain('olive');
     expect(word(container)).toBe('Stocked');
-    expect(screen.getByText('Wood screws · 6 of 12')).toBeTruthy();
-    expect(screen.getByText('Wood glue · 3 of 4')).toBeTruthy();
+    // The name, a wide gap, the count: no dot between them.
+    // The test library folds the gap to one space when it looks a tag up. On the page it is two spaces that do not fold.
+    expect(screen.getByText('Wood screws 6 of 12').textContent).toBe('Wood screws\u00a0\u00a06 of 12');
+    expect(screen.getByText('Wood glue 3 of 4')).toBeTruthy();
+    expect(container.textContent).not.toContain('Wood screws ·');
     expect(container.querySelectorAll('.feed .zone')).toHaveLength(4);
     expect(container.querySelectorAll('.pocket.full')).toHaveLength(6 + 5);
     expect(screen.getByText('Reorder at 4 · 11 days of cover')).toBeTruthy();
@@ -40,7 +43,7 @@ describe('Shelf', () => {
     const { container } = render(<Shelf live={live('low')} />);
     expect(plate(container)).toContain('wine');
     expect(word(container)).toBe('Reorder');
-    expect(screen.getByText('Wood screws · 4 of 12').className).toContain('alert');
+    expect(screen.getByText('Wood screws 4 of 12').className).toContain('alert');
     expect(container.querySelector('.zone.low')).not.toBeNull();
     expect(container.querySelector('.figure.low')?.textContent).toBe('4');
   });
@@ -104,7 +107,10 @@ describe('Shop', () => {
     expect(container.querySelectorAll('.frame')).toHaveLength(3);
     expect(screen.getByText('Price check · Retailer A')).toBeTruthy();
     expect(screen.getByText('Blocked · Retailer B').className).toContain('alert');
-    expect(screen.getByText('Your supplier · Offcut Supply')).toBeTruthy();
+    // The supplier's own frame carries no tag: the price checks are the ones that need naming.
+    expect(container.querySelectorAll('.frame > .tag')).toHaveLength(2);
+    expect(container.textContent).not.toContain('Your supplier');
+    expect(screen.getByLabelText('The cart at Offcut Supply')).toBeTruthy();
     expect(screen.getByText('Shopped by TinyFish on the live web')).toBeTruthy();
     expect(screen.getByText('Ordering 8 boxes')).toBeTruthy();
   });
@@ -116,7 +122,7 @@ describe('Shop', () => {
       ['failed', 'No price', 'The site showed a challenge page.'],
       ['live', 'Step 3', 'Setting quantity to 8'],
     ]);
-    expect(shopSentence(s, list, order)).toBe('Filling a cart at Offcut Supply. 2 of 2 price checks came back. Nothing is bought until someone says yes.');
+    expect(shopSentence(s, list, order)).toBe('Filling a cart at Offcut Supply. 2 of 2 price checks came back.');
     const done = panes(s, { ...order, total: 67.71 }, product)[2];
     expect([done?.state, done?.figure, done?.meta]).toEqual(['done', '$67.71', '8 boxes in the cart · with tax']);
   });
@@ -125,7 +131,8 @@ describe('Shop', () => {
     const bare: Snapshot = { ...s, runs: [], quotes: [] };
     expect(panes(bare, order, product).map((p) => [p.state, p.figure, p.meta])).toEqual(Array(3).fill(['loading', 'Starting', 'Opening a browser.']));
     const replayed: Snapshot = { ...s, runs: s.runs.map((r) => ({ ...r, replay: true, engine: 'local' as const })) };
-    expect(panes(replayed, order, product).map((p) => p.tag)).toEqual(['Price check · Retailer A · replay', 'Blocked · Retailer B · replay', 'Your supplier · Offcut Supply · replay']);
+    expect(panes(replayed, order, product).map((p) => p.tag)).toEqual(['Price check · Retailer A · replay', 'Blocked · Retailer B · replay', 'Replay']);
+    expect(panes(s, order, product).map((p) => p.tag)).toEqual(['Price check · Retailer A', 'Blocked · Retailer B', null]);
     render(<Shop live={{ ...live('shop'), snapshot: replayed }} />);
     expect(screen.getByText('Shopped by a local stand in, not on the live web')).toBeTruthy();
   });
@@ -150,33 +157,43 @@ describe('Order', () => {
     expect(screen.getByText('Tuesday')).toBeTruthy();
     // The sample shelf node is connected, and the test page is on localhost so it holds the local key: the plate has one button, Approve.
     expect(screen.getByText('Press the wooden button to place the order.')).toBeTruthy();
-    expect(screen.getByText('Or click Approve below, press Enter, or say yes from a phone. Nothing is bought until then.')).toBeTruthy();
     expect(APPROVE).toBe('Approve to place order');
     expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([APPROVE]);
-    expect(screen.getByText('8 boxes fills the board and arrives before it runs out. Retailer A is $1.20 more per box.')).toBeTruthy();
-    expect(screen.getByText('Waiting for a yes · PO RU-1042 · spend cap $150 an order')).toBeTruthy();
+    // Nothing else is written: no small print, no reason, no price note, no tag with the PO and the spend cap.
+    for (const gone of ['Nothing is bought', 'press Enter', 'fills the board', 'Retailer A is', 'Waiting for a yes', 'spend cap']) expect(container.textContent).not.toContain(gone);
+    expect(container.querySelector('.tag')).toBeNull();
     expect(container.querySelector('.frame.waiting')).not.toBeNull();
     expect(screen.getByRole('img', { name: 'A box of Wood screws #8 x 1-1/4 in' })).toBeTruthy();
   });
 
-  it('hides the market note when there is none', () => {
+  it('with no shelf node the button stands alone, and a hub that takes a yes from any screen gives it to a screen with no key', () => {
     const l = live('order');
-    (l.snapshot as Snapshot).orders = (l.snapshot as Snapshot).orders.map((o) => ({ ...o, marketNote: null }));
-    render(<OrderScreen live={l} />);
-    expect(screen.getByText('8 boxes fills the board and arrives before it runs out.')).toBeTruthy();
+    (l.snapshot as Snapshot).node.online = false;
+    const { container, unmount } = render(<OrderScreen live={l} />);
+    expect(screen.getByRole('button', { name: APPROVE })).toBeTruthy();
+    expect(container.querySelector('.figure.mid')?.textContent).toBe('Tuesday');
+    expect(container.textContent).not.toContain('phone');
+    unmount();
+    // The same key rules as a page: asked with no key at all, the open hub still means yes.
+    expect(yesKey({ open: true })).not.toBeNull();
+    expect(yesKey(null)).toBe('dev-approve-key');
   });
 
   it('placing is wine with the live pane; placed is olive with the confirmation; failed and cancelled say nothing was bought', () => {
     let r = at('placing');
     expect([plate(r.container).includes('wine'), word(r.container)]).toEqual([true, 'Placing']);
     expect(screen.getByText('Placing the order at Offcut Supply.')).toBeTruthy();
-    expect(screen.getByText('Approved with the wooden button · PO RU-1042')).toBeTruthy();
+    expect(r.container.querySelector('.tag')).toBeNull();
+    expect(r.container.textContent).not.toContain('Your supplier');
+    expect(screen.queryByRole('button', { name: 'Back to the board' })).toBeNull();
     r.unmount();
     r = at('placed');
     expect([plate(r.container).includes('olive'), word(r.container)]).toEqual([true, 'Ordered']);
     expect(screen.getByText('OC-58213')).toBeTruthy();
     expect(screen.getByText('Ordered. Arrives Tuesday.')).toBeTruthy();
     expect(screen.getByText('Confirmation · arrives Tuesday · $67.71')).toBeTruthy();
+    expect(r.container.textContent).not.toContain('Bought by reup');
+    expect(r.container.querySelector('.tag')).toBeNull();
     r.unmount();
     r = at('failed');
     expect([plate(r.container).includes('wine'), word(r.container)]).toEqual([true, 'Stopped']);
@@ -307,6 +324,31 @@ describe('the TV', () => {
   });
 });
 
+describe('the X on a finished order', () => {
+  it('goes back to the main view, on the board, and Escape does the same', () => {
+    act(() => store.set(live('placed')));
+    const { container } = render(<Tv />);
+    expect(word(container)).toBe('Ordered');
+    fireEvent.click(screen.getByRole('button', { name: 'Back to the board' }));
+    expect(container.querySelector('.plate')?.getAttribute('aria-label')).toBe('Shelf');
+    // The hub moves to another order by itself: the board follows it, and Escape closes that one too.
+    act(() => store.set(live('shelf')));
+    act(() => store.set(live('placed')));
+    expect(word(container)).toBe('Ordered');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(container.querySelector('.plate')?.getAttribute('aria-label')).toBe('Shelf');
+    act(() => store.set({ ...initial }));
+  });
+
+  it('is not there while the order is being placed, or on a screen that is not the board', () => {
+    const placing = render(<OrderScreen live={live('placing')} onClose={() => undefined} />);
+    expect(screen.queryByRole('button', { name: 'Back to the board' })).toBeNull();
+    placing.unmount();
+    render(<OrderScreen live={live('placed')} />);
+    expect(screen.queryByRole('button', { name: 'Back to the board' })).toBeNull();
+  });
+});
+
 describe('the menu', () => {
   it('lists the pages with where you are marked, and the board screens only on the board', () => {
     const { unmount } = render(<Menu page="/analytics" fixed />);
@@ -417,11 +459,11 @@ describe('saying yes and naming a part on the TV itself', () => {
   });
 
   it('the line names only what can say yes right now', () => {
-    expect(howToSayYes(true, false).line).toBe('Press the wooden button to place the order.');
-    expect(howToSayYes(true, true)).toEqual({ line: 'Press the wooden button to place the order.', also: 'Or click Approve below, press Enter, or say yes from a phone. Nothing is bought until then.' });
-    // With a key and no shelf node the button is the line: nothing is written above it.
-    expect(howToSayYes(false, true)).toEqual({ line: null, also: 'Or press Enter. A phone can say yes too. Nothing is bought until then.' });
-    expect(howToSayYes(false, false)).toEqual({ line: 'Say yes from a phone to place the order.', also: 'Nothing is bought until then.' });
+    expect(howToSayYes(true, false)).toBe('Press the wooden button to place the order.');
+    expect(howToSayYes(true, true)).toBe('Press the wooden button to place the order.');
+    // A screen that can say yes and has no shelf node: the button is the line, nothing is written above it.
+    expect(howToSayYes(false, true)).toBeNull();
+    expect(howToSayYes(false, false)).toBe('Say yes from a phone to place the order.');
   });
 });
 

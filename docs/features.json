@@ -219,7 +219,7 @@
         "GET / shows categories and featured items; GET /search?q= finds items by name, SKU or category words, best match first; GET /p/:sku shows name, SKU, unit, pack options as radio buttons with prices, stock, delivery days, a quantity field and Add to cart",
         "The catalog is seeded into D1 from contracts/mocks/catalog.json by a seed script; prices are CAD",
         "GET /catalog.json returns the whole catalog as the Catalog contract",
-        "A cookie notice shows on first visit and goes away when dismissed",
+        "There is no cookie notice. It was removed on Saturday night: it cost the buyer's browser a step on every run and showed in the live pane",
         "Every page has the footer: Offcut Supply is a demo store built for Hack Western 13. Nothing here is for sale.",
         "Pages are server rendered HTML that works with JavaScript off, with real labels on every input, matching the Offcut look in docs/UI.md"
       ],
@@ -322,7 +322,7 @@
       "acceptance": [
         "Matches docs/ui/shelf.html at 1920 by 1080 in both states (plain and `?low`): wordmark, the top tag, the feed on a mat in the frame with handles, the index of parts, one sentence, the word",
         "The feed is an <img> of cameras[board].streamUrl; if it fails to load it shows the board drawn from the pockets arrays, with an alert tag saying \"Camera feed unavailable. Showing counts.\"",
-        "Each zone is a selection with handles and a tag (\"Wood screws · 6 of 12\") placed from the zone's quad; item outlines come from the eye's outlines JSON when reachable",
+        "Each zone is a selection with handles and a tag with the name, two spaces and the count, no dot (\"Wood screws  6 of 12\") placed from the zone's quad; item outlines come from the eye's outlines JSON when reachable",
         "A product at or under its reorder point with no placed order cuts the plate to wine with the word \"Reorder\", an orange zone with an alert tag and an orange figure; once its order is placed the plate is olive, the word is \"On the way\" and its row reads \"8 boxes on the way · arrives Tuesday\"",
         "A count change cuts the figure to the new value and the taken squares go hollow; a reach turns that zone lime until it ends",
         "The sentence under the index is the newest activity, or \"Watching the board. Every part is above its reorder point.\"; the top tag reads \"Counted by the shelf node on QNX\" at node level 2 or higher and there is no tag otherwise; the mono line top right is the time alone",
@@ -349,10 +349,10 @@
       "story": "As a judge, I want to say yes with a wooden button.",
       "acceptance": [
         "Matches docs/ui/order.html: paper plate, the word is the order (\"8 boxes\"), the PartBox drawing across the frame with the product's name and unit on its label, the total, unit price, arrival day and supplier on the left, the reason and the market note as small copy",
-        "awaiting_approval: one line on the right says how to say yes (\"Press the wooden button to place the order.\" with the shelf node connected, a phone otherwise); a screen that holds a key has one button, \"Approve to place order\", and Enter does the same; with a key and no shelf node the button stands alone; the frame's orange handles blink, and the tag reads \"Waiting for a yes · PO RU-1042 · spend cap $150 an order\"",
+        "awaiting_approval: the right side holds one button, \"Approve to place order\", on any screen that can say yes: one that holds a key, or any screen when the hub is open (Snapshot.open). Enter does the same. With the shelf node connected one line above it reads \"Press the wooden button to place the order.\" There is no small print, no reason line, no price note and no tag. The frame's orange handles blink",
         "approved and placing: wine plate, the word \"Placing\", the frame turns landscape and holds the live pane of the place run, \"Placing the order at Offcut Supply.\"",
         "placed: olive plate, the word \"Ordered\", the confirmation number OC-58213 as the figure, \"Ordered. Arrives Tuesday.\"; shipped changes the tag to \"Shipped · arrives Tuesday\"; failed is a wine plate with the word \"Stopped\", an alert tag with the error and \"Nothing was bought.\"; cancelled is paper with the word \"Cancelled\"",
-        "The PO number and who approved (\"Approved with the wooden button at 9:16 AM\", \"from the laptop\" or \"from a phone\") show in the tag"
+        "The PO number shows top right once the order is placed. There is no tag saying who approved. A finished order has an X beside the menu that goes back to the main view, and Escape does the same"
       ],
       "tests": ["each order state renders its plate, word and line", "the word pluralises the unit: 8 boxes, 3 bags, 2 units for each", "arrival day formats as a weekday name in America/Toronto", "the market note is hidden when null"],
       "screens": ["docs/ui/order.html"], "depends": ["F23"]

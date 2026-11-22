@@ -1,51 +1,20 @@
-/** Order: the part in a frame, what it costs, when it arrives, and one line that says how to say yes. The plate and the word follow the order's state. */
+/** Order: the part in a frame, what it costs, when it arrives, and the button that says yes. The plate and the word follow the order's state. */
 import { unitsText } from '@reup/brain';
 import type { Order as OrderT, Snapshot } from '@reup/contracts';
 import { useEffect, useState } from 'react';
 import { Frame, PartBox, Plate, Tag, Word } from '../../components';
-import { call, hubUrl, token } from '../../lib/hub';
-import { clock, focusOrder, money, orderMoment, runsFor, supplierName, totalLabel, weekday } from '../../lib/view';
+import { call, hubUrl, yesKey } from '../../lib/hub';
+import { focusOrder, money, orderMoment, runsFor, supplierName, totalLabel, weekday } from '../../lib/view';
 import type { LiveState } from '../../store/reduce';
 import { alertText, BottomBar, Steps, TopBar } from '../common';
 
-const who = (o: OrderT) => (o.approvedBy === 'button' ? 'with the wooden button' : o.approvedBy === 'keyboard' ? 'from the laptop' : o.approvedBy === 'phone' ? 'from a phone' : null);
-
-/** The mono line that says where the order stands. */
-export function orderTag(o: OrderT, s: Snapshot): string {
-  const cap = 'spend cap $150 an order';
-  const by = who(o);
-  const at = by ? `Approved ${by} at ${clock(o.updatedAt).replace(/^\w+ /, '')}` : null;
-  switch (o.state) {
-    case 'pricing':
-    case 'carting':
-      return `Getting prices · PO ${o.poNumber}`;
-    case 'awaiting_approval':
-      return `Waiting for a yes · PO ${o.poNumber} · ${cap}`;
-    case 'approved':
-    case 'placing':
-      return by ? `Approved ${by} · PO ${o.poNumber}` : `PO ${o.poNumber}`;
-    case 'placed':
-      return `Bought by reup${at ? ` · ${at.toLowerCase()}` : ''}`;
-    case 'shipped':
-    case 'received':
-      return o.state === 'received' ? `Received · PO ${o.poNumber}` : `Shipped${o.eta ? ` · arrives ${weekday(o.eta)}` : ''}`;
-    case 'failed':
-      return `Stopped · PO ${o.poNumber}`;
-    case 'cancelled':
-      return `Cancelled · PO ${o.poNumber}`;
-  }
-  return supplierName(s, o.supplierId);
-}
-
 /**
- * How a person says yes, as one line and one smaller line. It names only what can say yes right now: the wooden
- * button when the shelf node is connected, the Approve button on a screen that holds a key, a phone otherwise.
+ * The one line above the Approve button, or null when the button says it all. It names only what can say yes right
+ * now: the wooden button when the shelf node is connected, a phone when this screen cannot say yes itself.
  */
-export function howToSayYes(nodeOnline: boolean, hasKey: boolean): { line: string | null; also: string } {
-  if (nodeOnline) return { line: 'Press the wooden button to place the order.', also: hasKey ? 'Or click Approve below, press Enter, or say yes from a phone. Nothing is bought until then.' : 'Or say yes from a phone. Nothing is bought until then.' };
-  // On a screen that holds a key the Approve button says it all, so there is no line above it.
-  if (hasKey) return { line: null, also: 'Or press Enter. A phone can say yes too. Nothing is bought until then.' };
-  return { line: 'Say yes from a phone to place the order.', also: 'Nothing is bought until then.' };
+export function howToSayYes(nodeOnline: boolean, canSayYes: boolean): string | null {
+  if (nodeOnline) return 'Press the wooden button to place the order.';
+  return canSayYes ? null : 'Say yes from a phone to place the order.';
 }
 
 /** The words on the button. Miller's wording. */
@@ -55,18 +24,18 @@ export const APPROVE = 'Approve to place order';
  * Saying yes on this screen: one Approve button to click, and Enter does the same. Only a screen that holds a key
  * has it, which is the station's own laptop or a board opened with ?k=. When the hub says no, the reason shows under it.
  */
-export function ApproveHere({ order, k = token('k') ?? token('ops'), send = call }: { order: OrderT; k?: string | null; send?: typeof call }) {
+export function ApproveHere({ order, k, send = call }: { order: OrderT; k: string | null; send?: typeof call }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const approve = async () => {
-    if (!k || busy) return;
+    if (k == null || busy) return;
     setBusy(true);
     const res = await send('POST', `/api/orders/${order.id}/approve`, { by: 'keyboard' }, k);
     setBusy(false);
     setError(res.ok ? null : (res.message ?? 'Could not place the order.'));
   };
   useEffect(() => {
-    if (!k) return;
+    if (k == null) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Enter' || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       // Enter inside a form or on a button already means something there.
@@ -76,7 +45,7 @@ export function ApproveHere({ order, k = token('k') ?? token('ops'), send = call
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
-  if (!k) return null;
+  if (k == null) return null;
   return (
     <div className="stack" style={{ gap: 18, alignItems: 'flex-start' }}>
       <button className="btn yes" type="button" disabled={busy} onClick={() => void approve()}>{APPROVE}</button>
@@ -85,7 +54,20 @@ export function ApproveHere({ order, k = token('k') ?? token('ops'), send = call
   );
 }
 
-export function Order({ live }: { live: LiveState }) {
+/** The X on a finished order: back to the main view. Escape does the same. */
+function Close({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return <button className="close" type="button" aria-label="Back to the board" onClick={onClose}><i /><i /></button>;
+}
+
+/** onClose is given on the board: an X on a finished order goes back to the main view. */
+export function Order({ live, onClose }: { live: LiveState; onClose?: () => void }) {
   const s = live.snapshot as Snapshot;
   const order = focusOrder(s);
   if (!order) {
@@ -109,7 +91,8 @@ export function Order({ live }: { live: LiveState }) {
 
   if (moment.plate === 'paper') {
     const waiting = order.state === 'awaiting_approval';
-    const yes = howToSayYes(s.node.online, (token('k') ?? token('ops')) != null);
+    const k = yesKey(s);
+    const line = waiting ? howToSayYes(s.node.online, k != null) : order.state === 'cancelled' ? 'Nothing was bought.' : 'Getting the cart ready.';
     return (
       <Plate tone="paper" label="Order">
         <Word text={moment.word} at="top" quiet={quiet} />
@@ -121,14 +104,12 @@ export function Order({ live }: { live: LiveState }) {
             <span className="meta">{order.total != null ? `${totalLabel(order)}${order.unitPrice != null ? ` · ${money(order.unitPrice)} each` : ''} · ${units}` : `From ${supplier}`}</span>
           </div>
           {arrives ? <div className="stack" style={{ gap: 12 }}><span className="figure mid">{arrives}</span><span className="meta">{`Arrives · from ${supplier}`}</span></div> : null}
-          <p className="copy small" style={{ maxWidth: '21em' }}>{[order.reason, order.marketNote].filter(Boolean).join(' ')}</p>
         </div>
         <div className="abs stack" style={{ left: 1280, top: 420, width: 580, gap: 22 }}>
-          {waiting && yes.line == null ? null : <p className="figure mid">{waiting ? yes.line : order.state === 'cancelled' ? 'Nothing was bought.' : 'Getting the cart ready.'}</p>}
-          {waiting ? <ApproveHere key={order.id} order={order} /> : null}
-          {waiting ? <p className="copy small" style={{ maxWidth: '19em' }}>{yes.also}</p> : null}
+          {line ? <p className="figure mid">{line}</p> : null}
+          {waiting ? <ApproveHere key={order.id} order={order} k={k} /> : null}
         </div>
-        <BottomBar credit={orderTag(order, s)} alert={alert} />
+        <BottomBar credit={null} alert={alert} />
       </Plate>
     );
   }
@@ -139,9 +120,10 @@ export function Order({ live }: { live: LiveState }) {
   const done = !placing && !failed;
   return (
     <Plate tone={moment.plate} label="Order">
-      <TopBar credit={orderTag(order, s)} alert={alert ?? (failed ? 'Stopped. Nothing was bought.' : null)} meta={`PO ${order.poNumber}`} />
+      <TopBar credit={null} alert={alert ?? (failed ? 'Stopped. Nothing was bought.' : null)} meta={`PO ${order.poNumber}`} right={onClose && !placing ? 216 : undefined} />
+      {onClose && !placing ? <Close onClose={onClose} /> : null}
       {placing ? (
-        <Frame label="Placing the order" waiting settle style={{ left: 580, top: 150, width: 760, height: 600 }} tag={<Tag tone="cream">{`Your supplier · ${supplier}${placeRun?.replay ? ' · replay' : ''}`}</Tag>}>
+        <Frame label={`Placing the order at ${supplier}`} waiting settle style={{ left: 580, top: 150, width: 760, height: 600 }} tag={placeRun?.replay ? <Tag tone="cream">Replay</Tag> : undefined}>
           {placeRun?.streamingUrl && placeRun.status === 'running' && !placeRun.replay && !live.mock
             ? <iframe className="fill mat" src={placeRun.streamingUrl} title={`Live browser at ${supplier}`} sandbox="allow-scripts allow-same-origin" />
             : <Steps run={placeRun} empty="Opening a browser." />}

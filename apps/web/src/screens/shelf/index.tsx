@@ -54,9 +54,11 @@ export function ZoneDrawing({ zone, count }: { zone: ZoneT; count: Count | undef
   return <div className="pile">{Array.from({ length: Math.min(n, 12) }, (_, i) => <i key={i} />)}</div>;
 }
 
+/** "Hex bolts  3 of 3": the name, a wide gap, the count. The gap is two spaces that a browser does not fold into one. */
+const GAP = '\u00a0\u00a0';
 export function zoneTag(zone: ZoneT, row: PartRow | undefined, checking = false): string {
   if (!row) return zone.name;
-  return `${zone.name} · ${row.count}${row.capacity != null ? ` of ${row.capacity}` : ''}${checking ? ' · check' : ''}`;
+  return `${zone.name}${GAP}${row.count}${row.capacity != null ? ` of ${row.capacity}` : ''}${checking ? `${GAP}check` : ''}`;
 }
 
 export function sentence(s: Snapshot): string {

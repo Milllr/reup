@@ -28,6 +28,9 @@
     "SUPPLY_URL": "https://offcut.wheredidallmyinventorygo.wtf",
     // Asked in this order until one answers. The newest Flash is last: it was overloaded on demo weekend.
     "GEMINI_MODEL": "gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.6-flash,gemini-3.8-flash",
+    // Any screen that opens the site can say yes to an order, name a new part and change an item, with no key.
+    // Miller's call for the demo: the board is the laptop, and a judge may be handed a phone. Nothing real is bought.
+    "APPROVE_OPEN": "true",
     "ORDER_CAP_CAD": "150",
     "DAY_CAP_CAD": "400",
     "TIME_ZONE": "America/Toronto"

@@ -5,6 +5,12 @@ export interface Config {
   DEVICE_TOKEN: string;
   OPS_TOKEN: string;
   APPROVE_KEY: string;
+  /**
+   * True: anything a person does with the approve key needs no key at all. Saying yes to an order, naming a new part
+   * and changing an item then work from any screen that opens the site. Offcut Supply is a demo store and no money
+   * moves, and the spend caps still hold. Operator and device routes keep their tokens.
+   */
+  APPROVE_OPEN: boolean;
   SUPPLY_WEBHOOK_SECRET: string;
   SUPPLY_URL: string;
   GEMINI_API_KEY: string;
@@ -21,6 +27,7 @@ export const DEFAULTS: Config = {
   DEVICE_TOKEN: 'dev-device-token',
   OPS_TOKEN: 'dev-ops-token',
   APPROVE_KEY: 'dev-approve-key',
+  APPROVE_OPEN: false,
   SUPPLY_WEBHOOK_SECRET: 'dev-supply-secret',
   SUPPLY_URL: 'http://localhost:3001',
   GEMINI_API_KEY: '',
@@ -43,6 +50,7 @@ export function configFrom(env: Record<string, unknown>): Config {
     DEVICE_TOKEN: text('DEVICE_TOKEN'),
     OPS_TOKEN: text('OPS_TOKEN'),
     APPROVE_KEY: text('APPROVE_KEY'),
+    APPROVE_OPEN: env.APPROVE_OPEN === true || env.APPROVE_OPEN === 'true',
     SUPPLY_WEBHOOK_SECRET: text('SUPPLY_WEBHOOK_SECRET'),
     SUPPLY_URL: text('SUPPLY_URL').replace(/\/$/, ''),
     GEMINI_API_KEY: typeof env.GEMINI_API_KEY === 'string' ? env.GEMINI_API_KEY : '',

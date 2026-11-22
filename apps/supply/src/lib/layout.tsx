@@ -1,4 +1,4 @@
-/** The page frame every route draws inside: header, cookie notice, content, footer. A small trade supplier's site: dense, useful, a little dated. */
+/** The page frame every route draws inside: header, content, footer. A small trade supplier's site: dense, useful, a little dated. */
 import type { Child } from 'hono/jsx';
 import type { Session } from './shop';
 
@@ -66,17 +66,6 @@ export function Page(p: PageProps) {
         <style dangerouslySetInnerHTML={{ __html: CSS }} />
       </head>
       <body>
-        {p.cookiesOk ? null : (
-          <div class="cookie" role="region" aria-label="Cookie notice">
-            <div class="bar">
-              <span>Offcut Supply uses cookies to keep your cart and your sign in.</span>
-              <form method="post" action="/cookies">
-                <input type="hidden" name="next" value={p.path} />
-                <button type="submit" class="plain">Accept cookies</button>
-              </form>
-            </div>
-          </div>
-        )}
         <header>
           <div class="bar">
             <a class="brand" href="/">Offcut Supply</a>

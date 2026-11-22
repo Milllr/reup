@@ -27,7 +27,7 @@ export function TeachForm({ teach, s, send = call, bearer, focus = false }: { te
   }
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!bearer) return setError(NO_KEY);
+    if (bearer == null) return setError(NO_KEY);
     const body: TeachConfirmBody = { name: name.trim(), unit: unit.trim() || 'each', sku: sku.trim() === '' ? null : sku.trim(), searchPhrase: sug && sug.name === name.trim() ? sug.searchPhrase : name.trim(), zoneId };
     if (body.name === '' || body.zoneId === '') return setError('Give it a name and a place.');
     const res = await send('POST', `/api/teach/${teach.id}/confirm`, body, bearer);

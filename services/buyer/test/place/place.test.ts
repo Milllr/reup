@@ -52,6 +52,10 @@ describe('placing the order', () => {
     const saved = placeParams(offcut, placeJob, basket, profile, 'prof-1');
     expect(saved.goal).toContain('1. You should already be signed in.');
     expect(saved.goal).not.toContain('password');
+    // The number goes in its own field. Three live runs had written it into the reason and left the field empty.
+    expect(saved.goal).toContain('on the line "Confirmation number: OC-58213". Return it in the confirmation field');
+    expect(saved.goal).toContain('never write the number there');
+    expect(saved.goal).not.toContain('cookie');
     expect(basketLink(offcut, null)).toBeNull();
   });
 

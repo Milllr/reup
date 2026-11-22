@@ -1,15 +1,16 @@
 /** Teach: a new part is on the teach spot. Its picture sits in the frame while reup names it and a person says yes. */
 import type { Snapshot } from '@reup/contracts';
 import { Frame, Plate, Word } from '../../components';
-import { hubUrl, token } from '../../lib/hub';
+import { hubUrl, yesKey } from '../../lib/hub';
 import type { LiveState } from '../../store/reduce';
 import { alertText, BottomBar } from '../common';
 import { SURE, TeachForm } from './form';
 
 export { SURE } from './form';
 
-export function Teach({ live, bearer = token('k') ?? token('ops') }: { live: LiveState; bearer?: string | null }) {
+export function Teach({ live, bearer: given }: { live: LiveState; bearer?: string | null }) {
   const s = live.snapshot as Snapshot;
+  const bearer = given !== undefined ? given : yesKey(s);
   const teach = s.teach;
   if (!teach) return null;
   const sug = teach.suggestion;
@@ -25,10 +26,10 @@ export function Teach({ live, bearer = token('k') ?? token('ops') }: { live: Liv
         <span className="meta">{zone}</span>
         <p className="copy small" style={{ maxWidth: '21em' }}>Put one unit on the teach spot. reup names it from the store catalog and starts counting it.</p>
       </div>
-      <div className="abs stack" style={{ left: 1280, top: bearer && teach.status !== 'naming' ? 372 : 420, width: 580, gap: 14 }}>
+      <div className="abs stack" style={{ left: 1280, top: bearer != null && teach.status !== 'naming' ? 372 : 420, width: 580, gap: 14 }}>
         {teach.status === 'naming' ? (
           <p className="figure mid">Naming it.</p>
-        ) : bearer ? (
+        ) : bearer != null ? (
           // A screen that holds a key names the part right here: the station's own laptop, or a TV opened with ?k=.
           <>
             <p className="figure mid">{teach.status === 'needs_confirm' && sug ? `Looks like ${sug.name.charAt(0).toLowerCase()}${sug.name.slice(1)}.` : 'Type its name.'}</p>

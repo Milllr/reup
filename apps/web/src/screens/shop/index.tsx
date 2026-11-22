@@ -12,7 +12,8 @@ export interface Pane {
   run: Run | undefined;
   /** queued or running with no picture yet, live with a picture, done, failed */
   state: 'loading' | 'live' | 'done' | 'failed';
-  tag: string;
+  /** The words on the frame's top edge. Null for the plain case at the supplier: the frame needs no label then. */
+  tag: string | null;
   figure: string;
   meta: string;
 }
@@ -40,7 +41,7 @@ export function panes(s: Snapshot, order: Order, product: Product | undefined): 
   const account = s.suppliers.find((x) => x.id === order.supplierId);
   if (account) {
     const replay = cartRun?.replay ? ' · replay' : '';
-    const tag = `Your supplier · ${account.name}${replay}`;
+    const tag = cartRun?.replay ? 'Replay' : null;
     if (order.state === 'failed' || cartRun?.status === 'failed') out.push({ supplier: account, kind: 'cart', run: cartRun, state: 'failed', tag: `Stopped · ${account.name}${replay}`, figure: 'No cart', meta: cartRun?.error ?? order.error ?? 'The cart could not be filled' });
     else if (order.total != null) out.push({ supplier: account, kind: 'cart', run: cartRun, state: 'done', tag, figure: money(order.total), meta: `${unitsText(order.units, product?.unit ?? 'each')} in the cart · with tax` });
     else out.push(working(account, 'cart', cartRun, tag));
@@ -48,7 +49,7 @@ export function panes(s: Snapshot, order: Order, product: Product | undefined): 
   return out;
 }
 
-function working(supplier: Supplier, kind: Pane['kind'], run: Run | undefined, tag: string): Pane {
+function working(supplier: Supplier, kind: Pane['kind'], run: Run | undefined, tag: string | null): Pane {
   if (!run || run.steps.length === 0) return { supplier, kind, run, state: run?.streamingUrl ? 'live' : 'loading', tag, figure: 'Starting', meta: 'Opening a browser.' };
   return { supplier, kind, run, state: run.streamingUrl ? 'live' : 'loading', tag, figure: `Step ${run.steps.length}`, meta: run.steps.at(-1)?.purpose ?? '' };
 }
@@ -60,7 +61,7 @@ export function shopSentence(s: Snapshot, list: Pane[], order: Order): string {
   const cart = list.find((p) => p.kind === 'cart');
   const first = cart?.state === 'done' ? `The cart is ready at ${account}.` : `Filling a cart at ${account}.`;
   const second = market.length > 0 ? ` ${back} of ${market.length} price ${market.length === 1 ? 'check' : 'checks'} came back.` : '';
-  return `${first}${second} Nothing is bought until someone says yes.`;
+  return `${first}${second}`;
 }
 
 const LEFTS = [96, 688, 1280];
@@ -89,7 +90,7 @@ export function Shop({ live }: { live: LiveState }) {
               <span className="figure mid" style={{ whiteSpace: 'nowrap' }}>{pane.figure}</span>
               <span className="meta" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pane.meta}</span>
             </div>
-            <Frame label={`${pane.tag}`} waiting={pane.state === 'loading' || pane.state === 'live'} settle style={{ left, top: 450, width: 544, height: 400 }} tag={<Tag tone={pane.state === 'failed' ? 'alert' : 'cream'}>{pane.tag}</Tag>}>
+            <Frame label={pane.tag ?? `The cart at ${pane.supplier.name}`} waiting={pane.state === 'loading' || pane.state === 'live'} settle style={{ left, top: 450, width: 544, height: 400 }} tag={pane.tag ? <Tag tone={pane.state === 'failed' ? 'alert' : 'cream'}>{pane.tag}</Tag> : undefined}>
               {pane.state === 'live' && pane.run?.streamingUrl && !pane.run.replay && !live.mock ? (
                 <iframe className="fill mat" src={pane.run.streamingUrl} title={`Live browser at ${pane.supplier.name}`} sandbox="allow-scripts allow-same-origin" />
               ) : (

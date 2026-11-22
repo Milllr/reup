@@ -42,6 +42,8 @@ export function createApp(room: RoomCore, options: AppOptions = {}): Hono {
   app.notFound((c) => c.json(err('not_found', `No route ${c.req.method} ${new URL(c.req.url).pathname}.`), 404));
 
   const allow = (c: Context, ...tokens: string[]) => {
+    // An open hub takes what the approve key allows from any screen, with no key. See Config.APPROVE_OPEN.
+    if (room.config.APPROVE_OPEN && tokens.includes(APPROVE_KEY)) return;
     const sent = (c.req.header('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
     if (sent === '' || !tokens.includes(sent)) throw new Unauthorized('Missing or wrong token.');
   };

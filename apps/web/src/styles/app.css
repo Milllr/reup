@@ -93,3 +93,9 @@
 .items .field.wide { flex: 2 1 300px; }
 .items .field.narrow { flex: 0 1 200px; }
 .items .field input, .items .field select { width: 100%; }
+
+/* ---------- the X on a finished order: back to the main view. The menu's square, beside it ---------- */
+.close { position: absolute; right: 124px; top: 30px; z-index: 40; display: grid; place-content: center; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 0; background: var(--ink); cursor: pointer; box-shadow: 0 0 0 2px var(--cream); }
+.close > i { grid-area: 1 / 1; display: block; width: 32px; height: 4px; background: var(--cream); transform: rotate(45deg); }
+.close > i + i { transform: rotate(-45deg); }
+.close:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }

@@ -306,6 +306,11 @@ export const Snapshot = z.object({
   season: Season,
   /** Count checks waiting for a person, oldest first. Missing means none. */
   checks: z.array(CountCheck).optional(),
+  /**
+   * True when this hub takes a yes, a new part's name and an item change from any screen, with no key: the demo's
+   * one shared space. Missing or false means a screen needs the approve key. Operator routes always need their token.
+   */
+  open: z.boolean().optional(),
 });
 
 // ---------- Offcut Supply's public catalog ----------

@@ -3,7 +3,7 @@ import { unitsText } from '@reup/brain';
 import type { CountCheck, Order, Snapshot } from '@reup/contracts';
 import { useState } from 'react';
 import { cx, Frame, Tag, Units, Word, Wordmark } from '../../components';
-import { call, hubUrl, token } from '../../lib/hub';
+import { call, hubUrl, yesKey } from '../../lib/hub';
 import { money, partRows, shelfMoment, shortTime, supplierName, weekday, type Tone } from '../../lib/view';
 import { useLive } from '../../store/live';
 import { sentence } from '../shelf';
@@ -20,13 +20,13 @@ function Band({ tone, label, children, word }: { tone: Tone; label: string; word
   );
 }
 
-export function ApproveBand({ order, s, send = call, k = token('k'), first }: { order: Order; s: Snapshot; send?: typeof call; k?: string | null; first?: boolean }) {
+export function ApproveBand({ order, s, send = call, k = yesKey(s), first }: { order: Order; s: Snapshot; send?: typeof call; k?: string | null; first?: boolean }) {
   const [state, setState] = useState<'idle' | 'busy' | 'hidden'>('idle');
   const [error, setError] = useState<string | null>(null);
   const product = s.products.find((p) => p.id === order.productId);
   if (state === 'hidden') return null;
   const approve = async () => {
-    if (!k) return setError(NO_KEY);
+    if (k == null) return setError(NO_KEY);
     setState('busy');
     const res = await send('POST', `/api/orders/${order.id}/approve`, { by: 'phone' }, k);
     setState('idle');
@@ -51,12 +51,12 @@ export function ApproveBand({ order, s, send = call, k = token('k'), first }: { 
 }
 
 /** A count check: the camera saw a drop far bigger than normal use. A person says whether it is right before reup shops. */
-export function CheckBand({ check, s, send = call, k = token('k') }: { check: CountCheck; s: Snapshot; send?: typeof call; k?: string | null }) {
+export function CheckBand({ check, s, send = call, k = yesKey(s) }: { check: CountCheck; s: Snapshot; send?: typeof call; k?: string | null }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const zone = s.zones.find((z) => z.id === check.zoneId);
   const answer = async (value: 'right' | 'miscount') => {
-    if (!k) return setError(NO_KEY);
+    if (k == null) return setError(NO_KEY);
     setBusy(true);
     const res = await send('POST', `/api/checks/${check.id}`, { answer: value }, k);
     setBusy(false);
@@ -93,7 +93,7 @@ export function Phone() {
           <Frame label="The new part" waiting className="" style={{ height: 190, margin: '8px 7px' }}>
             {s.teach.cropUrl ? <img className="fill mat crop" src={hubUrl(s.teach.cropUrl)} alt="The new part" /> : null}
           </Frame>
-          <TeachForm teach={s.teach} s={s} bearer={token('k')} />
+          <TeachForm teach={s.teach} s={s} bearer={yesKey(s)} />
         </section>
       ) : null}
       <section className={cx('plate', moment.plate, 'band')} aria-label="Counts">

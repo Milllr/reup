@@ -40,6 +40,31 @@ describe('the Room', () => {
     expect(second.room.s.suppliers.length).toBe(first.room.s.suppliers.length);
   });
 
+  it('an open hub takes a yes and an item change from a screen with no key, tells every screen so, and keeps the operator routes shut', async () => {
+    const shut = await rig();
+    expect(Snapshot.parse(shut.room.snapshot()).open).toBeUndefined();
+    expect((await shut.call('POST', '/api/products', { name: 'Tape', unit: 'roll', sku: null, zoneId: null, count: 2 })).status).toBe(401);
+
+    const r = await rig({ APPROVE_OPEN: true });
+    expect(Snapshot.parse(r.room.snapshot()).open).toBe(true);
+    expect(Snapshot.parse(await (await r.call('GET', '/api/state')).json()).open).toBe(true);
+    // A screen with no key adds an item and says yes to an order.
+    expect((await r.call('POST', '/api/products', { name: 'Tape', unit: 'roll', sku: null, zoneId: null, count: 2 })).status).toBe(200);
+    await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 4)] }, DEVICE);
+    const order = r.room.s.orders.at(-1);
+    if (!order) throw new Error('no order');
+    await r.call('POST', '/ingest/cart', { jobId: 'j-x', orderId: order.id, ok: true, packSize: 1, packs: 8, unitPrice: 7.49, total: 67.71, deliveryDays: 2, error: null }, DEVICE);
+    expect(r.room.order(order.id)?.state).toBe('awaiting_approval');
+    const yes = await r.call('POST', `/api/orders/${order.id}/approve`, { by: 'keyboard' });
+    expect(yes.status).toBe(200);
+    expect(r.room.order(order.id)?.state).toBe('approved');
+    // What only the operator or a device may do still needs its token.
+    expect((await r.call('POST', '/api/demo/reset')).status).toBe(401);
+    expect((await r.call('PUT', '/api/zones', { zones: [] })).status).toBe(401);
+    expect((await r.call('POST', '/ingest/counts', { counts: [] })).status).toBe(401);
+    expect((await r.call('POST', `/api/orders/${order.id}/cancel`)).status).toBe(401);
+  });
+
   it('sends job messages to buyers only, and everything else to everyone', async () => {
     const r = await rig();
     await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 4)] }, DEVICE);

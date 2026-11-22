@@ -1,7 +1,7 @@
 // Place: only ever run when the hub sends the job, and the hub sends it only after a person said yes.
 import type { IngestPlacedBody, Job, Supplier } from '@reup/contracts';
 import type { AgentParams } from '../agent';
-import { COOKIE_NOTE, signInStep, type CartPlan, type SignIn } from '../cart';
+import { signInStep, type CartPlan, type SignIn } from '../cart';
 import type { RunSpec } from '../runner';
 
 export type PlaceJob = Extract<Job, { kind: 'place' }>;
@@ -44,7 +44,6 @@ export function placeGoal(job: PlaceJob, basket: Basket | null, signIn: SignIn, 
   const rebuild = `open the cart, press "Empty cart" if it has anything in it, ${link ? `open ${link}` : 'find that product, choose that pack size and quantity'}, press "Add to cart", and press "Checkout"`;
   return [
     'Place an order that a person has already approved. The cart was filled earlier and is saved with the account.',
-    COOKIE_NOTE,
     `1. ${first}`,
     want
       ? `2. The page titled "Review your order" opens with the saved cart. It must hold exactly ${want} and nothing else. If it does, go on to step 3. Only if it does not, or the store says the cart is empty: ${rebuild}.`
@@ -54,7 +53,8 @@ export function placeGoal(job: PlaceJob, basket: Basket | null, signIn: SignIn, 
     '5. Press "Place order" once.',
     // The first real run read the page 3 seconds after the press, before the order page had loaded, and reported no number for an order the store had taken.
     '6. Wait for the next page to finish loading. It is headed "Order" and a number, and says "Thank you. Your order is placed." If the page still says "Review your order" and shows no error, wait 5 seconds and look again, up to 3 times. Do not press "Place order" again.',
-    '7. From that page return confirmation (the number beside "Confirmation number", exactly as shown, for example OC-58213), delivery_date (the date beside "Delivery date", exactly as shown) and reason (null).',
+    // Three live runs placed the order and then returned confirmation null, with the number written into the reason.
+    '7. That page shows the order number three times: in its heading ("Order OC-58213"), in its address, and on the line "Confirmation number: OC-58213". Return it in the confirmation field, exactly as shown, for example OC-58213. Return delivery_date (the date after "Delivery date:", exactly as shown) and reason (null). The reason field is only for a failure: never write the number there.',
     'Rules: press "Place order" only once. If after waiting no confirmation number appears, return confirmation null and the reason in one plain sentence. Never guess a number.',
   ].join('\n');
 }

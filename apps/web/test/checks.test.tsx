@@ -27,7 +27,7 @@ describe('count checks on the screens', () => {
     const zone = s.zones.find((z) => z.id === 'z-screws');
     const row = partRows(s).find((r) => r.product.id === 'p-screws');
     if (!zone) throw new Error('no zone');
-    expect(zoneTag(zone, row, true)).toMatch(/ · check$/);
+    expect(zoneTag(zone, row, true)).toMatch(/\u00a0\u00a0check$/);
     expect(zoneTag(zone, row, false)).not.toMatch(/check/);
   });
 

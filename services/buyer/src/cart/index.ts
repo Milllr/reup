@@ -62,9 +62,6 @@ export function cartStart(supplier: Supplier, job: CartJob, plan: CartPlan): str
   return `${base}/search?q=${encodeURIComponent(job.sku ?? job.searchPhrase)}`;
 }
 
-/** A line every goal at the store carries: the notice is a bar, not an overlay, and accepting it costs a step. */
-export const COOKIE_NOTE = 'A yellow cookie notice may sit at the top of the page. Leave it alone: it covers nothing.';
-
 export function cartGoal(job: CartJob, plan: CartPlan, signIn: SignIn): string {
   const steps: string[] = [];
   // A saved profile is already signed in, and the account's cart may still hold what an earlier run left.
@@ -85,7 +82,6 @@ export function cartGoal(job: CartJob, plan: CartPlan, signIn: SignIn): string {
   steps.push('Stop here. Do not type a PO number. Do not press "Place order". Return what you read with cart_ok true:');
   return [
     'Fill a cart at this store and stop at the order review page. Do not place the order.',
-    COOKIE_NOTE,
     ...steps.map((step, i) => `${i + 1}. ${step}`),
     '   pack_label: the pack size as shown. pack_size: units in one pack, 1 for a single box. packs: the quantity in the cart.',
     '   unit_price: the price of one pack. total: the order total with tax and shipping, as a number.',

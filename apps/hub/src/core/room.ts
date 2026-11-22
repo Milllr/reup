@@ -201,6 +201,9 @@ export class RoomCore {
 
   snapshot(): Snapshot {
     this.s.now = this.iso();
+    // A setting, told to every screen so it knows whether it can say yes without a key.
+    if (this.config.APPROVE_OPEN) this.s.open = true;
+    else delete this.s.open;
     return this.s;
   }
 

@@ -64,7 +64,7 @@ export function Tv() {
   if (s.teach) screen = <Teach live={live} />;
   else if (counting && !look) screen = <Shelf live={live} moment={{ plate: 'olive', word: 'Counting' }} />;
   else if (shown === 'shop') screen = <Shop live={live} />;
-  else if (shown === 'order') screen = <Order live={live} />;
+  else if (shown === 'order') screen = <Order live={live} onClose={() => pick('shelf')} />;
   else if (shown === 'why') screen = <Why live={live} />;
   return <Stage>{screen}<Menu page="/" look={look} onLook={pick} /></Stage>;
 }

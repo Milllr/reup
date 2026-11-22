@@ -29,9 +29,9 @@ describe('filling the cart', () => {
     expect(goal).toContain('4. On the cart page press "Checkout". Never press "Empty cart".');
     expect(goal).toContain('5. If the store asks you to sign in, use the email shop@reup.test and the password pw-1, then carry on. The cart is kept through the sign in.');
     expect(goal).toContain('6. On the page titled "Review your order"');
-    // Eight lines of work, and nothing about searching or the cookie notice as a step.
+    // Nothing about searching, and nothing about a cookie notice: the store has none now.
     expect(goal).not.toContain('Search the store');
-    expect(goal).toContain('Leave it alone');
+    expect(goal).not.toContain('cookie');
   });
 
   it('starts on the search results when the catalog does not have the SKU, or there is none', () => {

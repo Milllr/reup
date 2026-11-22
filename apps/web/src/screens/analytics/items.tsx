@@ -2,7 +2,7 @@
 import { Catalog, type CatalogItem, type Product, type Snapshot } from '@reup/contracts';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Tag } from '../../components';
-import { call, token } from '../../lib/hub';
+import { call, yesKey } from '../../lib/hub';
 import { mockCatalog } from '../../store/mock';
 import type { LiveState } from '../../store/reduce';
 
@@ -181,8 +181,9 @@ function AddItem({ s, catalog, act, busy }: { s: Snapshot; catalog: CatalogItem[
  * The section. k is the key this screen holds: with none, the list is shown and nothing can be changed.
  * send is the hub call, swapped in tests.
  */
-export function Items({ live, k = token('k') ?? token('ops'), send = call }: { live: LiveState; k?: string | null; send?: Send }) {
+export function Items({ live, k: given, send = call }: { live: LiveState; k?: string | null; send?: Send }) {
   const s = live.snapshot;
+  const k = given !== undefined ? given : yesKey(s);
   const catalog = useCatalog(live, send);
   const [busy, setBusy] = useState(false);
   const [said, setSaid] = useState<{ text: string; bad: boolean } | null>(null);

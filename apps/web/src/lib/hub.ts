@@ -37,6 +37,14 @@ export function token(kind: 'ops' | 'k'): string | null {
   }
 }
 
+/**
+ * What this screen can say yes with: a key it holds, or the empty string on a hub that takes a yes from any screen
+ * (Snapshot.open), which sends no key at all. Null means it cannot: it has no key and the hub wants one.
+ */
+export function yesKey(s: { open?: boolean } | null | undefined): string | null {
+  return token('k') ?? token('ops') ?? (s?.open ? '' : null);
+}
+
 export function setToken(kind: 'ops' | 'k', value: string): void {
   try {
     sessionStorage.setItem(`reup.${kind}`, value);

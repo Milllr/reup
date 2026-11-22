@@ -69,7 +69,7 @@ describe('catalog, search and product pages', () => {
     expect((await b.get('/cart')).text).toContain('Your cart is empty');
   });
 
-  it('puts the footer on every route, and a cookie notice until it is dismissed', async () => {
+  it('puts the footer on every route, and no cookie notice on any', async () => {
     const r = rig();
     const b = await signedIn(r);
     for (const path of ['/', '/search?q=screws', '/p/OC-1008-114', '/p/nope', '/cart', '/orders', '/admin', '/nowhere']) {
@@ -77,10 +77,13 @@ describe('catalog, search and product pages', () => {
       expect(res.text, path).toContain(FOOTER);
     }
     expect((await r.browser().get('/signin?next=/x')).text).toContain(FOOTER);
-    expect((await b.get('/')).text).toContain('Accept cookies');
-    const after = await b.submit('/cookies', { next: '/search?q=glue' });
-    expect(after.path).toBe('/search?q=glue');
-    expect(after.text).not.toContain('Accept cookies');
+    for (const path of ['/', '/p/OC-1008-114', '/cart', '/signin']) {
+      const fresh = (await r.browser().get(path)).text;
+      expect(fresh, path).not.toContain('Accept cookies');
+      expect(fresh, path).not.toContain('Cookie notice');
+    }
+    // The old route still answers, so a browser that had the notice open is sent on and never to another site.
+    expect((await b.submit('/cookies', { next: '/search?q=glue' })).path).toBe('/search?q=glue');
     expect((await b.submit('/cookies', { next: 'https://evil.example' })).path).toBe('/');
   });
 });
