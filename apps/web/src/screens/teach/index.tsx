@@ -81,7 +81,7 @@ export function Teach({ live, bearer: given }: { live: LiveState; bearer?: strin
       ) : (
         <>
           <Picture teach={teach} maxW={520} maxH={600} style={{ left: 540, top: 280 }} />
-          <div className="abs stack" style={{ left: 1120, top: 420, width: 640, gap: 14 }}>
+          <div className="abs stack" style={{ left: 1180, top: 450, width: 640, gap: 14 }}>
             {teach.status === 'naming' ? (
               <p className="figure mid">Naming it.</p>
             ) : teach.status === 'needs_confirm' && sug ? (
