@@ -14,8 +14,10 @@ SITE="${SITE_URL:-}"
 DATA="${GUARD_DATA:-$PWD/data}"
 mkdir -p "$DATA"
 if [ -n "$CAMERA_URL" ]; then export REUP_CAMERA_URL="$CAMERA_URL"; fi
-# With no page beside it the hand model's window is the whole screen. The screen is 1024 wide on the station's TV.
-if [ -z "$SITE" ]; then export REUP_FULLSCREEN="${REUP_FULLSCREEN:-1}" REUP_WINDOW_WIDTH="${REUP_WINDOW_WIDTH:-1024}"; fi
+# With no page beside it the hand model's window is the whole screen. The hand model looks at the picture at the
+# window's own width and the screen scales it up. Measured on the Pi with the laptop's stream: 640 wide, 20 to 25
+# pictures a second. 1024 wide, 10 to 14.
+if [ -z "$SITE" ]; then export REUP_FULLSCREEN="${REUP_FULLSCREEN:-1}" REUP_WINDOW_WIDTH="${REUP_WINDOW_WIDTH:-640}"; fi
 running() { pidin ar 2>/dev/null | grep -v grep | grep -q "$1"; }
 
 # The Pi has no clock battery. With the wrong date every https call fails.

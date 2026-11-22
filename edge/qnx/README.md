@@ -58,7 +58,7 @@ It was the other way round for twenty minutes (Sunday 3:55 AM to 4:15 AM): the c
 | 1280x720 NV12 | 5.9 |
 | 1920x1080 YCbYCr | 1.9 |
 
-Over the cable from the laptop the Pi gets 1280x720 at 9 to 18 pictures a second, the rate the eye serves them. It drops to about 5 while the eye is busy with a hand in the picture. The hand model takes 27 to 59 ms a picture.
+Over the cable from the laptop the Pi gets 1280x720 at 20 to 25 pictures a second when the eye is quiet, and the hand model keeps up at 18 to 21 (42 ms a picture, window 640 wide). It follows the eye's stream: about 11 when the eye is working, and about 5 for a few seconds at a time. With the window 1024 wide the Pi itself was the limit: 10 to 14.
 
 A camera on the Pi's own USB still works: leave `REUP_CAMERA_URL` out, and set the camera's size once with `sudo python3 ~/reup-node/vision/set_camera.py` (the workshop program opens the camera read only and may not change it). The node then serves its frames on port 8089, and `url` under `[cameras.board]` in `services/eye/config.toml` points the eye at them.
 
@@ -122,7 +122,7 @@ Checked on a laptop: every guard and supervisor rule in `tests/`, the C++ math, 
 Checked on the Pi, Sunday Nov 22 from 3:20 AM to 4:25 AM:
 
 * The patched workshop program builds on the Pi and runs.
-* With the laptop's camera as its camera: 1280x720, 9 to 18 pictures a second, inference 27 to 59 ms, hands found, full screen on the TV.
+* With the laptop's camera as its camera: 1280x720, 20 to 25 pictures a second with dips to 5, inference 18 to 21 a second at 42 ms, hands found, full screen on the TV.
 * Reaches by real hands are in the ledger on the Pi's disk (`data/ledger.jsonl`), and the hub shows the node online at level 1.
 * The guard runs at priority 20 and vision at 10 (`pidin`).
 * Vision killed with `slay -f handtrack_node`: the hand model was ready again 3.5 s after the kill. Through the workshop's `start.sh` it took 36 s, so `run.sh` sets ROS 2 up once and starts the program itself.
