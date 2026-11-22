@@ -28,3 +28,33 @@
 .wrap { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .line { display: flex; align-items: flex-end; gap: 14px; padding: 12px 0; }
 .line .figure { min-width: 40px; }
+/* ---------- the Analytics page: a paper plate that scrolls, type on the plate, every chart in a frame ---------- */
+/* The word hangs over the top 340 pixels, and the tail of its y a little lower on the right, so the type starts under it on the left. */
+.analytics { display: flex; flex-direction: column; gap: 76px; padding: 372px 48px 56px; min-height: 100vh; height: auto; }
+.analytics > :not(.word) { position: relative; z-index: 2; }
+.analytics h2 { margin: 0; }
+.analytics a { color: inherit; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 48px 36px; }
+.tile { gap: 10px; }
+.tile .copy { max-width: 15em; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 760px), 1fr)); gap: 76px 56px; }
+.card { gap: 26px; min-width: 0; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 620px), 1fr)); gap: 56px; align-items: start; }
+.plot { position: relative; width: 100%; aspect-ratio: 936 / 416; }
+.plot.short { aspect-ratio: 936 / 336; }
+.analytics table { border-collapse: collapse; width: 100%; }
+.analytics td, .analytics th { text-align: left; padding: 7px 18px 7px 0; vertical-align: baseline; font-weight: inherit; }
+.analytics th { padding-bottom: 12px; white-space: nowrap; }
+.bars { gap: 22px; }
+.track { height: 16px; background: rgba(30, 26, 25, 0.1); }
+.track > i { display: block; height: 100%; background: var(--frame); }
+.chart .ahead { fill: none; stroke: var(--line); stroke-width: 3; stroke-dasharray: 3 7; }
+.chart .mark { fill: var(--line); }
+.chart .order { fill: var(--orange); }
+.chart .base { stroke: var(--line); stroke-width: 2; opacity: 0.4; }
+.plot.short .bar { opacity: 0.5; }
+.chart .bar.now { opacity: 1; }
+.chart .cross { stroke: var(--line); stroke-width: 1.5; opacity: 0.7; }
+.chart .tip rect { fill: var(--cream); }
+.chart .tip text { fill: var(--ink); text-transform: none; letter-spacing: 0; }
+

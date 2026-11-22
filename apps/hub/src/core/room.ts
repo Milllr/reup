@@ -53,6 +53,10 @@ export interface Internal {
   board: Record<string, { learn: boolean }>;
   /** When the new part card gives up waiting for a name or a yes, so the screens are never held by it for good. Null when no card is up. */
   teachUntil: number | null;
+  /** Every change of a count, oldest first, at most TRAIL_MAX. The Analytics page draws the day from it. A demo reset keeps it. */
+  trail: { productId: string; ts: string; delta: number; countAfter: number }[];
+  /** Every order placed, oldest first, at most PLACED_MAX. A demo reset keeps it too. */
+  placed: { poNumber: string; productId: string; name: string; units: number; total: number | null; confirmation: string; ts: string }[];
   /** orderId to the last time the buyer said anything about that order, or was handed work for it. */
   heard: Record<string, number>;
   /** Since when no buyer is connected. Null while one is. */
@@ -78,6 +82,8 @@ export const TEACH_WAIT_MS = { naming: 20_000, failed: 90_000, needs_confirm: 18
 
 /** How long the Shelf keeps the screen after a count crosses the reorder point: the judge sees the drop, then the shopping. */
 export const REORDER_BEAT_MS = 2500;
+export const TRAIL_MAX = 400;
+export const PLACED_MAX = 50;
 
 /**
  * How long an order waits on the buyer before the hub gives it up, so the Shop and Order screens are never held for good.
@@ -92,7 +98,7 @@ export const OPEN_STATES: ReadonlySet<Order['state']> = new Set(['pricing', 'car
 export function freshInternal(): Internal {
   return {
     seq: 0, poSeq: 1041, seenIds: [], eyeCounts: {}, nodeCounts: {}, disagree: {}, usage: {}, leadDays: {}, jobs: [],
-    replay: { market: false, cart: false, place: false }, screenOverride: null, screenUntil: {}, shopAfter: {}, recentChanges: {}, recentReaches: [], recentPicks: [], deliveries: {}, board: {}, teachUntil: null, heard: {}, buyerAwaySince: null,
+    replay: { market: false, cart: false, place: false }, screenOverride: null, screenUntil: {}, shopAfter: {}, recentChanges: {}, recentReaches: [], recentPicks: [], deliveries: {}, board: {}, teachUntil: null, trail: [], placed: [], heard: {}, buyerAwaySince: null,
     spend: { day: '', total: 0 }, catalog: null, lastHeartbeat: 0,
   };
 }

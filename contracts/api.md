@@ -13,7 +13,7 @@ Base URL: `HUB_URL`. JSON in and out. Times are ISO 8601 with an offset. Money i
 | APPROVE_KEY | `Authorization: Bearer` | phones (from the QR link `?k=`), and a TV or laptop opened with `?k=` | approve by phone or by keyboard, teach confirm and cancel |
 | SUPPLY_WEBHOOK_SECRET | `X-Offcut-Secret` | Offcut Supply | `/hooks/supply` |
 
-Reading state needs no token: `/live` for screens, `/api/state`, history, and a teach crop at `/api/teach/:id/crop.jpg`. The buyer's socket is the exception: `/live?role=buyer&token=DEVICE_TOKEN`, because only the buyer is sent jobs.
+Reading state needs no token: `/live` for screens, `/api/state`, history, analytics, and a teach crop at `/api/teach/:id/crop.jpg`. The buyer's socket is the exception: `/live?role=buyer&token=DEVICE_TOKEN`, because only the buyer is sent jobs.
 
 ## Errors
 
@@ -26,6 +26,7 @@ Every error is `ApiError`: `{ ok: false, code, message }` with status 400 bad_re
 | GET | /live?role=screen, ops or buyer | WebSocket | ServerMessage stream, snapshot first | server-messages.json |
 | GET | /api/state | | Snapshot | snapshot.json |
 | GET | /api/products/:id/history | | HistoryResult | history.json |
+| GET | /api/analytics | | AnalyticsResult | analytics.json |
 | GET | /api/jobs | | JobsResult | jobs.json |
 | POST | /ingest/counts | IngestCountsBody (counts may be empty when cameras is sent) | Ok | ingest-counts.json |
 | POST | /ingest/picks | IngestPicksBody | IngestPicksResult | ingest-picks.json |

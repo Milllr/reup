@@ -15,7 +15,7 @@ The local half and the Cloudflare deploy were both run. The secrets line and the
 | The shelf node with stand in vision, from edge/qnx | `HUB_URL=http://localhost:3000 DEVICE_TOKEN=dev-device-token VISION_CMD="python3 tools/fake_vision.py" ./run.sh` |
 | Everything, checked | `node hw/hw.mjs check` |
 
-Then open http://localhost:3000 for the TV, http://localhost:3000/m for a phone and http://localhost:3000/ops for the operator (token `dev-ops-token` on a laptop).
+Then open http://localhost:3000 for the TV, http://localhost:3000/m for a phone, http://localhost:3000/analytics for the analytics page and http://localhost:3000/ops for the operator (token `dev-ops-token` on a laptop).
 
 ## Cloudflare
 
@@ -24,13 +24,20 @@ Deployed Sat Nov 21 with wrangler from Miller's laptop.
 | What | Address |
 | --- | --- |
 | Hub: TV, phone, operator, API | https://wheredidallmyinventorygo.wtf |
+| Analytics | https://wheredidallmyinventorygo.wtf/analytics |
 | Offcut Supply | https://offcut.wheredidallmyinventorygo.wtf |
 
 The two D1 databases exist and their ids are in `apps/hub/wrangler.jsonc` and `apps/supply/wrangler.jsonc`. Deploy again after a change, from the repo root: `npm run deploy`
 
+Done Sat Nov 21, 8 PM: the repo is linked to the Infisical project hw13, and `GEMINI_API_KEY` and `TINYFISH_API_KEY` are in it at the root path. The Gemini key is on the deployed hub.
+
+* A key only a person has: `node tools/secrets.mjs` asks for it with hidden input, stores it in Infisical and sets it on the hub. Already in Infisical: `infisical run -- node tools/secrets.mjs --push`
+* Then deploy once more, `npm run deploy`. A secret that changes does not reach the hub that is already running. It keeps its old settings until the next deploy.
+* `GEMINI_MODEL` in `apps/hub/wrangler.jsonc` lists several models with commas between. The hub asks them in that order, each for at most 7 seconds, so one overloaded model does not stop a part being named.
+
 Still to do:
 
-1. Secrets. The Workers run on their `dev-` values until this is done. From Infisical, one line a Worker, with the hub's secrets under the Infisical path `/hub` and the store's under `/supply`.
+1. The other secrets. The Workers run on their `dev-` values for the tokens and passwords until this is done. From Infisical, one line a Worker, with the hub's secrets under the Infisical path `/hub` and the store's under `/supply`.
    * From apps/hub: `infisical export --path=/hub --format=dotenv | npx wrangler secret bulk`
    * From apps/supply: `infisical export --path=/supply --format=dotenv | npx wrangler secret bulk`
 2. The domain. wheredidallmyinventorygo.wtf has its DNS at GoDaddy, so wrangler cannot put the Workers on it yet. Move the nameservers to Cloudflare, then add a custom domain to each Worker and change `SUPPLY_URL` and `HUB_URL` in the two wrangler.jsonc files back to the domain.
@@ -59,4 +66,4 @@ Without a secret, each Worker falls back to its `dev-` value. That is fine on a 
 
 * A price check is reused for 10 minutes. A second judge inside that window sees the prices at once and only the Offcut pane shopping live. To check prices live for every judge, change `TEN_MINUTES` in `apps/hub/src/orders/index.ts`.
 * The two retailers in `services/buyer/suppliers.json` are untested. Run each search in the TinyFish playground three times before trusting it (task BH2).
-* Naming a taught part needs `GEMINI_API_KEY`. Without it the screen says so and a typed name works.
+* Naming a taught part needs `GEMINI_API_KEY` on the hub. Without it the screen says so and a typed name works.

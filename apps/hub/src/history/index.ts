@@ -60,10 +60,10 @@ export class D1History implements History {
   }
 }
 
-/** 30 completed local days of use, and the next 7 days from the brain. */
-export function historyResult(room: RoomCore, productId: string): HistoryResult | null {
+/** The last 30 completed local days of a part, oldest first: what was used, what came in, and what the board held at the end of each. */
+export function pastDays(room: RoomCore, productId: string): { day: string; used: number; restocked: number; endCount: number; sample: boolean }[] {
   const product = room.product(productId);
-  if (!product) return null;
+  if (!product) return [];
   const today = room.today();
   const byDay = room.x.usage[productId] ?? {};
   const use = room.dailyUse(productId);
@@ -78,7 +78,15 @@ export function historyResult(room: RoomCore, productId: string): HistoryResult 
     const day = byDay[use.days[i] ?? ''];
     next = cap(next + (day?.used ?? 0) - (day?.restocked ?? 0));
   }
+  return use.days.map((day, i) => ({ day, used: Math.max(0, Math.round(use.used[i] ?? 0)), restocked: Math.max(0, Math.round(byDay[day]?.restocked ?? 0)), endCount: Math.round(ends[i] ?? 0), sample: byDay[day]?.sample === true }));
+}
 
+/** 30 completed local days of use, and the next 7 days from the brain. */
+export function historyResult(room: RoomCore, productId: string): HistoryResult | null {
+  const product = room.product(productId);
+  if (!product) return null;
+  const today = room.today();
+  const count = room.count(productId)?.count ?? 0;
   const policy = room.policy(productId);
   const d = (policy?.ratePerDay ?? 0) * (policy?.seasonFactor ?? 1);
   const order = room.openOrderFor(productId);
@@ -91,7 +99,7 @@ export function historyResult(room: RoomCore, productId: string): HistoryResult 
 
   return {
     productId,
-    days: use.days.map((day, i) => ({ day, used: Math.round(use.used[i] ?? 0), endCount: Math.round(ends[i] ?? 0), sample: byDay[day]?.sample === true })),
+    days: pastDays(room, productId).map(({ day, used, endCount, sample }) => ({ day, used, endCount, sample })),
     forecast: forecast(count, d, 7, product.capacity, arrival).map((f) => ({ day: addDays(today, f.offset), expected: f.expected, low: f.low, high: f.high })),
     reorderPoint: policy?.reorderPoint ?? 0,
   };

@@ -1,0 +1,2915 @@
+{
+  "now": "2026-11-21T11:55:38-05:00",
+  "today": "2026-11-21",
+  "parts": [
+    {
+      "productId": "p-washers",
+      "name": "Flat washers 3/4 in",
+      "unit": "each",
+      "count": 1,
+      "capacity": 3,
+      "ratePerDay": 0.05,
+      "reorderPoint": 1,
+      "leadDays": 2,
+      "daysOfCover": 19.6,
+      "reorderOn": null,
+      "runsOutOn": "2026-12-11",
+      "unitPrice": 4.29,
+      "days": [
+        {
+          "day": "2026-10-22",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-23",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-24",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-25",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-26",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-27",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-28",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-29",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-30",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-31",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-01",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-02",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-03",
+          "used": 1,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-04",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-05",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-06",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-07",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-08",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-09",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-10",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-11",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-12",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-13",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-14",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-15",
+          "used": 1,
+          "restocked": 0,
+          "endCount": 1,
+          "sample": true
+        },
+        {
+          "day": "2026-11-16",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 1,
+          "sample": true
+        },
+        {
+          "day": "2026-11-17",
+          "used": 0,
+          "restocked": 2,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-18",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-19",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-20",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        }
+      ],
+      "today": {
+        "used": 2,
+        "restocked": 0
+      },
+      "projection": [
+        {
+          "day": "2026-11-22",
+          "expected": 0.95,
+          "low": 0.58,
+          "high": 1.32,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-23",
+          "expected": 0.9,
+          "low": 0.37,
+          "high": 1.42,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-24",
+          "expected": 2.85,
+          "low": 2.85,
+          "high": 2.85,
+          "ordered": 0,
+          "arrives": 2
+        },
+        {
+          "day": "2026-11-25",
+          "expected": 2.8,
+          "low": 2.42,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-26",
+          "expected": 2.74,
+          "low": 2.22,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-27",
+          "expected": 2.69,
+          "low": 2.05,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-28",
+          "expected": 2.64,
+          "low": 1.9,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-29",
+          "expected": 2.59,
+          "low": 1.76,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-30",
+          "expected": 2.54,
+          "low": 1.63,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-01",
+          "expected": 2.49,
+          "low": 1.5,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-02",
+          "expected": 2.44,
+          "low": 1.39,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-03",
+          "expected": 2.39,
+          "low": 1.27,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-04",
+          "expected": 2.34,
+          "low": 1.16,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-05",
+          "expected": 2.29,
+          "low": 1.05,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-06",
+          "expected": 2.23,
+          "low": 0.94,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-07",
+          "expected": 2.18,
+          "low": 0.84,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-08",
+          "expected": 2.13,
+          "low": 0.74,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-09",
+          "expected": 2.08,
+          "low": 0.64,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-10",
+          "expected": 2.03,
+          "low": 0.54,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-11",
+          "expected": 1.98,
+          "low": 0.44,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-12",
+          "expected": 1.93,
+          "low": 0.35,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-13",
+          "expected": 1.88,
+          "low": 0.25,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-14",
+          "expected": 1.83,
+          "low": 0.16,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-15",
+          "expected": 1.78,
+          "low": 0.07,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-16",
+          "expected": 1.72,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-17",
+          "expected": 1.67,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-18",
+          "expected": 1.62,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-19",
+          "expected": 1.57,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-20",
+          "expected": 1.52,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-21",
+          "expected": 1.47,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-22",
+          "expected": 1.42,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-23",
+          "expected": 1.37,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-24",
+          "expected": 1.32,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-25",
+          "expected": 1.27,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-26",
+          "expected": 1.21,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-27",
+          "expected": 1.16,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-28",
+          "expected": 1.11,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-29",
+          "expected": 1.06,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-30",
+          "expected": 1.01,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-31",
+          "expected": 0.96,
+          "low": 0,
+          "high": 3,
+          "ordered": 2,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-01",
+          "expected": 0.91,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-02",
+          "expected": 2.86,
+          "low": 2.86,
+          "high": 2.86,
+          "ordered": 0,
+          "arrives": 2
+        },
+        {
+          "day": "2027-01-03",
+          "expected": 2.81,
+          "low": 2.43,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-04",
+          "expected": 2.76,
+          "low": 2.23,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-05",
+          "expected": 2.7,
+          "low": 2.06,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-06",
+          "expected": 2.65,
+          "low": 1.91,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-07",
+          "expected": 2.6,
+          "low": 1.77,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-08",
+          "expected": 2.55,
+          "low": 1.64,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-09",
+          "expected": 2.5,
+          "low": 1.52,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-10",
+          "expected": 2.45,
+          "low": 1.4,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-11",
+          "expected": 2.4,
+          "low": 1.28,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-12",
+          "expected": 2.35,
+          "low": 1.17,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-13",
+          "expected": 2.3,
+          "low": 1.06,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-14",
+          "expected": 2.25,
+          "low": 0.96,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-15",
+          "expected": 2.19,
+          "low": 0.85,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-16",
+          "expected": 2.14,
+          "low": 0.75,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-17",
+          "expected": 2.09,
+          "low": 0.65,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-18",
+          "expected": 2.04,
+          "low": 0.55,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-19",
+          "expected": 1.99,
+          "low": 0.45,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-20",
+          "expected": 1.94,
+          "low": 0.36,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        }
+      ]
+    },
+    {
+      "productId": "p-bolts",
+      "name": "Hex bolts 3/4 x 3 in",
+      "unit": "each",
+      "count": 2,
+      "capacity": 3,
+      "ratePerDay": 0.05,
+      "reorderPoint": 1,
+      "leadDays": 2,
+      "daysOfCover": 39.2,
+      "reorderOn": "2026-12-11",
+      "runsOutOn": "2026-12-31",
+      "unitPrice": 3.49,
+      "days": [
+        {
+          "day": "2026-10-22",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-23",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-24",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-25",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-26",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-27",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-28",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-29",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-30",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-31",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-01",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-02",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-03",
+          "used": 1,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-04",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-05",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-06",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-07",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-08",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-09",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-10",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-11",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-12",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-13",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-14",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-15",
+          "used": 1,
+          "restocked": 0,
+          "endCount": 1,
+          "sample": true
+        },
+        {
+          "day": "2026-11-16",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 1,
+          "sample": true
+        },
+        {
+          "day": "2026-11-17",
+          "used": 0,
+          "restocked": 2,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-18",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-19",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-20",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        }
+      ],
+      "today": {
+        "used": 1,
+        "restocked": 0
+      },
+      "projection": [
+        {
+          "day": "2026-11-22",
+          "expected": 1.95,
+          "low": 1.58,
+          "high": 2.32,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-23",
+          "expected": 1.9,
+          "low": 1.37,
+          "high": 2.42,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-24",
+          "expected": 1.85,
+          "low": 1.2,
+          "high": 2.49,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-25",
+          "expected": 1.8,
+          "low": 1.05,
+          "high": 2.54,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-26",
+          "expected": 1.75,
+          "low": 0.91,
+          "high": 2.58,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-27",
+          "expected": 1.69,
+          "low": 0.78,
+          "high": 2.61,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-28",
+          "expected": 1.64,
+          "low": 0.66,
+          "high": 2.63,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-29",
+          "expected": 1.59,
+          "low": 0.54,
+          "high": 2.65,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-30",
+          "expected": 1.54,
+          "low": 0.42,
+          "high": 2.66,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-01",
+          "expected": 1.49,
+          "low": 0.31,
+          "high": 2.67,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-02",
+          "expected": 1.44,
+          "low": 0.2,
+          "high": 2.67,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-03",
+          "expected": 1.39,
+          "low": 0.1,
+          "high": 2.68,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-04",
+          "expected": 1.34,
+          "low": 0,
+          "high": 2.68,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-05",
+          "expected": 1.29,
+          "low": 0,
+          "high": 2.68,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-06",
+          "expected": 1.24,
+          "low": 0,
+          "high": 2.68,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-07",
+          "expected": 1.18,
+          "low": 0,
+          "high": 2.67,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-08",
+          "expected": 1.13,
+          "low": 0,
+          "high": 2.67,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-09",
+          "expected": 1.08,
+          "low": 0,
+          "high": 2.66,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-10",
+          "expected": 1.03,
+          "low": 0,
+          "high": 2.66,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-11",
+          "expected": 0.98,
+          "low": 0,
+          "high": 2.65,
+          "ordered": 2,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-12",
+          "expected": 0.93,
+          "low": 0,
+          "high": 2.64,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-13",
+          "expected": 2.88,
+          "low": 2.88,
+          "high": 2.88,
+          "ordered": 0,
+          "arrives": 2
+        },
+        {
+          "day": "2026-12-14",
+          "expected": 2.83,
+          "low": 2.45,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-15",
+          "expected": 2.78,
+          "low": 2.25,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-16",
+          "expected": 2.73,
+          "low": 2.08,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-17",
+          "expected": 2.67,
+          "low": 1.93,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-18",
+          "expected": 2.62,
+          "low": 1.79,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-19",
+          "expected": 2.57,
+          "low": 1.66,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-20",
+          "expected": 2.52,
+          "low": 1.54,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-21",
+          "expected": 2.47,
+          "low": 1.42,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-22",
+          "expected": 2.42,
+          "low": 1.3,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-23",
+          "expected": 2.37,
+          "low": 1.19,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-24",
+          "expected": 2.32,
+          "low": 1.08,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-25",
+          "expected": 2.27,
+          "low": 0.98,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-26",
+          "expected": 2.21,
+          "low": 0.87,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-27",
+          "expected": 2.16,
+          "low": 0.77,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-28",
+          "expected": 2.11,
+          "low": 0.67,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-29",
+          "expected": 2.06,
+          "low": 0.57,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-30",
+          "expected": 2.01,
+          "low": 0.47,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-31",
+          "expected": 1.96,
+          "low": 0.38,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-01",
+          "expected": 1.91,
+          "low": 0.28,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-02",
+          "expected": 1.86,
+          "low": 0.19,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-03",
+          "expected": 1.81,
+          "low": 0.1,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-04",
+          "expected": 1.76,
+          "low": 0.01,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-05",
+          "expected": 1.7,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-06",
+          "expected": 1.65,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-07",
+          "expected": 1.6,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-08",
+          "expected": 1.55,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-09",
+          "expected": 1.5,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-10",
+          "expected": 1.45,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-11",
+          "expected": 1.4,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-12",
+          "expected": 1.35,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-13",
+          "expected": 1.3,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-14",
+          "expected": 1.25,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-15",
+          "expected": 1.19,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-16",
+          "expected": 1.14,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-17",
+          "expected": 1.09,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-18",
+          "expected": 1.04,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-19",
+          "expected": 0.99,
+          "low": 0,
+          "high": 3,
+          "ordered": 2,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-20",
+          "expected": 0.94,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        }
+      ]
+    },
+    {
+      "productId": "p-wax",
+      "name": "MWAX synthetic lubricant",
+      "unit": "pack",
+      "count": 4,
+      "capacity": 4,
+      "ratePerDay": 0.18,
+      "reorderPoint": 2,
+      "leadDays": 2,
+      "daysOfCover": 22.3,
+      "reorderOn": "2026-12-03",
+      "runsOutOn": "2026-12-14",
+      "unitPrice": 14.99,
+      "days": [
+        {
+          "day": "2026-10-22",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 4,
+          "sample": true
+        },
+        {
+          "day": "2026-10-23",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 4,
+          "sample": true
+        },
+        {
+          "day": "2026-10-24",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 4,
+          "sample": true
+        },
+        {
+          "day": "2026-10-25",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 4,
+          "sample": true
+        },
+        {
+          "day": "2026-10-26",
+          "used": 1,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-27",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-28",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-29",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-30",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-31",
+          "used": 1,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-01",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-02",
+          "used": 0,
+          "restocked": 2,
+          "endCount": 4,
+          "sample": true
+        },
+        {
+          "day": "2026-11-03",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 4,
+          "sample": true
+        },
+        {
+          "day": "2026-11-04",
+          "used": 1,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-05",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-06",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-07",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-08",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-09",
+          "used": 1,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-10",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-11",
+          "used": 0,
+          "restocked": 2,
+          "endCount": 4,
+          "sample": true
+        },
+        {
+          "day": "2026-11-12",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 4,
+          "sample": true
+        },
+        {
+          "day": "2026-11-13",
+          "used": 1,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-14",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-15",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-16",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-17",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-18",
+          "used": 1,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-19",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-20",
+          "used": 0,
+          "restocked": 2,
+          "endCount": 4,
+          "sample": true
+        }
+      ],
+      "today": {
+        "used": 0,
+        "restocked": 0
+      },
+      "projection": [
+        {
+          "day": "2026-11-22",
+          "expected": 3.82,
+          "low": 3.12,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-23",
+          "expected": 3.64,
+          "low": 2.65,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-24",
+          "expected": 3.46,
+          "low": 2.25,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-25",
+          "expected": 3.28,
+          "low": 1.89,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-26",
+          "expected": 3.11,
+          "low": 1.54,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-27",
+          "expected": 2.93,
+          "low": 1.22,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-28",
+          "expected": 2.75,
+          "low": 0.9,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-29",
+          "expected": 2.57,
+          "low": 0.59,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-30",
+          "expected": 2.39,
+          "low": 0.29,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-01",
+          "expected": 2.21,
+          "low": 0,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-02",
+          "expected": 2.03,
+          "low": 0,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-03",
+          "expected": 1.85,
+          "low": 0,
+          "high": 4,
+          "ordered": 2,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-04",
+          "expected": 1.67,
+          "low": 0,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-05",
+          "expected": 3.49,
+          "low": 3.49,
+          "high": 3.49,
+          "ordered": 0,
+          "arrives": 2
+        },
+        {
+          "day": "2026-12-06",
+          "expected": 3.32,
+          "low": 2.62,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-07",
+          "expected": 3.14,
+          "low": 2.15,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-08",
+          "expected": 2.96,
+          "low": 1.75,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-09",
+          "expected": 2.78,
+          "low": 1.38,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-10",
+          "expected": 2.6,
+          "low": 1.04,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-11",
+          "expected": 2.42,
+          "low": 0.71,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-12",
+          "expected": 2.24,
+          "low": 0.39,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-13",
+          "expected": 2.06,
+          "low": 0.09,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-14",
+          "expected": 1.88,
+          "low": 0,
+          "high": 3.98,
+          "ordered": 2,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-15",
+          "expected": 1.7,
+          "low": 0,
+          "high": 3.91,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-16",
+          "expected": 3.53,
+          "low": 3.53,
+          "high": 3.53,
+          "ordered": 0,
+          "arrives": 2
+        },
+        {
+          "day": "2026-12-17",
+          "expected": 3.35,
+          "low": 2.65,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-18",
+          "expected": 3.17,
+          "low": 2.18,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-19",
+          "expected": 2.99,
+          "low": 1.78,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-20",
+          "expected": 2.81,
+          "low": 1.41,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-21",
+          "expected": 2.63,
+          "low": 1.07,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-22",
+          "expected": 2.45,
+          "low": 0.74,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-23",
+          "expected": 2.27,
+          "low": 0.43,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-24",
+          "expected": 2.09,
+          "low": 0.12,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-25",
+          "expected": 1.91,
+          "low": 0,
+          "high": 4,
+          "ordered": 2,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-26",
+          "expected": 1.74,
+          "low": 0,
+          "high": 3.94,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-27",
+          "expected": 3.56,
+          "low": 3.56,
+          "high": 3.56,
+          "ordered": 0,
+          "arrives": 2
+        },
+        {
+          "day": "2026-12-28",
+          "expected": 3.38,
+          "low": 2.68,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-29",
+          "expected": 3.2,
+          "low": 2.21,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-30",
+          "expected": 3.02,
+          "low": 1.81,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-31",
+          "expected": 2.84,
+          "low": 1.44,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-01",
+          "expected": 2.66,
+          "low": 1.1,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-02",
+          "expected": 2.48,
+          "low": 0.77,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-03",
+          "expected": 2.3,
+          "low": 0.46,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-04",
+          "expected": 2.12,
+          "low": 0.15,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-05",
+          "expected": 1.95,
+          "low": 0,
+          "high": 4,
+          "ordered": 2,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-06",
+          "expected": 1.77,
+          "low": 0,
+          "high": 3.97,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-07",
+          "expected": 3.59,
+          "low": 3.59,
+          "high": 3.59,
+          "ordered": 0,
+          "arrives": 2
+        },
+        {
+          "day": "2027-01-08",
+          "expected": 3.41,
+          "low": 2.71,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-09",
+          "expected": 3.23,
+          "low": 2.24,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-10",
+          "expected": 3.05,
+          "low": 1.84,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-11",
+          "expected": 2.87,
+          "low": 1.47,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-12",
+          "expected": 2.69,
+          "low": 1.13,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-13",
+          "expected": 2.51,
+          "low": 0.8,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-14",
+          "expected": 2.33,
+          "low": 0.49,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-15",
+          "expected": 2.16,
+          "low": 0.18,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-16",
+          "expected": 1.98,
+          "low": 0,
+          "high": 4,
+          "ordered": 2,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-17",
+          "expected": 1.8,
+          "low": 0,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-18",
+          "expected": 3.62,
+          "low": 3.62,
+          "high": 3.62,
+          "ordered": 0,
+          "arrives": 2
+        },
+        {
+          "day": "2027-01-19",
+          "expected": 3.44,
+          "low": 2.74,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-20",
+          "expected": 3.26,
+          "low": 2.27,
+          "high": 4,
+          "ordered": 0,
+          "arrives": 0
+        }
+      ]
+    },
+    {
+      "productId": "p-9v",
+      "name": "9V batteries",
+      "unit": "each",
+      "count": 3,
+      "capacity": 3,
+      "ratePerDay": 0.05,
+      "reorderPoint": 1,
+      "leadDays": 2,
+      "daysOfCover": 58.8,
+      "reorderOn": "2026-12-31",
+      "runsOutOn": "2027-01-19",
+      "unitPrice": 4.29,
+      "days": [
+        {
+          "day": "2026-10-22",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-23",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-24",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-25",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-26",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-27",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-28",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-29",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-30",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-10-31",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-01",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-02",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-03",
+          "used": 1,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-04",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-05",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-06",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-07",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-08",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-09",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-10",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-11",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-12",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-13",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-14",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 2,
+          "sample": true
+        },
+        {
+          "day": "2026-11-15",
+          "used": 1,
+          "restocked": 0,
+          "endCount": 1,
+          "sample": true
+        },
+        {
+          "day": "2026-11-16",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 1,
+          "sample": true
+        },
+        {
+          "day": "2026-11-17",
+          "used": 0,
+          "restocked": 2,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-18",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-19",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        },
+        {
+          "day": "2026-11-20",
+          "used": 0,
+          "restocked": 0,
+          "endCount": 3,
+          "sample": true
+        }
+      ],
+      "today": {
+        "used": 1,
+        "restocked": 1
+      },
+      "projection": [
+        {
+          "day": "2026-11-22",
+          "expected": 2.95,
+          "low": 2.58,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-23",
+          "expected": 2.9,
+          "low": 2.37,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-24",
+          "expected": 2.85,
+          "low": 2.2,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-25",
+          "expected": 2.8,
+          "low": 2.05,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-26",
+          "expected": 2.74,
+          "low": 1.91,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-27",
+          "expected": 2.69,
+          "low": 1.78,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-28",
+          "expected": 2.64,
+          "low": 1.66,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-29",
+          "expected": 2.59,
+          "low": 1.54,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-11-30",
+          "expected": 2.54,
+          "low": 1.42,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-01",
+          "expected": 2.49,
+          "low": 1.31,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-02",
+          "expected": 2.44,
+          "low": 1.2,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-03",
+          "expected": 2.39,
+          "low": 1.1,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-04",
+          "expected": 2.34,
+          "low": 0.99,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-05",
+          "expected": 2.29,
+          "low": 0.89,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-06",
+          "expected": 2.23,
+          "low": 0.79,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-07",
+          "expected": 2.18,
+          "low": 0.69,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-08",
+          "expected": 2.13,
+          "low": 0.6,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-09",
+          "expected": 2.08,
+          "low": 0.5,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-10",
+          "expected": 2.03,
+          "low": 0.41,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-11",
+          "expected": 1.98,
+          "low": 0.31,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-12",
+          "expected": 1.93,
+          "low": 0.22,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-13",
+          "expected": 1.88,
+          "low": 0.13,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-14",
+          "expected": 1.83,
+          "low": 0.04,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-15",
+          "expected": 1.78,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-16",
+          "expected": 1.72,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-17",
+          "expected": 1.67,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-18",
+          "expected": 1.62,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-19",
+          "expected": 1.57,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-20",
+          "expected": 1.52,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-21",
+          "expected": 1.47,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-22",
+          "expected": 1.42,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-23",
+          "expected": 1.37,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-24",
+          "expected": 1.32,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-25",
+          "expected": 1.27,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-26",
+          "expected": 1.21,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-27",
+          "expected": 1.16,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-28",
+          "expected": 1.11,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-29",
+          "expected": 1.06,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-30",
+          "expected": 1.01,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2026-12-31",
+          "expected": 0.96,
+          "low": 0,
+          "high": 3,
+          "ordered": 2,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-01",
+          "expected": 0.91,
+          "low": 0,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-02",
+          "expected": 2.86,
+          "low": 2.86,
+          "high": 2.86,
+          "ordered": 0,
+          "arrives": 2
+        },
+        {
+          "day": "2027-01-03",
+          "expected": 2.81,
+          "low": 2.43,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-04",
+          "expected": 2.76,
+          "low": 2.23,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-05",
+          "expected": 2.7,
+          "low": 2.06,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-06",
+          "expected": 2.65,
+          "low": 1.91,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-07",
+          "expected": 2.6,
+          "low": 1.77,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-08",
+          "expected": 2.55,
+          "low": 1.64,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-09",
+          "expected": 2.5,
+          "low": 1.52,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-10",
+          "expected": 2.45,
+          "low": 1.4,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-11",
+          "expected": 2.4,
+          "low": 1.28,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-12",
+          "expected": 2.35,
+          "low": 1.17,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-13",
+          "expected": 2.3,
+          "low": 1.06,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-14",
+          "expected": 2.25,
+          "low": 0.96,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-15",
+          "expected": 2.19,
+          "low": 0.85,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-16",
+          "expected": 2.14,
+          "low": 0.75,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-17",
+          "expected": 2.09,
+          "low": 0.65,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-18",
+          "expected": 2.04,
+          "low": 0.55,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-19",
+          "expected": 1.99,
+          "low": 0.45,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        },
+        {
+          "day": "2027-01-20",
+          "expected": 1.94,
+          "low": 0.36,
+          "high": 3,
+          "ordered": 0,
+          "arrives": 0
+        }
+      ]
+    }
+  ],
+  "trail": [
+    {
+      "productId": "p-bolts",
+      "ts": "2026-11-21T09:54:01-05:00",
+      "delta": -2,
+      "countAfter": 1
+    },
+    {
+      "productId": "p-bolts",
+      "ts": "2026-11-21T09:57:01-05:00",
+      "delta": 2,
+      "countAfter": 3
+    },
+    {
+      "productId": "p-wax",
+      "ts": "2026-11-21T10:22:01-05:00",
+      "delta": -2,
+      "countAfter": 2
+    },
+    {
+      "productId": "p-wax",
+      "ts": "2026-11-21T10:26:01-05:00",
+      "delta": 2,
+      "countAfter": 4
+    },
+    {
+      "productId": "p-9v",
+      "ts": "2026-11-21T10:44:01-05:00",
+      "delta": -1,
+      "countAfter": 2
+    },
+    {
+      "productId": "p-washers",
+      "ts": "2026-11-21T11:15:01-05:00",
+      "delta": -2,
+      "countAfter": 1
+    },
+    {
+      "productId": "p-9v",
+      "ts": "2026-11-21T11:27:38-05:00",
+      "delta": 1,
+      "countAfter": 3
+    },
+    {
+      "productId": "p-bolts",
+      "ts": "2026-11-21T11:49:38-05:00",
+      "delta": -1,
+      "countAfter": 2
+    }
+  ],
+  "placed": [
+    {
+      "poNumber": "RU-1044",
+      "productId": "p-washers",
+      "name": "Flat washers 3/4 in",
+      "units": 2,
+      "total": 17.68,
+      "confirmation": "OC-61675",
+      "ts": "2026-11-21T11:15:38-05:00"
+    }
+  ]
+}

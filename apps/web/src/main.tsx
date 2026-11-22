@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { liveUrl, param } from './lib/hub';
+import { Analytics } from './screens/analytics';
 import { Ops } from './screens/ops';
 import { Phone } from './screens/phone';
 import { Tv } from './screens/tv';
@@ -29,4 +30,4 @@ if (param('mock') === '1') {
 }
 
 const root = document.getElementById('root');
-if (root) createRoot(root).render(<StrictMode>{path === '/m' ? <Phone /> : path === '/ops' ? <Ops /> : <Tv />}</StrictMode>);
+if (root) createRoot(root).render(<StrictMode>{path === '/m' ? <Phone /> : path === '/ops' ? <Ops /> : path === '/analytics' ? <Analytics /> : <Tv />}</StrictMode>);

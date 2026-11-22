@@ -5,11 +5,12 @@ import { cors } from 'hono/cors';
 import type { z } from 'zod';
 import type { RoomCore } from './core/room';
 import { putZones, reset, setBoard, setReplay, setScreen, setSeason } from './demo';
+import { analyticsResult } from './analytics';
 import { historyResult } from './history';
 import { supplyWebhook } from './hooks';
 import { ingestCounts, ingestNode, ingestPicks, ingestReaches } from './ingest';
 import { approve, cancel, Conflict, ingestCart, ingestPlaced, ingestQuotes, ingestReorder, ingestRuns, NotFound, openOrder } from './orders';
-import { cancelTeach, confirmTeach, cropKey, startTeach } from './teach';
+import { cancelTeach, catalog, confirmTeach, cropKey, startTeach } from './teach';
 
 class BadRequest extends Error {}
 class Unauthorized extends Error {}
@@ -70,6 +71,8 @@ export function createApp(room: RoomCore, options: AppOptions = {}): Hono {
     if (!result) throw new NotFound(`No product ${c.req.param('id')}.`);
     return c.json(result);
   });
+  // The store's catalog gives a price to a part nobody has bought yet. It is cached, and a store that is down costs only the prices.
+  app.get('/api/analytics', async (c) => c.json(analyticsResult(room, await catalog(room))));
   app.get('/api/teach/:id/crop.jpg', async (c) => {
     const data = await room.deps.store.get<string>(cropKey(c.req.param('id')));
     if (!data) throw new NotFound('No picture for that id.');

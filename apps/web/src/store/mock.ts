@@ -57,3 +57,4 @@ export const mockMessages = (): ServerMessage[] => (messages as unknown[]).flatM
 });
 
 export { default as mockHistory } from '../../../../contracts/mocks/history.json';
+export { default as mockAnalytics } from '../../../../contracts/mocks/analytics.json';

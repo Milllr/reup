@@ -19,7 +19,7 @@ The stand in drives Offcut Supply's own pages over plain HTTP and makes up retai
 | SUPPLY_URL | Offcut Supply | http://localhost:3001 |
 | TINYFISH_API_KEY | From Infisical | none, required unless BUYER_ENGINE=local |
 | TINYFISH_PROFILE_ID | A saved browser profile that is signed in to Offcut Supply | none |
-| OFFCUT_EMAIL, OFFCUT_PASSWORD | The shop account, used only when there is no profile | shop@reup.test, none |
+| OFFCUT_EMAIL, OFFCUT_PASSWORD | The shop account, used only when there is no profile | shop@reup.test, the store's own development password |
 | BUYER_ENGINE | `tinyfish` or `local` | tinyfish |
 | TIME_ZONE | For delivery dates | America/Toronto |
 

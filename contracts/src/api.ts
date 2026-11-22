@@ -79,6 +79,45 @@ export const HistoryResult = z.object({
   reorderPoint: z.number().int().nonnegative(),
 });
 
+/** One part on the Analytics page: where it stands, the 30 days behind it and the 60 days ahead. */
+export const AnalyticsPart = z.object({
+  productId: Id,
+  name: z.string(),
+  unit: z.string(),
+  count: z.number().int().nonnegative(),
+  capacity: z.number().int().positive().nullable(),
+  /** Units used a day, after the season factor. */
+  ratePerDay: z.number().nonnegative(),
+  reorderPoint: z.number().int().nonnegative(),
+  leadDays: z.number().nonnegative(),
+  /** Days until the board is empty at this rate. Null when the part is not in use. */
+  daysOfCover: z.number().nonnegative().nullable(),
+  /** The local day reup next orders it by its own rule, within the days ahead. Null when it does not, or an order is already open. */
+  reorderOn: z.string().nullable(),
+  /** The local day the board would be empty if nothing were ordered. Null when the part is not in use. */
+  runsOutOn: z.string().nullable(),
+  /** What one unit costs at the account supplier, from its last quote or the store catalog. Null when neither says. */
+  unitPrice: Money.nullable(),
+  /** Oldest first, one entry per completed local day, 30 days. sample marks history that was made up for the demo, not seen. */
+  days: z.array(z.object({ day: z.string(), used: z.number().int().nonnegative(), restocked: z.number().int().nonnegative(), endCount: z.number().int().nonnegative(), sample: z.boolean() })),
+  /** Today so far, as the cameras saw it. */
+  today: z.object({ used: z.number().int().nonnegative(), restocked: z.number().int().nonnegative() }),
+  /** The next 60 days if reup keeps ordering by its own rule. expected is the end of the day. ordered and arrives are units. */
+  projection: z.array(z.object({ day: z.string(), expected: z.number().nonnegative(), low: z.number().nonnegative(), high: z.number().nonnegative(), ordered: z.number().int().nonnegative(), arrives: z.number().int().nonnegative() })),
+});
+
+/** GET /api/analytics. Everything the Analytics page draws, for every part on the board, in one answer. */
+export const AnalyticsResult = z.object({
+  now: IsoTime,
+  /** The local day that now falls in. */
+  today: z.string(),
+  parts: z.array(AnalyticsPart),
+  /** Every change of a count in the last 24 hours, oldest first, at most 400. Kept through a demo reset: it is the record of the day. */
+  trail: z.array(z.object({ productId: Id, ts: IsoTime, delta: z.number().int(), countAfter: z.number().int().nonnegative() })),
+  /** Every order reup placed, newest first, at most 50. Kept through a demo reset, with the part's name as it was then. */
+  placed: z.array(z.object({ poNumber: z.string(), productId: Id, name: z.string(), units: z.number().int().positive(), total: Money.nullable(), confirmation: z.string(), ts: IsoTime })),
+});
+
 // ---------- teaching ----------
 
 /** POST /api/teach (eye). A new item is sitting on the teach spot. jpegBase64 is the crop, at most 400 kB. */
@@ -142,6 +181,7 @@ export const ROUTES = [
   ['GET', '/live', 'WebSocket. role=screen|ops|buyer. Sends ServerMessage.'],
   ['GET', '/api/state', 'Snapshot'],
   ['GET', '/api/products/:id/history', 'HistoryResult'],
+  ['GET', '/api/analytics', 'AnalyticsResult'],
   ['GET', '/api/jobs', 'JobsResult (device token)'],
   ['POST', '/ingest/counts', 'IngestCountsBody -> Ok (device token)'],
   ['POST', '/ingest/picks', 'IngestPicksBody -> IngestPicksResult (device token)'],
@@ -181,6 +221,8 @@ export type IngestCartBody = z.infer<typeof IngestCartBody>;
 export type IngestPlacedBody = z.infer<typeof IngestPlacedBody>;
 export type JobsResult = z.infer<typeof JobsResult>;
 export type HistoryResult = z.infer<typeof HistoryResult>;
+export type AnalyticsPart = z.infer<typeof AnalyticsPart>;
+export type AnalyticsResult = z.infer<typeof AnalyticsResult>;
 export type TeachBody = z.infer<typeof TeachBody>;
 export type TeachConfirmBody = z.infer<typeof TeachConfirmBody>;
 export type ApproveBody = z.infer<typeof ApproveBody>;

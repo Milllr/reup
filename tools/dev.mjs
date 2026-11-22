@@ -69,7 +69,7 @@ once('store', 'npx wrangler d1 migrations apply offcut-supply --local', join(roo
 
 // Each wrangler gets its own inspector port. Two on the default port is an 'address already in use' error.
 // Under infisical run the hub gets the Gemini key, so a new part is named on a laptop too. Without it a typed name works.
-const gemini = /^[\w-]+$/.test(process.env.GEMINI_API_KEY ?? '') ? ` --var GEMINI_API_KEY:${process.env.GEMINI_API_KEY}` : '';
+const gemini = /^[\w.-]+$/.test(process.env.GEMINI_API_KEY ?? '') ? ` --var GEMINI_API_KEY:${process.env.GEMINI_API_KEY}` : '';
 keep('hub', `npx wrangler dev --port ${hubPort} --inspector-port ${hubPort + 6229} --var SUPPLY_URL:${storeUrl}${gemini}`, join(root, 'apps', 'hub'));
 keep('store', `npx wrangler dev --port ${storePort} --inspector-port ${storePort + 6229} --var HUB_URL:${hubUrl} --var SHIP_DELAY_MS:${flag('ship-ms', '20000')}`, join(root, 'apps', 'supply'));
 await Promise.all([up(`${hubUrl}/api/health`, 'hub'), up(`${storeUrl}/catalog.json`, 'store')]);

@@ -2,7 +2,7 @@
 import { unitsText } from '@reup/brain';
 import { TEACH_ZONE } from '../seed';
 import type { Count, IngestCountsBody, IngestNodeBody, IngestNodeResult, IngestPicksBody, IngestPicksResult, IngestReachesBody, PickEvent, Zone } from '@reup/contracts';
-import type { RoomCore } from '../core/room';
+import { TRAIL_MAX, type RoomCore } from '../core/room';
 import { dayIn } from '../core/time';
 import { learnStock } from '../demo';
 import { deliveryExpected, afterCountChange } from '../orders';
@@ -48,6 +48,8 @@ function recordPick(room: RoomCore, pick: PickEvent): void {
   }
   room.deps.history.pick(pick);
   room.emit({ type: 'pick', pick });
+  room.x.trail.push({ productId: pick.productId, ts: pick.ts, delta: pick.delta, countAfter: pick.countAfter });
+  if (room.x.trail.length > TRAIL_MAX) room.x.trail.splice(0, room.x.trail.length - TRAIL_MAX);
   room.x.recentPicks.push({ pick, at: Date.parse(pick.ts) });
   if (room.x.recentPicks.length > 20) room.x.recentPicks.shift();
   if (!product) return;

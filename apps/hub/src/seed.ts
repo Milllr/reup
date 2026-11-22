@@ -102,18 +102,24 @@ export function sampleForStock(stock: number): Sample | null {
   const target = Math.max(1, stock - TAKE_TO_REORDER);
   const use = sampleUse(target);
   if (use.length === 0) return null;
-  // Walk back from a full ledge. A day that would have started with more than the ledge holds is a day a delivery came,
-  // and the ledge was just under its reorder point before it.
-  const low = Math.max(0, target - 1);
+  // A month with reup on the job, walked forward from a full ledge: at the reorder point it orders what fills the
+  // ledge, and that lands leadDays later. So the sample shows a ledge that dips and comes back, not one left empty.
   const restock: Record<number, number> = {};
-  let end = stock;
-  for (let i = use.length - 1; i >= 0; i--) {
-    const before = end + (use[i] ?? 0);
-    if (before > stock) {
-      restock[i] = before - low;
-      end = low;
-    } else {
-      end = before;
+  const last = use.length - 1;
+  let level = stock;
+  let due: { at: number; units: number } | null = null;
+  for (let i = 0; i <= last; i++) {
+    if (due && due.at === i) {
+      restock[i] = due.units;
+      level += due.units;
+      due = null;
+    }
+    level = Math.max(0, level - (use[i] ?? 0));
+    if (!due && level <= target) due = { at: Math.min(last, i + BOARD_LEAD_DAYS), units: stock - level };
+    // The board is full when it is set up, so whatever is still out by the last day came in on it.
+    if (i === last && level < stock) {
+      restock[i] = (restock[i] ?? 0) + (stock - level);
+      level = stock;
     }
   }
   return { use, restock, leadDays: BOARD_LEAD_DAYS };

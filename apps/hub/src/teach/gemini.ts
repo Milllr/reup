@@ -51,11 +51,25 @@ export function parseAnswer(text: string): NameResult {
   return { sku, name, unit: typeof raw.unit === 'string' && raw.unit.trim() !== '' ? raw.unit.trim() : 'each', confidence };
 }
 
-export class GeminiNamer implements Namer {
-  constructor(private apiKey: string, private model: string, private fetcher: typeof fetch = fetch) {}
+/** How long one model gets before the next one is asked. A good answer takes 1 to 7 seconds. */
+export const ATTEMPT_MS = 7000;
 
-  private async call(body: unknown, signal: AbortSignal): Promise<Response> {
-    return this.fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent`, {
+/** "a, b , c" as a list. GEMINI_MODEL may name several models: the first that answers names the part. */
+export const modelList = (models: string) => models.split(',').map((m) => m.trim()).filter((m) => m !== '');
+
+export class GeminiNamer implements Namer {
+  private models: string[];
+
+  /**
+   * models is one model or several with commas between, in the order to ask them. A model that is overloaded, slow
+   * or gone is skipped: on Sat Nov 21 2026 the newest Flash answered 503 or took two minutes while the others took 2 seconds.
+   */
+  constructor(private apiKey: string, models: string, private fetcher: typeof fetch = fetch, private attemptMs = ATTEMPT_MS, private log: (line: string) => void = (line) => console.error(line)) {
+    this.models = modelList(models);
+  }
+
+  private async call(model: string, body: unknown, signal: AbortSignal): Promise<Response> {
+    return this.fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
       body: JSON.stringify(body),
@@ -63,13 +77,35 @@ export class GeminiNamer implements Namer {
     });
   }
 
-  async name(jpegBase64: string, catalog: readonly CatalogItem[], signal: AbortSignal): Promise<NameResult> {
-    const contents = [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: jpegBase64 } }, { text: buildPrompt(catalog) }] }];
-    let res = await this.call({ contents, generationConfig: { temperature: 0, responseFormat: { text: { mimeType: 'APPLICATION_JSON', schema: SCHEMA } } } }, signal);
-    if (res.status === 400) res = await this.call({ contents, generationConfig: { temperature: 0, responseMimeType: 'application/json' } }, signal);
+  private async ask(model: string, contents: unknown, signal: AbortSignal): Promise<NameResult> {
+    let res = await this.call(model, { contents, generationConfig: { temperature: 0, responseFormat: { text: { mimeType: 'APPLICATION_JSON', schema: SCHEMA } } } }, signal);
+    if (res.status === 400) res = await this.call(model, { contents, generationConfig: { temperature: 0, responseMimeType: 'application/json' } }, signal);
     if (!res.ok) throw new Error(`Gemini answered ${res.status}.`);
     const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     const text = (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('');
     return parseAnswer(text);
+  }
+
+  async name(jpegBase64: string, catalog: readonly CatalogItem[], signal: AbortSignal): Promise<NameResult> {
+    const contents = [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: jpegBase64 } }, { text: buildPrompt(catalog) }] }];
+    let last: unknown = new Error('No Gemini model is set.');
+    for (const model of this.models) {
+      if (signal.aborted) break;
+      // Each model has its own clock, and the caller's signal still stops everything.
+      const attempt = new AbortController();
+      const stop = () => attempt.abort();
+      signal.addEventListener('abort', stop);
+      const timer = setTimeout(stop, this.attemptMs);
+      try {
+        return await this.ask(model, contents, attempt.signal);
+      } catch (err) {
+        last = attempt.signal.aborted && !signal.aborted ? new Error(`${model} took longer than ${Math.round(this.attemptMs / 1000)} seconds.`) : err;
+        this.log(`naming with ${model} failed: ${last instanceof Error ? last.message : String(last)}`);
+      } finally {
+        clearTimeout(timer);
+        signal.removeEventListener('abort', stop);
+      }
+    }
+    throw last;
   }
 }

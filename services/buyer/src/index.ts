@@ -20,7 +20,7 @@ for (const line of startupLines(config)) console.log(line);
 
 let agent: Agent;
 if (config.ENGINE === 'local') {
-  agent = new LocalAgent(config.SUPPLY_URL, config.OFFCUT_EMAIL, config.OFFCUT_PASSWORD || 'dev-shop-password');
+  agent = new LocalAgent(config.SUPPLY_URL, config.OFFCUT_EMAIL, config.OFFCUT_PASSWORD);
 } else if (config.TINYFISH_API_KEY === '') {
   console.error('TINYFISH_API_KEY is not set. Run the buyer through Infisical, or use npm run start:local -w services/buyer for the development stand in.');
   process.exit(1);

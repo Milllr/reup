@@ -36,6 +36,62 @@ describe('naming a new part', () => {
     expect(calls[1]?.body.generationConfig).toHaveProperty('responseMimeType', 'application/json');
   });
 
+  describe('several models, asked in turn', () => {
+    const good = () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"sku":"OC-2202","name":"b","unit":"bag of 4","confidence":"sure"}' }] } }] }));
+    const modelOf = (url: string) => /models\/([^:]+):/.exec(url)?.[1] ?? '';
+
+    it('skips a model that is overloaded and takes the next one', async () => {
+      const asked: string[] = [];
+      const logs: string[] = [];
+      const fake = (async (url: string) => {
+        asked.push(modelOf(url));
+        return asked.length === 1 ? new Response('{"error":{"status":"UNAVAILABLE"}}', { status: 503 }) : good();
+      }) as unknown as typeof fetch;
+      const result = await new GeminiNamer('k', 'new-flash, steady-flash ,spare', fake, 7000, (l) => logs.push(l)).name('abc', items, new AbortController().signal);
+      expect(result.sku).toBe('OC-2202');
+      expect(asked).toEqual(['new-flash', 'steady-flash']);
+      expect(logs).toEqual(['naming with new-flash failed: Gemini answered 503.']);
+    });
+
+    it('gives a slow model 7 seconds, then asks the next', async () => {
+      vi.useFakeTimers();
+      try {
+        const asked: string[] = [];
+        const logs: string[] = [];
+        const fake = ((url: string, init: RequestInit) => {
+          asked.push(modelOf(url));
+          if (asked.length > 1) return Promise.resolve(good());
+          // Never answers. It ends only when its own request is aborted.
+          return new Promise<Response>((_, reject) => init.signal?.addEventListener('abort', () => reject(new Error('aborted'))));
+        }) as unknown as typeof fetch;
+        const naming = new GeminiNamer('k', 'slow,fast', fake, 7000, (l) => logs.push(l)).name('abc', items, new AbortController().signal);
+        await vi.advanceTimersByTimeAsync(6900);
+        expect(asked).toEqual(['slow']);
+        await vi.advanceTimersByTimeAsync(200);
+        expect((await naming).sku).toBe('OC-2202');
+        expect(asked).toEqual(['slow', 'fast']);
+        expect(logs).toEqual(['naming with slow failed: slow took longer than 7 seconds.']);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('says what the last model said when none can name it, and stops at once when the caller gives up', async () => {
+      const asked: string[] = [];
+      const fake = (async (url: string) => {
+        asked.push(modelOf(url));
+        return new Response('{}', { status: asked.length === 1 ? 503 : 429 });
+      }) as unknown as typeof fetch;
+      await expect(new GeminiNamer('k', 'a,b', fake, 7000, () => {}).name('abc', items, new AbortController().signal)).rejects.toThrow('Gemini answered 429.');
+      expect(asked).toEqual(['a', 'b']);
+      const gone = new AbortController();
+      gone.abort();
+      await expect(new GeminiNamer('k', 'a,b', fake, 7000, () => {}).name('abc', items, gone.signal)).rejects.toThrow();
+      expect(asked).toEqual(['a', 'b']);
+      await expect(new GeminiNamer('k', ' , ', fake, 7000, () => {}).name('abc', items, new AbortController().signal)).rejects.toThrow('No Gemini model is set.');
+    });
+  });
+
   it('stores the crop, names it from the catalog and waits for a person', async () => {
     const r = await rig({}, { fetch: catalogFetch, namer: namer({ sku: 'OC-1008-200', name: 'whatever', unit: 'x', confidence: 'fairly_sure' }) });
     const res = await r.call('POST', '/api/teach', body, DEVICE);
@@ -81,12 +137,14 @@ describe('naming a new part', () => {
     expect(r.room.s.activity.at(-1)?.text).toBe('1 box of wood screws #8 x 2 in taken. 0 left.');
   });
 
-  it('fails plainly when naming throws or takes over 12 seconds, and a person can still confirm', async () => {
+  it('fails plainly when naming throws or takes over 18 seconds, and a person can still confirm', async () => {
     vi.useFakeTimers();
     try {
       const r = await rig({}, { fetch: catalogFetch, namer: namer(() => new Promise<never>(() => {})) });
       await r.call('POST', '/api/teach', body, DEVICE);
-      await vi.advanceTimersByTimeAsync(12_500);
+      await vi.advanceTimersByTimeAsync(17_000);
+      expect(r.room.s.teach?.status).toBe('naming');
+      await vi.advanceTimersByTimeAsync(1500);
       await r.room.idle();
       expect(r.room.s.teach).toMatchObject({ status: 'failed', error: 'Could not name it. Type a name to add it.' });
       const id = r.room.s.teach?.id;

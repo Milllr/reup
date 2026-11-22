@@ -150,6 +150,69 @@ export function forecast(count: number, d: number, days = 7, capacity: number | 
   return out;
 }
 
+export interface ProjectionDay {
+  /** Days from today, 1 is tomorrow. */
+  offset: number;
+  /** What is on the board at the end of that day. */
+  expected: number;
+  low: number;
+  high: number;
+  /** Units reup orders that day, by its own rule. */
+  ordered: number;
+  /** Units that arrive that day. */
+  arrives: number;
+}
+
+export interface ProjectionInput {
+  count: number;
+  /** Use per day after the season factor. */
+  d: number;
+  days: number;
+  capacity: number | null;
+  reorderPoint: number;
+  leadDays: number;
+  /** True when an order fills the board back up, as for a part on a ledge. Otherwise an order covers HORIZON_DAYS of use. */
+  fill: boolean;
+  /** An order already on its way. */
+  arrival?: { offset: number; units: number } | null;
+}
+
+/**
+ * The next days if reup keeps ordering by its own rule: at or under the reorder point with nothing on its way it
+ * orders, and the order arrives leadDays later, the next day at the soonest. The band is how far use may have drifted
+ * since the count was last known: today, or the day a delivery came in. The first days match forecast().
+ */
+export function project(input: ProjectionInput): ProjectionDay[] {
+  const { count, capacity, reorderPoint, fill } = input;
+  const d = Math.max(0, input.d);
+  const lead = Math.max(1, Math.round(input.leadDays));
+  const cap = (n: number) => (capacity == null ? n : Math.min(capacity, n));
+  const r = (n: number) => Math.round(n * 100) / 100;
+  const out: ProjectionDay[] = [];
+  let level = count;
+  let pending = input.arrival && input.arrival.offset >= 1 ? { at: input.arrival.offset, units: input.arrival.units } : null;
+  let known = 0;
+  for (let k = 1; k <= input.days; k++) {
+    let arrives = 0;
+    if (pending && pending.at === k) {
+      arrives = pending.units;
+      level = cap(level + pending.units);
+      pending = null;
+      known = k;
+    }
+    level = Math.max(0, level - d);
+    let ordered = 0;
+    if (d > 0 && reorderPoint > 0 && !pending && level <= reorderPoint) {
+      const have = Math.ceil(level);
+      ordered = fill && capacity != null ? Math.max(1, capacity - have) : orderQty(d, capacity, have);
+      pending = { at: k + lead, units: ordered };
+    }
+    const spread = Z * Math.sqrt(d * (k - known));
+    out.push({ offset: k, expected: r(cap(level)), low: r(cap(Math.max(0, level - spread))), high: r(cap(level + spread)), ordered, arrives });
+  }
+  return out;
+}
+
 export interface PolicyInput {
   productId: string;
   /** Completed days, oldest first. */

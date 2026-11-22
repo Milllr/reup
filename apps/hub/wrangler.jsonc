@@ -18,7 +18,8 @@
   "vars": {
     // The workers.dev address until the domain's DNS is on Cloudflare. Then: https://offcut.wheredidallmyinventorygo.wtf
     "SUPPLY_URL": "https://offcut.wheredidallmyinventorygo.wtf",
-    "GEMINI_MODEL": "gemini-3.8-flash",
+    // Asked in this order until one answers. The newest Flash is last: it was overloaded on demo weekend.
+    "GEMINI_MODEL": "gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.6-flash,gemini-3.8-flash",
     "ORDER_CAP_CAD": "150",
     "DAY_CAP_CAD": "400",
     "TIME_ZONE": "America/Toronto"

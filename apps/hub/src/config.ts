@@ -24,7 +24,8 @@ export const DEFAULTS: Config = {
   SUPPLY_WEBHOOK_SECRET: 'dev-supply-secret',
   SUPPLY_URL: 'http://localhost:3001',
   GEMINI_API_KEY: '',
-  GEMINI_MODEL: 'gemini-3.8-flash',
+  // Asked in this order until one answers. See GeminiNamer.
+  GEMINI_MODEL: 'gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.6-flash,gemini-3.8-flash',
   ORDER_CAP_CAD: 150,
   DAY_CAP_CAD: 400,
   TIME_ZONE: 'America/Toronto',

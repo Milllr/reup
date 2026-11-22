@@ -25,6 +25,7 @@ const cases: Record<string, z.ZodType> = {
   jobs: C.JobsResult,
   'server-messages': z.array(C.ServerMessage),
   history: C.HistoryResult,
+  analytics: C.AnalyticsResult,
   catalog: C.Catalog,
   'ingest-counts': C.IngestCountsBody,
   'ingest-picks': C.IngestPicksBody,

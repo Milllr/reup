@@ -5,7 +5,8 @@ import { daysBefore } from '../core/time';
 import { Conflict, NotFound } from '../orders';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
-export const NAME_TIMEOUT_MS = 12_000;
+/** Every model together. Under the 20 seconds the hub lets a card say "Naming it." */
+export const NAME_TIMEOUT_MS = 18_000;
 
 export const cropKey = (id: string) => `crop:${id}`;
 
@@ -43,7 +44,7 @@ async function nameIt(room: RoomCore, id: string, jpegBase64: string): Promise<v
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
         controller.abort();
-        reject(new Error('Naming took longer than 12 seconds.'));
+        reject(new Error('Naming took longer than 18 seconds.'));
       }, NAME_TIMEOUT_MS);
     });
     const result = await Promise.race([namer.name(jpegBase64, items, controller.signal), timeout]).finally(() => {

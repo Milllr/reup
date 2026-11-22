@@ -10,7 +10,7 @@ Written Sat Nov 21 at kickoff. Frozen: add fields, do not rename or remove them.
 * `src/events.ts`: WebSocket messages from the hub (`ServerMessage`) and the buyer's work (`Job`)
 * `src/api.ts`: the body and the result of every hub route, and `ROUTES`
 * `api.md`: the routes as a table, auth, errors, the eye's local routes
-* `mocks/`: one sample payload per shape. `snapshot.json` is the demo at the moment shopping starts. `catalog.json` is also Offcut Supply's seed data. `board.json` is the station as built: `npm run board` puts it on a hub
+* `mocks/`: one sample payload per shape. `snapshot.json` is the demo at the moment shopping starts. `catalog.json` is also Offcut Supply's seed data. `board.json` is the station as built: `npm run board` puts it on a hub. `analytics.json` is that station after a morning at the table
 * `test/mocks.test.ts`: every mock validates against its schema
 
 ## How to use it

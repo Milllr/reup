@@ -2,7 +2,7 @@
 // pricing, carting, awaiting_approval, approved, placing, placed, shipped, received. Or failed, or cancelled.
 import { marketNote, money, orderReason, unitsText } from '@reup/brain';
 import type { IngestCartBody, IngestPlacedBody, IngestQuotesBody, IngestReorderBody, IngestRunsBody, Job, Order, Quote } from '@reup/contracts';
-import type { RoomCore } from '../core/room';
+import { PLACED_MAX, type RoomCore } from '../core/room';
 import { businessDaysFrom, weekdayIn } from '../core/time';
 
 export class Conflict extends Error {}
@@ -305,6 +305,8 @@ export function markPlaced(room: RoomCore, order: Order, confirmation: string, e
   if (room.x.spend.day !== room.today()) room.x.spend = { day: room.today(), total: 0 };
   room.x.spend.total += order.total ?? 0;
   room.x.jobs = room.x.jobs.filter((j) => !('orderId' in j) || j.orderId !== order.id);
+  room.x.placed.push({ poNumber: order.poNumber, productId: order.productId, name: room.product(order.productId)?.name ?? 'A part', units: order.units, total: order.total, confirmation, ts: room.iso() });
+  if (room.x.placed.length > PLACED_MAX) room.x.placed.splice(0, room.x.placed.length - PLACED_MAX);
   room.holdScreen(order.id);
   saveOrder(room, order);
   room.activity('info', `Ordered. Confirmation ${confirmation}.${order.eta ? ` Arrives ${weekdayIn(order.eta, room.config.TIME_ZONE)}.` : ''}`);

@@ -13,6 +13,9 @@ export interface Config {
   RECORDINGS_DIR: string;
 }
 
+/** What Offcut Supply itself falls back to for its shop account while no ACCOUNT_PASSWORD secret is set (apps/supply/src/lib/config.ts). Not a secret. */
+export const DEV_SHOP_PASSWORD = 'dev-shop-password';
+
 export function configFrom(env: Record<string, string | undefined>, recordingsDir: string): Config {
   const text = (key: string, fallback: string) => (env[key] && env[key] !== '' ? (env[key] as string) : fallback);
   return {
@@ -23,7 +26,8 @@ export function configFrom(env: Record<string, string | undefined>, recordingsDi
     TINYFISH_PROFILE_ID: text('TINYFISH_PROFILE_ID', ''),
     ENGINE: env.BUYER_ENGINE === 'local' ? 'local' : 'tinyfish',
     OFFCUT_EMAIL: text('OFFCUT_EMAIL', 'shop@reup.test'),
-    OFFCUT_PASSWORD: text('OFFCUT_PASSWORD', ''),
+    // With none given the buyer signs in the way a store with no secrets expects, so a fresh deploy shops end to end.
+    OFFCUT_PASSWORD: text('OFFCUT_PASSWORD', DEV_SHOP_PASSWORD),
     TIME_ZONE: text('TIME_ZONE', 'America/Toronto'),
     RECORDINGS_DIR: text('BUYER_RECORDINGS_DIR', recordingsDir),
   };
@@ -37,7 +41,7 @@ export function startupLines(c: Config): string[] {
     `Store: ${c.SUPPLY_URL}`,
     `Engine: ${c.ENGINE === 'local' ? 'local stand in (development only, not the live web)' : 'TinyFish'}`,
     `TINYFISH_API_KEY: ${set(c.TINYFISH_API_KEY)}`,
-    `TINYFISH_PROFILE_ID: ${set(c.TINYFISH_PROFILE_ID)}${c.TINYFISH_PROFILE_ID === '' ? ' (cart and place runs will need OFFCUT_PASSWORD to sign in)' : ''}`,
-    `OFFCUT_PASSWORD: ${set(c.OFFCUT_PASSWORD)}`,
+    `TINYFISH_PROFILE_ID: ${set(c.TINYFISH_PROFILE_ID)}${c.TINYFISH_PROFILE_ID === '' ? ' (cart and place runs sign in with OFFCUT_PASSWORD)' : ''}`,
+    `OFFCUT_PASSWORD: ${c.OFFCUT_PASSWORD === DEV_SHOP_PASSWORD ? "not set, using the store's development password" : set(c.OFFCUT_PASSWORD)}`,
   ];
 }

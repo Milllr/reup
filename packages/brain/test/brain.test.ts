@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Policy, type Quote, type Supplier } from '@reup/contracts';
-import { coverText, daysOfCover, forecast, marketNote, orderQty, orderReason, packsFor, policyFor, ratePerDay, reasonText, reorderPoint, unitsText, unitWord } from '../src/index';
+import { coverText, daysOfCover, forecast, marketNote, orderQty, orderReason, packsFor, policyFor, project, ratePerDay, reasonText, reorderPoint, unitsText, unitWord } from '../src/index';
 
 const now = '2026-11-21T09:14:00-05:00';
 const supplier = (id: string, name: string, kind: 'account' | 'market'): Supplier => ({ id, name, kind, baseUrl: 'https://example.com', searchUrl: 'https://example.com/s?q={q}', country: 'CA' });
@@ -91,6 +91,54 @@ describe('forecast', () => {
   it('rises on the day an order arrives', () => {
     const days = forecast(4, 0.56, 7, 12, { offset: 3, units: 8 });
     expect(days[2]?.expected).toBeGreaterThan(days[1]?.expected ?? 0);
+  });
+});
+
+describe('project', () => {
+  const ledge = { count: 3, d: 0.5, days: 30, capacity: 3, reorderPoint: 1, leadDays: 2, fill: true };
+
+  it('matches the forecast until the first order', () => {
+    const seven = forecast(4, 0.56, 7, 12);
+    const ahead = project({ count: 4, d: 0.56, days: 7, capacity: 12, reorderPoint: 0, leadDays: 2, fill: false });
+    expect(ahead.map(({ offset, expected, low, high }) => ({ offset, expected, low, high }))).toEqual(seven);
+    expect(ahead.every((day) => day.ordered === 0 && day.arrives === 0)).toBe(true);
+  });
+
+  it('orders at the reorder point, fills the ledge when the order lands, and does it again', () => {
+    const days = project(ledge);
+    // 3 on the ledge, half a unit a day: at 1 on day 4. Ordered then, 2 to fill the ledge, in 2 days later.
+    expect(days[3]).toMatchObject({ offset: 4, expected: 1, ordered: 2, arrives: 0 });
+    expect(days[5]).toMatchObject({ offset: 6, arrives: 2, ordered: 0 });
+    // The day it lands the ledge held 0.5, took 2 and lost half a unit to use: 2. The count is known again, so the band is narrow.
+    expect(days[5]?.expected).toBe(2);
+    expect((days[5]?.high ?? 0) - (days[5]?.low ?? 0)).toBeLessThan((days[4]?.high ?? 0) - (days[4]?.low ?? 0));
+    const orders = days.filter((day) => day.ordered > 0);
+    expect(orders.length).toBeGreaterThanOrEqual(4);
+    // Never a second order while one is on its way, never above the ledge, never under zero.
+    orders.forEach((order, i) => {
+      const next = orders[i + 1];
+      if (next) expect(next.offset).toBeGreaterThanOrEqual(order.offset + 2);
+    });
+    expect(days.every((day) => day.expected >= 0 && day.high <= 3 && day.low >= 0 && day.low <= day.expected && day.expected <= day.high)).toBe(true);
+    expect(days.reduce((sum, day) => sum + day.arrives, 0)).toBeLessThanOrEqual(days.reduce((sum, day) => sum + day.ordered, 0));
+  });
+
+  it('a part nobody uses stays where it is and is never ordered', () => {
+    const days = project({ ...ledge, d: 0 });
+    expect(days.every((day) => day.expected === 3 && day.low === 3 && day.high === 3 && day.ordered === 0)).toBe(true);
+  });
+
+  it('counts an order that is already on its way and orders nothing on top of it', () => {
+    const days = project({ ...ledge, count: 1, arrival: { offset: 2, units: 2 } });
+    expect(days[0]).toMatchObject({ expected: 0.5, ordered: 0 });
+    expect(days[1]).toMatchObject({ arrives: 2, expected: 2, ordered: 0 });
+    expect(days.find((day) => day.ordered > 0)?.offset).toBe(4);
+  });
+
+  it('without a ledge to fill, an order covers 14 days of use', () => {
+    const days = project({ count: 4, d: 0.56, days: 10, capacity: 12, reorderPoint: 4, leadDays: 2, fill: false });
+    expect(days[0]).toMatchObject({ ordered: 8 });
+    expect(days[2]).toMatchObject({ arrives: 8 });
   });
 });
 
