@@ -72,5 +72,5 @@ export function toQuote(id: string, job: Extract<Job, { kind: 'market' }>, suppl
 }
 
 export function marketSpec(supplier: Supplier, job: Extract<Job, { kind: 'market' }>): RunSpec {
-  return { kind: 'market', supplier, productId: job.productId, orderId: null, params: marketParams(supplier, job), replay: job.replay === true, fallback: true, check: marketCheck };
+  return { kind: 'market', supplier, productId: job.productId, orderId: null, subject: job.productId, params: marketParams(supplier, job), replay: job.replay === true, fallback: true, check: marketCheck };
 }

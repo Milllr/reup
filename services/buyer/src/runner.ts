@@ -20,6 +20,11 @@ export interface RunSpec {
   supplier: Supplier;
   productId: string | null;
   orderId: string | null;
+  /**
+   * What the run is about, so a recording is only ever replayed for the same thing. Before this a price recorded for
+   * hex bolts was replayed for a lubricant, and the order card said a retailer was $14.72 less per pack.
+   */
+  subject: string;
   params: AgentParams;
   /** The operator asked for the recording in place of a live run. */
   replay: boolean;
@@ -44,19 +49,24 @@ function freshRun(deps: Deps, spec: RunSpec, replay: boolean): Run {
   };
 }
 
+/** A replay is a fallback in a 3 minute demo. However long the live run took, its replay is over in this long. */
+export const REPLAY_MAX_MS = 20_000;
+
 async function playRecording(deps: Deps, spec: RunSpec): Promise<RunResult | null> {
-  const recording = await deps.recordings.load(spec.kind, spec.supplier.id);
+  const recording = await deps.recordings.load(spec.kind, spec.supplier.id, spec.subject);
   if (!recording) return null;
   const run = freshRun(deps, spec, true);
   await deps.mirror(run);
+  // The steps keep their order and their spacing, squeezed to fit when the run was a long one.
+  const pace = recording.durationMs > REPLAY_MAX_MS ? REPLAY_MAX_MS / recording.durationMs : 1;
   let at = 0;
   for (const step of recording.steps) {
-    await deps.sleep(Math.max(0, step.offsetMs - at));
+    await deps.sleep(Math.round(Math.max(0, step.offsetMs - at) * pace));
     at = step.offsetMs;
     run.steps = [...run.steps, { ts: deps.iso(deps.now()), purpose: step.purpose }];
     await deps.mirror(run);
   }
-  await deps.sleep(Math.max(0, recording.durationMs - at));
+  await deps.sleep(Math.round(Math.max(0, recording.durationMs - at) * pace));
   run.status = 'completed';
   run.finishedAt = deps.iso(deps.now());
   await deps.mirror(run);
@@ -104,7 +114,7 @@ export async function runAgent(deps: Deps, spec: RunSpec): Promise<RunResult> {
   await deps.mirror(run);
 
   if (!error) {
-    await deps.recordings.save({ kind: spec.kind, supplierId: spec.supplier.id, savedAt: run.finishedAt, durationMs: deps.now().getTime() - started, steps, result: outcome.result }).catch((err) => console.error('Could not save the recording.', err));
+    await deps.recordings.save({ kind: spec.kind, supplierId: spec.supplier.id, subject: spec.subject, savedAt: run.finishedAt, durationMs: deps.now().getTime() - started, steps, result: outcome.result }).catch((err) => console.error('Could not save the recording.', err));
     return { ok: true, result: outcome.result, error: null, replayed: false, run };
   }
   if (spec.fallback) {

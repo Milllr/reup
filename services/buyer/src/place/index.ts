@@ -114,7 +114,7 @@ export function toPlacedBody(job: PlaceJob, ok: boolean, result: Record<string, 
 
 export function placeSpec(supplier: Supplier, job: PlaceJob, basket: Basket | null, signIn: SignIn, profileId: string): RunSpec {
   // A failed place run is never answered with a recording by itself: only the operator's replay switch plays one.
-  return { kind: 'place', supplier, productId: null, orderId: job.orderId, params: placeParams(supplier, job, basket, signIn, profileId), replay: job.replay === true, fallback: false, check: placeCheck };
+  return { kind: 'place', supplier, productId: null, orderId: job.orderId, subject: 'any', params: placeParams(supplier, job, basket, signIn, profileId), replay: job.replay === true, fallback: false, check: placeCheck };
 }
 
 export const TRACK_SCHEMA = { type: 'object', properties: { status: { type: 'string', nullable: true }, delivery_date: { type: 'string', nullable: true } }, required: ['status', 'delivery_date'] };

@@ -5,13 +5,13 @@ import { join } from 'node:path';
 import { Run } from '@reup/contracts';
 import { describe, expect, it } from 'vitest';
 import { plainError, schemaProblems, TinyFishAgent, toRequest, type TinyFishClient } from '../src/agent';
-import { CART_SCHEMA } from '../src/cart';
+import { CART_SCHEMA, cartSpec, planCart } from '../src/cart';
 import { startupLines } from '../src/config';
 import { MARKET_SCHEMA, marketSpec } from '../src/market';
 import { PLACE_SCHEMA, placeSpec, TRACK_SCHEMA } from '../src/place';
 import { fileRecordings } from '../src/recordings';
-import { runAgent } from '../src/runner';
-import { completed, config, deps, fakeAgent, marketJob, offcut, placeJob, retailerA } from './helpers';
+import { REPLAY_MAX_MS, runAgent } from '../src/runner';
+import { cartJob, completed, config, deps, fakeAgent, marketJob, offcut, placeJob, retailerA } from './helpers';
 
 const good = { listing_name: 'Wood Screws', pack_size: 1, price: 8.69, currency: 'CAD', in_stock: true, delivery_days: 3, product_url: 'https://a.test/p/1' };
 
@@ -58,7 +58,7 @@ describe('the run mirror', () => {
     const realMirror = d.mirror;
     d.mirror = async (run) => { clock.now += 1000; await realMirror(run); };
     await runAgent(d, marketSpec(retailerA, marketJob));
-    const saved = recordings.all.get('market-s-market-a');
+    const saved = recordings.all.get('market-s-market-a-p-screws');
     expect(saved?.steps.map((s) => s.purpose)).toEqual(['one', 'two']);
     expect(saved?.result).toEqual(good);
 
@@ -70,6 +70,43 @@ describe('the run mirror', () => {
     expect(mirrored.at(-1)?.steps.map((s) => s.purpose)).toEqual(['one', 'two']);
     expect(mirrored.at(-1)?.status).toBe('completed');
     expect(slept.reduce((a, b) => a + b, 0)).toBe(saved?.durationMs);
+  });
+
+  it('never replays a recording made for another part, or for another quantity', async () => {
+    const agent = fakeAgent(() => completed(good));
+    const { d, recordings } = deps(agent);
+    await runAgent(d, marketSpec(retailerA, marketJob));
+    expect([...recordings.all.keys()]).toEqual(['market-s-market-a-p-screws']);
+    // Replay is asked for glue, and only screws were recorded: it runs live.
+    const glue = await runAgent(d, marketSpec(retailerA, { ...marketJob, productId: 'p-glue', replay: true }));
+    expect(glue.replayed).toBe(false);
+    expect(agent.calls).toHaveLength(2);
+    // A live price check for glue fails: there is nothing true to fall back on, so it fails.
+    d.agent = fakeAgent(() => ({ runId: 'tf-3', status: 'FAILED', result: null, error: 'The site timed out.' }));
+    await recordings.all.delete('market-s-market-a-p-glue');
+    const failed = await runAgent(d, marketSpec(retailerA, { ...marketJob, productId: 'p-glue' }));
+    expect(failed).toMatchObject({ ok: false, replayed: false, error: 'The site timed out.' });
+    // A cart recording is for one part and one quantity.
+    const plan = planCart(cartJob, []);
+    const signIn = { profile: true, email: '', password: '' };
+    d.agent = fakeAgent(() => completed({ cart_ok: true, reason: null, pack_label: null, pack_size: 1, packs: 8, unit_price: 7.49, total: 67.71, delivery_days: 2, delivery_date: null }));
+    await runAgent(d, cartSpec(offcut, cartJob, plan, signIn, 'prof'));
+    expect([...recordings.all.keys()]).toContain('cart-s-offcut-p-screws-x8');
+    d.agent = fakeAgent(() => ({ runId: 'tf-4', status: 'FAILED', result: null, error: 'The run took too long.' }));
+    const other = await runAgent(d, cartSpec(offcut, { ...cartJob, units: 2 }, planCart({ ...cartJob, units: 2 }, []), signIn, 'prof'));
+    expect(other).toMatchObject({ ok: false, replayed: false });
+    const same = await runAgent(d, cartSpec(offcut, cartJob, plan, signIn, 'prof'));
+    expect(same).toMatchObject({ ok: true, replayed: true });
+  });
+
+  it('squeezes the replay of a long run into 20 seconds, steps in order', async () => {
+    const { d, slept, recordings, mirrored } = deps(fakeAgent(() => completed(good)));
+    await recordings.save({ kind: 'market', supplierId: 's-market-a', subject: 'p-screws', savedAt: '2026-11-21T21:43:29-05:00', durationMs: 276_000, steps: [{ offsetMs: 69_000, purpose: 'one' }, { offsetMs: 207_000, purpose: 'two' }], result: good });
+    const out = await runAgent(d, marketSpec(retailerA, { ...marketJob, replay: true }));
+    expect(out.replayed).toBe(true);
+    expect(slept).toEqual([5000, 10_000, 5000]);
+    expect(slept.reduce((a, b) => a + b, 0)).toBe(REPLAY_MAX_MS);
+    expect(mirrored.at(-1)?.steps.map((s) => s.purpose)).toEqual(['one', 'two']);
   });
 
   it('falls back to a recording when a live run fails and one exists, but never for placing an order', async () => {
@@ -100,10 +137,11 @@ describe('the run mirror', () => {
 
   it('round trips a recording through a file', async () => {
     const store = fileRecordings(mkdtempSync(join(tmpdir(), 'reup-rec-')));
-    const rec = { kind: 'cart', supplierId: 's-offcut', savedAt: '2026-11-21T09:14:00-05:00', durationMs: 4200, steps: [{ offsetMs: 100, purpose: 'a' }, { offsetMs: 900, purpose: 'b' }], result: { total: 67.71 } };
+    const rec = { kind: 'cart', supplierId: 's-offcut', subject: 'p-screws-x8', savedAt: '2026-11-21T09:14:00-05:00', durationMs: 4200, steps: [{ offsetMs: 100, purpose: 'a' }, { offsetMs: 900, purpose: 'b' }], result: { total: 67.71 } };
     await store.save(rec);
-    expect(await store.load('cart', 's-offcut')).toEqual(rec);
-    expect(await store.load('place', 's-offcut')).toBeNull();
+    expect(await store.load('cart', 's-offcut', 'p-screws-x8')).toEqual(rec);
+    expect(await store.load('cart', 's-offcut', 'p-screws-x2')).toBeNull();
+    expect(await store.load('place', 's-offcut', 'any')).toBeNull();
   });
 });
 

@@ -151,7 +151,7 @@ export class Buyer {
   private async track(job: TrackJob): Promise<void> {
     const supplier = await this.supplier(job.supplierId);
     if (!supplier || supplier.kind !== 'account') return;
-    const out = await runAgent(this.deps, { kind: 'track', supplier, productId: null, orderId: job.orderId, params: trackParams(supplier, job, this.signIn(), this.config.TINYFISH_PROFILE_ID), replay: false, fallback: false, check: (r) => (typeof r?.status === 'string' ? null : 'The order page showed no status.') });
+    const out = await runAgent(this.deps, { kind: 'track', supplier, productId: null, orderId: job.orderId, subject: job.orderId, params: trackParams(supplier, job, this.signIn(), this.config.TINYFISH_PROFILE_ID), replay: false, fallback: false, check: (r) => (typeof r?.status === 'string' ? null : 'The order page showed no status.') });
     this.log(`  ${supplier.name}: order ${job.confirmation} is ${out.ok ? String(out.result?.status) : 'unknown'}`);
   }
 }

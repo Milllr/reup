@@ -131,5 +131,5 @@ export function toCartBody(job: CartJob, plan: CartPlan, ok: boolean, result: Re
 }
 
 export function cartSpec(supplier: Supplier, job: CartJob, plan: CartPlan, signIn: SignIn, profileId: string): RunSpec {
-  return { kind: 'cart', supplier, productId: job.productId, orderId: job.orderId, params: cartParams(supplier, job, plan, signIn, profileId), replay: job.replay === true, fallback: true, check: cartCheck };
+  return { kind: 'cart', supplier, productId: job.productId, orderId: job.orderId, subject: `${job.productId}-x${job.units}`, params: cartParams(supplier, job, plan, signIn, profileId), replay: job.replay === true, fallback: true, check: cartCheck };
 }
