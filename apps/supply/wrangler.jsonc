@@ -9,6 +9,9 @@
   // workers.dev zone. Without the flag Cloudflare refuses that fetch from a request (error 1042), so "order confirmed"
   // never reached the hub. Only "shipped", sent from the Shipper's alarm 20 seconds later, did.
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // The store's address on the team's domain. workers_dev stays on so the old address keeps answering.
+  "workers_dev": true,
+  "routes": [{ "pattern": "offcut.wheredidallmyinventorygo.wtf", "custom_domain": true }],
   "durable_objects": { "bindings": [{ "name": "SHIPPER", "class_name": "Shipper" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Shipper"] }],
   "d1_databases": [{ "binding": "DB", "database_name": "offcut-supply", "migrations_dir": "migrations" }],

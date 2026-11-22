@@ -6,6 +6,10 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat"],
+  // The team's address. The zone is on Cloudflare since Saturday night (nameservers moved from GoDaddy).
+  // workers_dev stays on: the eye, the buyer and the shelf node may still post to the workers.dev address.
+  "workers_dev": true,
+  "routes": [{ "pattern": "wheredidallmyinventorygo.wtf", "custom_domain": true }],
   "assets": {
     "directory": "../web/dist",
     "binding": "ASSETS",
