@@ -324,7 +324,7 @@
         "Each zone is a selection with handles and a tag (\"Wood screws · 6 of 12\") placed from the zone's quad; item outlines come from the eye's outlines JSON when reachable",
         "A product at or under its reorder point with no placed order cuts the plate to wine with the word \"Reorder\", an orange zone with an alert tag and an orange figure; once its order is placed the plate is olive, the word is \"On the way\" and its row reads \"8 boxes on the way · arrives Tuesday\"",
         "A count change cuts the figure to the new value and the taken squares go hollow; a reach turns that zone lime until it ends",
-        "The sentence under the index is the newest activity, or \"Watching the board. Every part is above its reorder point.\"; the top tag reads \"Counted by the shelf node on QNX\" at node level 2 or higher and \"Counted by the eye\" otherwise",
+        "The sentence under the index is the newest activity, or \"Watching the board. Every part is above its reorder point.\"; the top tag reads \"Counted by the shelf node on QNX\" at node level 2 or higher and there is no tag otherwise; the mono line top right is the time alone",
         "With no products: \"No parts yet. Put one on the teach spot.\""
       ],
       "tests": ["renders the snapshot mock", "wine plate and the word Reorder at the reorder point", "olive plate and On the way once the order is placed", "feed fallback when the image errors", "empty state", "zone position from a quad"],
@@ -348,10 +348,10 @@
       "story": "As a judge, I want to say yes with a wooden button.",
       "acceptance": [
         "Matches docs/ui/order.html: paper plate, the word is the order (\"8 boxes\"), the PartBox drawing across the frame with the product's name and unit on its label, the total, unit price, arrival day and supplier on the left, the reason and the market note as small copy",
-        "awaiting_approval: one line on the right says how to say yes (\"Press the wooden button to place the order.\" with the shelf node connected, \"Press Enter to place the order.\" on a screen that holds a key, a phone otherwise), with nothing to click, the frame's orange handles blink, and the tag reads \"Waiting for a yes · PO RU-1042 · spend cap $150 an order\"",
+        "awaiting_approval: one line on the right says how to say yes (\"Press the wooden button to place the order.\" with the shelf node connected, \"Approve to place the order.\" on a screen that holds a key, a phone otherwise); a screen that holds a key has one Approve button to click, and Enter does the same; the frame's orange handles blink, and the tag reads \"Waiting for a yes · PO RU-1042 · spend cap $150 an order\"",
         "approved and placing: wine plate, the word \"Placing\", the frame turns landscape and holds the live pane of the place run, \"Placing the order at Offcut Supply.\"",
         "placed: olive plate, the word \"Ordered\", the confirmation number OC-58213 as the figure, \"Ordered. Arrives Tuesday.\"; shipped changes the tag to \"Shipped · arrives Tuesday\"; failed is a wine plate with the word \"Stopped\", an alert tag with the error and \"Nothing was bought.\"; cancelled is paper with the word \"Cancelled\"",
-        "The PO number and who approved (\"Approved with the wooden button at 9:16 AM\", \"from the keyboard\" or \"from a phone\") show in the tag"
+        "The PO number and who approved (\"Approved with the wooden button at 9:16 AM\", \"from the laptop\" or \"from a phone\") show in the tag"
       ],
       "tests": ["each order state renders its plate, word and line", "the word pluralises the unit: 8 boxes, 3 bags, 2 units for each", "arrival day formats as a weekday name in America/Toronto", "the market note is hidden when null"],
       "screens": ["docs/ui/order.html"], "depends": ["F23"]

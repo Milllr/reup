@@ -16,12 +16,14 @@ export function alertText(live: LiveState): string | null {
 }
 
 /** Olive and wine plates: wordmark top left, one tag top centre (the credit, or an alert in its place), a meta line top right. */
-export function TopBar({ credit, alert, meta }: { credit: string; alert: string | null; meta?: string }) {
+export function TopBar({ credit, alert, meta }: { credit: string | null; alert: string | null; meta?: string }) {
+  const text = alert ?? credit;
   return (
     <>
       <Wordmark className="abs" style={{ left: 48, top: 40 }} />
-      <Tag center tone={alert ? 'alert' : undefined} style={{ top: 42 }}>{alert ?? credit}</Tag>
-      {meta ? <span className="meta abs" style={{ right: 48, top: 52 }}>{meta}</span> : null}
+      {text ? <Tag center tone={alert ? 'alert' : undefined} style={{ top: 42 }}>{text}</Tag> : null}
+      {/* The menu's bars sit in the corner, so the mono line stops short of them. */}
+      {meta ? <span className="meta abs" style={{ right: 128, top: 52 }}>{meta}</span> : null}
     </>
   );
 }

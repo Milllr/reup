@@ -58,3 +58,25 @@
 .chart .tip rect { fill: var(--cream); }
 .chart .tip text { fill: var(--ink); text-transform: none; letter-spacing: 0; }
 
+
+/* ---------- saying yes on the Order screen: one button, big enough to find from across a table ---------- */
+.btn.yes { font-size: 40px; min-height: 104px; padding: 20px 64px; letter-spacing: -0.02em; }
+
+/* ---------- the menu: three bars in the top right corner of every page ---------- */
+/* On the board it sits inside the stage and scales with it. On a page that scrolls it is fixed to the window. */
+.menu { position: absolute; right: 40px; top: 30px; z-index: 40; font-family: var(--sans); color: var(--cream); }
+.menu > button { display: grid; place-content: center; gap: 8px; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 0; background: var(--ink); cursor: pointer; box-shadow: 0 0 0 2px var(--cream); }
+.menu > button > i { display: block; width: 30px; height: 4px; background: var(--cream); }
+.menu > button:focus-visible, .menu nav :focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+.menu > nav { position: absolute; right: 0; top: 72px; display: flex; flex-direction: column; min-width: 330px; padding: 22px 30px 26px; background: var(--ink); box-shadow: 0 0 0 2px var(--cream); }
+.menu nav a, .menu nav button { display: flex; align-items: center; gap: 14px; padding: 7px 0; border: 0; background: none; cursor: pointer; text-align: left; text-decoration: none; color: inherit; font: inherit; font-weight: 600; font-size: 30px; letter-spacing: -0.02em; }
+/* The square that marks where you are is the same square as a handle. */
+.menu nav a::before, .menu nav button::before { content: ''; flex: none; width: 13px; height: 13px; }
+.menu nav [aria-current]::before, .menu nav [aria-pressed='true']::before { background: var(--orange); }
+.menu nav a:hover, .menu nav button:hover { color: var(--lime); }
+.menu nav .meta { margin: 20px 0 6px; opacity: 0.6; }
+.menu.fixed { position: fixed; right: 16px; top: 16px; }
+.menu.fixed > button { width: 48px; height: 48px; gap: 6px; }
+.menu.fixed > button > i { width: 22px; height: 3px; }
+.menu.fixed > nav { top: 54px; min-width: 240px; padding: 16px 22px 20px; }
+.menu.fixed nav a { font-size: 22px; }

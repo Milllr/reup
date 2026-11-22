@@ -67,5 +67,5 @@ In the demo: the 8 bags in the Delivery box go into the pockets after "Ordered".
 | The place run fails | Order failed, same sentence. The operator can start it again |
 | Hub unreachable from the TV | Alert tag: "Hub unreachable. Showing the last counts from 9:14." The word takes the text colour. Reconnects by itself |
 | Camera unplugged | Shelf draws the board from pocket data with an alert tag saying so |
-| Node offline | Alert tag: "Shelf node offline." The top tag reads "Counted by the eye". Approve from a phone |
+| Node offline | Alert tag: "Shelf node offline." The Shelf has no top tag. Approve with the button on the Order screen, with Enter, or from a phone |
 | Buyer offline | Orders wait in pricing with the sentence "The buyer is offline." |

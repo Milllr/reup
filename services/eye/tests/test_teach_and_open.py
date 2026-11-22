@@ -177,6 +177,57 @@ def test_a_part_lifted_off_before_it_is_named_takes_its_card_down(tmp_path):
     assert len(hub.teaches) == 2 and e.pending_teach["id"] == "t-2"
 
 
+# An arm in front of the board: it comes in from the bottom of the picture, or from the ledge next door, and ends over the spot.
+ARM_FROM_BELOW = [[0.7, 0.7], [0.8, 0.7], [0.8, 1.0], [0.7, 1.0]]
+ARM_FROM_THE_SIDE = [[0.4, 0.68], [0.72, 0.68], [0.72, 0.8], [0.4, 0.8]]
+
+
+def test_an_arm_held_over_the_teach_spot_is_not_a_part(tmp_path):
+    e, hub, logs = eye(tmp_path, TEACH, with_reference=False)
+    t = still(e, frame(), 0.0, 2.5)
+    # Someone takes a part from the ledge next door and holds still with it for five seconds, twice.
+    for arm in (ARM_FROM_BELOW, ARM_FROM_THE_SIDE):
+        t = still(e, frame([arm]), t, 5.0)
+        seen = e.health()["teach"]
+        assert hub.teaches == [] and e.pending_teach is None
+        assert seen["reaching"] and seen["patch"] == 0.0 and seen["armed"]
+        t = still(e, frame(), t, 2.5)
+        assert hub.teaches == [] and not e.health()["teach"]["reaching"]
+    assert not any("new part" in line.lower() for line in logs)
+    # A hand puts a part down: nothing while the arm is there, one card once it is gone.
+    t = still(e, frame([ITEM, ARM_FROM_BELOW]), t, 3.0)
+    assert hub.teaches == []
+    still(e, frame([ITEM]), t, 2.5)
+    assert len(hub.teaches) == 1 and e.pending_teach["id"] == "t-1"
+    # The picture of the part is the part, not the arm.
+    x0, y0, x1, y1 = e.pending_teach["box"]
+    assert 0.67 < x0 < 0.7 and 0.8 < x1 < 0.83 and 0.61 < y0 < 0.65 and 0.8 < y1 < 0.84
+
+
+def test_an_arm_over_a_part_that_waits_for_its_name_does_not_take_its_card_down(tmp_path):
+    e, hub, logs = eye(tmp_path, TEACH, with_reference=False)
+    t = still(e, frame(), 0.0, 2.5)
+    t = still(e, frame([ITEM]), t, 2.5)
+    assert len(hub.teaches) == 1 and e.pending_teach["id"] == "t-1"
+    # A judge reaches across for the ledge next door, covering the part for five seconds.
+    t = still(e, frame([ARM_FROM_THE_SIDE]), t, 5.0)
+    assert not getattr(hub, "cancelled", []) and e.pending_teach is not None
+    t = still(e, frame([ITEM]), t, 3.0)
+    assert not getattr(hub, "cancelled", []) and len(hub.teaches) == 1
+    # A hand lifts the part off: the card comes down once the spot has been empty for two seconds.
+    t = still(e, frame([ARM_FROM_BELOW]), t, 1.0)
+    still(e, frame(), t, 2.5)
+    assert hub.cancelled == ["t-1"] and e.pending_teach is None and "taken off the teach spot" in logs[-1]
+
+
+def test_with_no_margin_the_spot_is_read_alone(tmp_path):
+    e, hub, _ = eye(tmp_path, TEACH + "\nreach = 0", with_reference=False)
+    t = still(e, frame(), 0.0, 2.5)
+    assert e.teach_points.shape[0] == e.config.open.grid**2
+    still(e, frame([ITEM]), t, 2.5)
+    assert len(hub.teaches) == 1 and not e.health()["teach"]["reaching"]
+
+
 def test_after_the_hub_confirms_the_picture_is_saved_and_the_zone_is_counted(tmp_path):
     snap = snapshot()
     snap["zones"].append({"id": "z-teach", "name": "Teach spot", "kind": "open", "camera": "board", "quad": [[0.6, 0.55], [0.9, 0.55], [0.9, 0.92], [0.6, 0.92]], "rows": None, "cols": None, "productId": None})

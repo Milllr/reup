@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest';
 import history from '../../../contracts/mocks/history.json';
 import type { Reply } from '../src/lib/hub';
+import { Menu, pageHref } from '../src/screens/menu';
 import { ApproveHere, howToSayYes, Order as OrderScreen } from '../src/screens/order';
 import { Controls, ZoneEditor } from '../src/screens/ops';
 import { ApproveBand, NO_KEY, TeachForm } from '../src/screens/phone';
@@ -71,12 +72,22 @@ describe('Shelf', () => {
     expect(off.container.querySelector('.word')?.className).toContain('quiet');
   });
 
-  it('turns a zone lime while a hand is over it, and reads Counted by the eye below node level 2', () => {
-    const l = live('shelf', { reaching: { 'z-glue': true } });
-    (l.snapshot as Snapshot).node.level = 1;
-    const { container } = render(<Shelf live={l} />);
+  it('turns a zone lime while a hand is over it', () => {
+    const { container } = render(<Shelf live={live('shelf', { reaching: { 'z-glue': true } })} />);
     expect(container.querySelectorAll('.zone.reach')).toHaveLength(1);
-    expect(screen.getByText('Counted by the eye')).toBeTruthy();
+  });
+
+  it('tags the count only when the shelf node on QNX does it, and the mono line is the time alone', () => {
+    const node = render(<Shelf live={live('shelf')} />);
+    expect(screen.getByText('Counted by the shelf node on QNX')).toBeTruthy();
+    expect(node.container.querySelector('.meta.abs')?.textContent).toBe('Sat 9:14 AM');
+    node.unmount();
+    const l = live('shelf');
+    (l.snapshot as Snapshot).node.level = 1;
+    const eye = render(<Shelf live={l} />);
+    expect(eye.container.querySelector('.tag.center')).toBeNull();
+    expect(eye.container.textContent).not.toContain('Counted by');
+    expect(eye.container.textContent).not.toContain('camera live');
   });
 });
 
@@ -136,10 +147,10 @@ describe('Order', () => {
     expect(word(container)).toBe('8 boxes');
     expect(screen.getByText('$67.71')).toBeTruthy();
     expect(screen.getByText('Tuesday')).toBeTruthy();
-    // The sample shelf node is connected, and the test page is on localhost so it holds the local key. Nothing on the plate is a button.
+    // The sample shelf node is connected, and the test page is on localhost so it holds the local key: the plate has one button, Approve.
     expect(screen.getByText('Press the wooden button to place the order.')).toBeTruthy();
-    expect(screen.getByText('Or press Enter, or say yes from a phone. Nothing is bought until then.')).toBeTruthy();
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.getByText('Or click Approve, press Enter, or say yes from a phone. Nothing is bought until then.')).toBeTruthy();
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Approve']);
     expect(screen.getByText('8 boxes fills the board and arrives before it runs out. Retailer A is $1.20 more per box.')).toBeTruthy();
     expect(screen.getByText('Waiting for a yes · PO RU-1042 · spend cap $150 an order')).toBeTruthy();
     expect(container.querySelector('.frame.waiting')).not.toBeNull();
@@ -220,6 +231,61 @@ describe('the TV', () => {
     expect(word(container)).toBe('Counting');
     act(() => store.set({ ...initial }));
   });
+
+  it('the menu holds this screen on a picked screen until the hub moves on, and Auto follows the hub again', () => {
+    act(() => store.set(live('shelf')));
+    const { container } = render(<Tv />);
+    const pick = (name: string) => {
+      fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+      fireEvent.click(screen.getByRole('button', { name }));
+    };
+    expect(screen.queryByRole('navigation')).toBeNull();
+    pick('Why');
+    expect(word(container)).toBe('Forecast');
+    // Picking shuts the menu, and the same hub screen arriving again changes nothing.
+    expect(screen.queryByRole('navigation')).toBeNull();
+    act(() => store.set(live('shelf')));
+    expect(word(container)).toBe('Forecast');
+    // The hub moves to the order by itself: the board follows it.
+    act(() => store.set(live('order')));
+    expect(word(container)).toBe('8 boxes');
+    pick('Shelf');
+    expect(word(container)).toBe('Reorder');
+    pick('Auto');
+    expect(word(container)).toBe('8 boxes');
+    act(() => store.set({ ...initial }));
+  });
+});
+
+describe('the menu', () => {
+  it('lists the pages with where you are marked, and the board screens only on the board', () => {
+    const { unmount } = render(<Menu page="/analytics" fixed />);
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    const links = screen.getAllByRole('link') as HTMLAnchorElement[];
+    expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([['Board', '/'], ['Analytics', '/analytics'], ['Operator', '/ops'], ['Phone', '/m']]);
+    expect(links.filter((a) => a.getAttribute('aria-current') === 'page').map((a) => a.textContent)).toEqual(['Analytics']);
+    expect(screen.queryByRole('button', { name: 'Why' })).toBeNull();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('navigation')).toBeNull();
+    unmount();
+    const onLook = vi.fn();
+    render(<Menu page="/" look="why" onLook={onLook} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.getByRole('button', { name: 'Why' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Auto' }));
+    expect(onLook).toHaveBeenCalledWith(null);
+  });
+
+  it('a click anywhere else shuts it, and a link keeps the mock switch and a hub that lives elsewhere', () => {
+    render(<Menu page="/" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.getByRole('navigation')).toBeTruthy();
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('navigation')).toBeNull();
+    const given: Record<string, string> = { mock: '1', hub: 'https://hub.example', k: 'secret' };
+    expect(pageHref('/analytics', (name) => given[name] ?? null)).toBe('/analytics?mock=1&hub=https%3A%2F%2Fhub.example');
+    expect(pageHref('/ops', () => null)).toBe('/ops');
+  });
 });
 
 describe('saying yes and naming a part on the TV itself', () => {
@@ -249,29 +315,47 @@ describe('saying yes and naming a part on the TV itself', () => {
     expect(screen.queryByLabelText('Name')).toBeNull();
   });
 
-  it('the order screen says yes with Enter, has nothing to click, and does nothing without a key', async () => {
+  it('the order screen says yes with a click on Approve or with Enter, and has neither without a key', async () => {
     const s = mockSnapshot('order');
     const order = s.orders[0] as Order;
     const send = vi.fn(async () => ok(order));
     const { unmount, container } = render(<ApproveHere order={order} k="key-1" send={send as never} />);
-    expect(container.innerHTML).toBe('');
-    fireEvent.keyDown(window, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
     await waitFor(() => expect(send).toHaveBeenCalledWith('POST', `/api/orders/${order.id}/approve`, { by: 'keyboard' }, 'key-1'));
+    expect(send).toHaveBeenCalledTimes(1);
     await waitFor(() => {
       fireEvent.keyDown(window, { key: 'Enter' });
       expect(send).toHaveBeenCalledTimes(2);
     });
-    // Enter typed into a field is not a yes, and neither is another key or a held one.
+    // Enter typed into a field is not a yes, and neither is another key or a held one. Enter on a button is that button's own click.
     const field = document.body.appendChild(document.createElement('input'));
     fireEvent.keyDown(field, { key: 'Enter' });
     fireEvent.keyDown(window, { key: 'a' });
     fireEvent.keyDown(window, { key: 'Enter', repeat: true });
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Approve' }), { key: 'Enter' });
     expect(send).toHaveBeenCalledTimes(2);
     field.remove();
     unmount();
-    render(<ApproveHere order={order} k={null} send={send as never} />);
+    const none = render(<ApproveHere order={order} k={null} send={send as never} />);
+    expect(none.container.innerHTML).toBe('');
     fireEvent.keyDown(window, { key: 'Enter' });
     expect(send).toHaveBeenCalledTimes(2);
+    expect(container).toBeTruthy();
+  });
+
+  it('a second click while the hub is answering does not say yes twice', async () => {
+    const order = mockSnapshot('order').orders[0] as Order;
+    let answer: (r: Reply<Order>) => void = () => undefined;
+    const send = vi.fn(() => new Promise<Reply<Order>>((resolve) => { answer = resolve; }));
+    render(<ApproveHere order={order} k="key-1" send={send as never} />);
+    const button = screen.getByRole('button', { name: 'Approve' }) as HTMLButtonElement;
+    fireEvent.click(button);
+    await waitFor(() => expect(button.disabled).toBe(true));
+    fireEvent.click(button);
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(send).toHaveBeenCalledTimes(1);
+    await act(async () => answer(ok(order)));
+    expect(button.disabled).toBe(false);
   });
 
   it('the order screen says why when the hub says no', async () => {
@@ -284,8 +368,8 @@ describe('saying yes and naming a part on the TV itself', () => {
 
   it('the line names only what can say yes right now', () => {
     expect(howToSayYes(true, false).line).toBe('Press the wooden button to place the order.');
-    expect(howToSayYes(true, true)).toEqual({ line: 'Press the wooden button to place the order.', also: 'Or press Enter, or say yes from a phone. Nothing is bought until then.' });
-    expect(howToSayYes(false, true)).toEqual({ line: 'Press Enter to place the order.', also: 'Or say yes from a phone. Nothing is bought until then.' });
+    expect(howToSayYes(true, true)).toEqual({ line: 'Press the wooden button to place the order.', also: 'Or click Approve, press Enter, or say yes from a phone. Nothing is bought until then.' });
+    expect(howToSayYes(false, true)).toEqual({ line: 'Approve to place the order.', also: 'Click it or press Enter. A phone can say yes too. Nothing is bought until then.' });
     expect(howToSayYes(false, false)).toEqual({ line: 'Say yes from a phone to place the order.', also: 'Nothing is bought until then.' });
   });
 });

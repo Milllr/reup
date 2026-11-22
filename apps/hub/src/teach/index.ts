@@ -126,4 +126,6 @@ export async function cancelTeach(room: RoomCore, id: string): Promise<void> {
   if (!teach || teach.id !== id) throw new NotFound(`No teach ${id} is waiting.`);
   await room.deps.store.delete(cropKey(id));
   setTeach(room, null);
+  // The card came down with nothing added: say so, or the Shelf keeps reading "Naming it." long after.
+  room.activity('info', 'The new part was not added.');
 }

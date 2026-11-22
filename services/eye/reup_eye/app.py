@@ -71,7 +71,7 @@ class Eye:
         self.teach_before: Optional[np.ndarray] = None  # the empty spot as it was before something was left on it
         self.teach_still_since: Optional[float] = None
         self.teach_present_since: Optional[float] = None
-        self.teach_seen = {"differs": 0.0, "patch": 0.0}  # for the health page: how much of the spot differs, and its largest patch
+        self.teach_seen = {"differs": 0.0, "patch": 0.0, "reaching": False}  # for the health page: how much of the spot differs, its largest patch, and an arm over it
         self.pending_teach: Optional[dict] = None
         self.on_teach: Callable[..., None] = self._post_teach
         self.on_prompts_changed: Callable[[], None] = lambda: None
@@ -350,13 +350,21 @@ class Eye:
         and a part is one connected patch of another surface: another colour, or far darker or brighter than a shadow
         or a lamp makes the wood (see other_surface). A patch that stays for rebase_s with no part announced is not a
         new part: something was there from the start, or was left behind, and the empty picture is taken again.
+
+        The eye looks a little past every edge of the spot too (teach.reach). A part sits inside the spot. A patch
+        that runs out past that margin is an arm reaching over it, for the ledge next door or to put a part down:
+        while it is there nothing is announced and nothing is taken down.
         """
         n = self.config.open.grid
-        key = json.dumps(zone["quad"])
+        pad = self._teach_pad()
+        key = json.dumps([zone["quad"], pad])
         if key != self.teach_key:
             self.teach_key, self.teach_base, self.teach_before, self.teach_still_since, self.teach_present_since = key, None, None, None, None
             try:
-                self.teach_points = grid_samples(zone["quad"], n)
+                # The same cells as a grid over the spot alone, and pad more of them on every side.
+                steps = (np.arange(n + 2 * pad) + 0.5 - pad) / n
+                uu, vv = np.meshgrid(steps, steps)
+                self.teach_points = apply(unit_to_quad(zone["quad"]), np.c_[uu.ravel(), vv.ravel()])
             except np.linalg.LinAlgError:
                 self.teach_points = None
         if self.teach_points is None:
@@ -369,12 +377,13 @@ class Eye:
             self._teach_step(frame, zone, None, moving, now)
             return
         # A part, not a shadow: points whose colour changed, or that are far darker or brighter than light alone makes them.
-        blobs = self._teach_blobs(now_look, self.teach_base, note=True)
-        if blobs and not moving and self.teach_before is not None and not self._teach_blobs(now_look, self.teach_before):
+        parts, reaching = self._teach_blobs(now_look, self.teach_base, note=True)
+        differs = bool(parts) or reaching
+        if differs and not moving and self.teach_before is not None and self._teach_blobs(now_look, self.teach_before) == ([], False):
             # What had been left on the spot was taken away: the spot looks the way it did before. That is not a part.
-            self.teach_base, self.teach_before, blobs = now_look.copy(), None, []
+            self.teach_base, self.teach_before, parts, reaching, differs = now_look.copy(), None, [], False, False
             self.log("What was left on the teach spot was taken away. The spot is empty again.")
-        if not blobs:
+        if not differs:
             self.teach_present_since = None
             if not moving:
                 self.teach_base += 0.08 * (now_look - self.teach_base)
@@ -384,23 +393,43 @@ class Eye:
                 self.teach_before = self.teach_base
                 self.teach_base = now_look.copy()
                 self.teach_present_since = None
-                blobs = []
+                parts, reaching = [], False
                 self.log(f"The teach spot looked different for {self.config.teach.rebase_s:.0f} seconds with no new part put down. Its empty picture was taken again.")
-        self._teach_step(frame, zone, blobs[0] if blobs else None, moving, now)
+        self._teach_step(frame, zone, parts[0] if parts and not reaching else None, moving, now, reaching)
 
-    def _teach_blobs(self, look: np.ndarray, empty: np.ndarray, note: bool = False) -> list:
-        """Connected patches of another surface than the empty spot, each over teach.share of the spot, largest first."""
-        n = self.config.open.grid
-        mask = other_surface(look, empty, self.config.teach.hue, self.config.teach.darker, self.config.teach.brighter).reshape(n, n)
-        blobs = sorted(label_blobs(mask, max(2, int(self.config.teach.share * n * n))), key=len, reverse=True)
+    def _teach_pad(self) -> int:
+        """How many cells past each edge of the teach spot the eye also looks."""
+        return max(0, int(round(self.config.teach.reach * self.config.open.grid)))
+
+    def _teach_blobs(self, look: np.ndarray, empty: np.ndarray, note: bool = False) -> tuple[list, bool]:
+        """What differs from the empty spot, as (parts, reaching).
+
+        parts: connected patches of another surface that stay inside the margin, each over teach.share of the spot,
+        largest first, as cells of the spot's own grid. reaching: a patch runs out past the margin around the spot.
+        """
+        n, pad = self.config.open.grid, self._teach_pad()
+        side = n + 2 * pad
+        mask = other_surface(look, empty, self.config.teach.hue, self.config.teach.darker, self.config.teach.brighter).reshape(side, side)
+        least = max(2, int(self.config.teach.share * n * n))
+        parts, reaching = [], False
+        for blob in label_blobs(mask, least):
+            if pad > 0 and any(r in (0, side - 1) or c in (0, side - 1) for r, c in blob):
+                reaching = True
+                continue
+            inside = [(r - pad, c - pad) for r, c in blob if pad <= r < pad + n and pad <= c < pad + n]
+            if len(inside) >= least:
+                parts.append(inside)
+        parts.sort(key=len, reverse=True)
         if note:
-            self.teach_seen = {"differs": round(float(mask.mean()), 4), "patch": round(len(blobs[0]) / (n * n), 4) if blobs else 0.0}
-        return blobs
+            spot = mask[pad : pad + n, pad : pad + n]
+            self.teach_seen = {"differs": round(float(spot.mean()), 4), "patch": round(len(parts[0]) / (n * n), 4) if parts else 0.0, "reaching": reaching}
+        return parts, reaching
 
-    def _teach_step(self, frame: np.ndarray, zone: dict, blob: Optional[list], moving: bool, now: float) -> None:
-        """blob is the cells of the part on the spot, or None when the spot is empty."""
-        is_present = blob is not None
-        fire = self.teach_spot.update(is_present, moving, now)
+    def _teach_step(self, frame: np.ndarray, zone: dict, blob: Optional[list], moving: bool, now: float, reaching: bool = False) -> None:
+        """blob is the cells of the part on the spot, or None when the spot is empty. reaching: an arm is over the spot."""
+        # An arm over the spot hides what is on it: nothing new is announced, and a part waiting for its name is not taken for lifted off.
+        is_present = blob is not None or reaching
+        fire = self.teach_spot.update(is_present, moving or reaching, now)
         pending = self.pending_teach
         if pending is not None and not is_present and self.teach_spot.armed:
             # The part was lifted off again before anyone named it: the card comes down, and the next part starts fresh.

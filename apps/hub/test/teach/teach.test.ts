@@ -211,8 +211,11 @@ describe('naming a new part', () => {
     await r.room.idle();
     expect(r.room.s.teach).toMatchObject({ status: 'failed', error: 'Naming is not set up. Type a name to add it.' });
     const id = r.room.s.teach?.id;
+    expect(r.room.s.activity.at(-1)?.text).toBe('A new part is on the teach spot. Naming it.');
     expect((await r.call('POST', `/api/teach/${id}/cancel`, undefined, APPROVE)).status).toBe(200);
     expect(r.room.s.teach).toBeNull();
+    // The newest line is no longer "Naming it.": the Shelf shows the newest line for as long as nothing else happens.
+    expect(r.room.s.activity.at(-1)).toMatchObject({ tone: 'info', text: 'The new part was not added.' });
     expect((await r.call('POST', `/api/teach/${id}/cancel`, undefined, APPROVE)).status).toBe(404);
   });
 

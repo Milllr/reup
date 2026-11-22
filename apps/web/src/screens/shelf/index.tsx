@@ -78,12 +78,13 @@ export function Shelf({ live, moment: forced }: { live: LiveState; moment?: Mome
   const showFeed = !live.mock && board != null && board.online && board.streamUrl != null && failedUrl !== board.streamUrl;
   const outlines = useOutlines(board?.streamUrl ?? null, showFeed);
   const alert = alertText(live) ?? (!live.mock && !showFeed && s.products.length > 0 ? NO_FEED : null);
-  const credit = s.node.online && s.node.level >= 2 ? 'Counted by the shelf node on QNX' : 'Counted by the eye';
+  // The tag is there when the shelf node on QNX does the counting. The eye counting is the plain case and gets no tag.
+  const credit = s.node.online && s.node.level >= 2 ? 'Counted by the shelf node on QNX' : null;
   const zones = s.zones.filter((z) => z.camera === 'board');
 
   return (
     <Plate tone={moment.plate} label="Shelf">
-      <TopBar credit={credit} alert={alert} meta={`${clock(s.now)}${board?.online ? ' · board camera live' : ''}`} />
+      <TopBar credit={credit} alert={alert} meta={clock(s.now)} />
 
       <Frame settle label="Live parts board" style={{ left: 96, top: 118, width: 1150, height: 662 }} waiting={s.products.length === 0}>
         <div className="fill mat feed">

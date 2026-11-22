@@ -1,9 +1,13 @@
-/** The TV: one stage that moves between screens by itself, from snapshot.screen. Nobody clicks during the demo. */
-import { useEffect } from 'react';
+/**
+ * The board: one stage that moves between screens by itself, from snapshot.screen.
+ * The menu in the corner can hold this screen on one of them, until reup moves on.
+ */
+import { useEffect, useState } from 'react';
 import { Frame, Plate, Stage, Word, Wordmark } from '../components';
 import { call, token } from '../lib/hub';
 import { useLive } from '../store/live';
 import { useUntil } from './common';
+import { type Look, Menu } from './menu';
 import { Order } from './order';
 import { Shelf } from './shelf';
 import { Shop } from './shop';
@@ -16,6 +20,15 @@ export function Tv() {
   const live = useLive();
   const s = live.snapshot;
   const counting = useUntil(live.countingUntil);
+  // A screen picked from the menu, and the screen the hub was on when it was picked.
+  const [held, setHeld] = useState<{ look: Look; over: string } | null>(null);
+  const hubScreen = s?.screen ?? null;
+  // The hub moved to another screen by itself: follow it again, so this screen never misses what reup does next.
+  useEffect(() => {
+    setHeld((h) => (h && h.over !== hubScreen ? null : h));
+  }, [hubScreen]);
+  const look = held?.look ?? null;
+  const pick = (next: Look | null) => setHeld(next && s ? { look: next, over: s.screen } : null);
 
   // With ?ops=<token>, keys 1 to 4 force a screen and 0 hands control back to the hub.
   useEffect(() => {
@@ -40,14 +53,16 @@ export function Tv() {
           <Frame label="Waiting for the hub" waiting style={{ left: 96, top: 118, width: 1150, height: 662 }} />
           <Word text="Starting" quiet />
         </Plate>
+        <Menu page="/" />
       </Stage>
     );
   }
+  const shown = look ?? s.screen;
   let screen = <Shelf live={live} />;
   if (s.teach) screen = <Teach live={live} />;
-  else if (counting) screen = <Shelf live={live} moment={{ plate: 'olive', word: 'Counting' }} />;
-  else if (s.screen === 'shop') screen = <Shop live={live} />;
-  else if (s.screen === 'order') screen = <Order live={live} />;
-  else if (s.screen === 'why') screen = <Why live={live} />;
-  return <Stage>{screen}</Stage>;
+  else if (counting && !look) screen = <Shelf live={live} moment={{ plate: 'olive', word: 'Counting' }} />;
+  else if (shown === 'shop') screen = <Shop live={live} />;
+  else if (shown === 'order') screen = <Order live={live} />;
+  else if (shown === 'why') screen = <Why live={live} />;
+  return <Stage>{screen}<Menu page="/" look={look} onLook={pick} /></Stage>;
 }

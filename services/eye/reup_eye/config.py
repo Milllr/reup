@@ -20,7 +20,7 @@ DEFAULTS: dict = {
     "settle": {"still_ms": 500, "motion_pixel": 10.0, "motion_limit": 0.004, "motion_block": 4, "keepalive_s": 30},
     "open": {"detector": "auto", "model": "yoloe-26s-seg.pt", "imgsz": 960, "conf": 0.3, "hz": 8, "hold": 3, "grid": 64, "blob_pixel": 26.0, "min_area": 0.012, "unit_floor": 0.3},
     "align": {"enabled": True, "every_s": 1.0, "min_phase": 0.1, "min_match": 0.3, "hidden_phase": 0.06, "dead_px": 2.0, "max_shift": 0.2, "max_turn": 4.0, "verify_s": 3.0, "hold_s": 15.0},
-    "teach": {"zone": "z-teach", "camera": "board", "quad": [[0.76, 0.6], [0.92, 0.6], [0.92, 0.92], [0.76, 0.92]], "hold_s": 1.0, "clear_s": 2.0, "share": 0.01, "rebase_s": 20.0, "hue": 0.06, "darker": 0.35, "brighter": 2.5},
+    "teach": {"zone": "z-teach", "camera": "board", "quad": [[0.76, 0.6], [0.92, 0.6], [0.92, 0.92], [0.76, 0.92]], "hold_s": 1.5, "clear_s": 2.0, "share": 0.01, "rebase_s": 20.0, "hue": 0.06, "darker": 0.35, "brighter": 2.5, "reach": 0.2},
 }
 CAMERA_DEFAULT = {"name": "", "index": 0, "width": 1920, "height": 1080, "fps": 30, "board": FULL, "enabled": True}
 

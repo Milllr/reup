@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { liveUrl, param } from './lib/hub';
 import { Analytics } from './screens/analytics';
+import { Menu, type Page } from './screens/menu';
 import { Ops } from './screens/ops';
 import { Phone } from './screens/phone';
 import { Tv } from './screens/tv';
@@ -29,5 +30,14 @@ if (param('mock') === '1') {
   setInterval(() => store.ping(), 20_000);
 }
 
+// The board places its own menu inside the stage. Every other page gets one fixed to the window.
+const page: Page | null = path === '/m' || path === '/ops' || path === '/analytics' ? path : null;
 const root = document.getElementById('root');
-if (root) createRoot(root).render(<StrictMode>{path === '/m' ? <Phone /> : path === '/ops' ? <Ops /> : path === '/analytics' ? <Analytics /> : <Tv />}</StrictMode>);
+if (root) {
+  createRoot(root).render(
+    <StrictMode>
+      {page === '/m' ? <Phone /> : page === '/ops' ? <Ops /> : page === '/analytics' ? <Analytics /> : <Tv />}
+      {page ? <Menu page={page} fixed /> : null}
+    </StrictMode>,
+  );
+}

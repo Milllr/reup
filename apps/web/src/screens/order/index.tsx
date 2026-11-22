@@ -8,7 +8,7 @@ import { clock, focusOrder, money, orderMoment, runsFor, supplierName, totalLabe
 import type { LiveState } from '../../store/reduce';
 import { alertText, BottomBar, Steps, TopBar } from '../common';
 
-const who = (o: OrderT) => (o.approvedBy === 'button' ? 'with the wooden button' : o.approvedBy === 'keyboard' ? 'from the keyboard' : o.approvedBy === 'phone' ? 'from a phone' : null);
+const who = (o: OrderT) => (o.approvedBy === 'button' ? 'with the wooden button' : o.approvedBy === 'keyboard' ? 'from the laptop' : o.approvedBy === 'phone' ? 'from a phone' : null);
 
 /** The mono line that says where the order stands. */
 export function orderTag(o: OrderT, s: Snapshot): string {
@@ -39,18 +39,17 @@ export function orderTag(o: OrderT, s: Snapshot): string {
 
 /**
  * How a person says yes, as one line and one smaller line. It names only what can say yes right now: the wooden
- * button when the shelf node is connected, Enter when this screen holds a key, a phone otherwise.
+ * button when the shelf node is connected, the Approve button on a screen that holds a key, a phone otherwise.
  */
 export function howToSayYes(nodeOnline: boolean, hasKey: boolean): { line: string; also: string } {
-  if (nodeOnline) return { line: 'Press the wooden button to place the order.', also: hasKey ? 'Or press Enter, or say yes from a phone. Nothing is bought until then.' : 'Or say yes from a phone. Nothing is bought until then.' };
-  if (hasKey) return { line: 'Press Enter to place the order.', also: 'Or say yes from a phone. Nothing is bought until then.' };
+  if (nodeOnline) return { line: 'Press the wooden button to place the order.', also: hasKey ? 'Or click Approve, press Enter, or say yes from a phone. Nothing is bought until then.' : 'Or say yes from a phone. Nothing is bought until then.' };
+  if (hasKey) return { line: 'Approve to place the order.', also: 'Click it or press Enter. A phone can say yes too. Nothing is bought until then.' };
   return { line: 'Say yes from a phone to place the order.', also: 'Nothing is bought until then.' };
 }
 
 /**
- * Enter on this screen's keyboard says yes. Only a screen that holds a key listens, which is the station's own laptop
- * or a TV opened with ?k=. There is nothing to click: the line on the plate says what to press. It shows only when
- * the hub says no.
+ * Saying yes on this screen: one Approve button to click, and Enter does the same. Only a screen that holds a key
+ * has it, which is the station's own laptop or a board opened with ?k=. When the hub says no, the reason shows under it.
  */
 export function ApproveHere({ order, k = token('k') ?? token('ops'), send = call }: { order: OrderT; k?: string | null; send?: typeof call }) {
   const [busy, setBusy] = useState(false);
@@ -73,8 +72,13 @@ export function ApproveHere({ order, k = token('k') ?? token('ops'), send = call
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
-  if (!k || !error) return null;
-  return <Tag tone="alert" style={{ whiteSpace: 'normal', borderRadius: 14, lineHeight: 1.3 }}>{error}</Tag>;
+  if (!k) return null;
+  return (
+    <div className="stack" style={{ gap: 18, alignItems: 'flex-start' }}>
+      <button className="btn yes" type="button" disabled={busy} onClick={() => void approve()}>Approve</button>
+      {error ? <Tag tone="alert" style={{ whiteSpace: 'normal', borderRadius: 14, lineHeight: 1.3 }}>{error}</Tag> : null}
+    </div>
+  );
 }
 
 export function Order({ live }: { live: LiveState }) {
@@ -117,8 +121,8 @@ export function Order({ live }: { live: LiveState }) {
         </div>
         <div className="abs stack" style={{ left: 1280, top: 420, width: 580, gap: 22 }}>
           <p className="figure mid">{waiting ? yes.line : order.state === 'cancelled' ? 'Nothing was bought.' : 'Getting the cart ready.'}</p>
-          {waiting ? <p className="copy small" style={{ maxWidth: '19em' }}>{yes.also}</p> : null}
           {waiting ? <ApproveHere key={order.id} order={order} /> : null}
+          {waiting ? <p className="copy small" style={{ maxWidth: '19em' }}>{yes.also}</p> : null}
         </div>
         <BottomBar credit={orderTag(order, s)} alert={alert} />
       </Plate>
