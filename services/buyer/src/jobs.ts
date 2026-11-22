@@ -82,6 +82,14 @@ export class Buyer {
     return snapshot.orders.some((o) => o.productId === job.productId && (o.state === 'pricing' || o.state === 'carting' || o.state === 'awaiting_approval'));
   }
 
+  /** True when there is a recording to play for this retailer and this part. */
+  private async recorded(job: Extract<Job, { kind: 'market' }>, id: string): Promise<boolean> {
+    const supplier = await this.supplier(id);
+    if (!supplier) return false;
+    const spec = marketSpec(supplier, job);
+    return (await this.deps.recordings.load(spec.kind, spec.supplier.id, spec.subject).catch(() => null)) != null;
+  }
+
   /**
    * One run per retailer. Live price checks go one at a time, across every job: the TinyFish account runs two browsers
    * at once, and with two price checks holding both, the cart run waited 7 minutes for one. This way one browser is
@@ -98,8 +106,10 @@ export class Buyer {
       if (await this.link.post('/ingest/quotes', { jobId: job.id, quotes: [quote] })) posted += 1;
       this.log(`  ${supplier.name}: ${quote.ok ? `$${quote.unitPrice} a unit` : (out.error ?? 'no price')}${out.replayed ? ' (replay)' : ''}`);
     };
-    await Promise.allSettled(job.supplierIds.map((id) => {
-      if (job.replay === true) return check(id, false);
+    await Promise.allSettled(job.supplierIds.map(async (id) => {
+      // A recording plays at once and needs no browser. A retailer with no recording runs live even when replays are
+      // on, and a live check always takes its turn: at 7:04 AM two of them held both browsers and a cart waited 4 minutes.
+      if (job.replay === true && (await this.recorded(job, id))) return check(id, false);
       const turn = this.prices.then(() => check(id, true));
       this.prices = turn.catch(() => undefined);
       return turn;

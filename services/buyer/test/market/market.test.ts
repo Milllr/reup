@@ -58,6 +58,28 @@ describe('the market check', () => {
     expect(order.slice(0, 4)).toEqual(['start a.test', 'end a.test', 'start b.test', 'end b.test']);
   });
 
+  it('with replays on, a retailer that has no recording still takes its turn for a live browser', async () => {
+    let open = 0;
+    let most = 0;
+    const agent = fakeAgent(async () => {
+      open += 1;
+      most = Math.max(most, open);
+      await new Promise((r) => setTimeout(r, 15));
+      open -= 1;
+      return completed(good);
+    });
+    const made = deps(agent);
+    // Retailer A has a recording for screws and for glue. Retailer B never gave a price, so it has none.
+    for (const subject of ['p-screws', 'p-glue']) await made.d.recordings.save({ kind: 'market', supplierId: 's-market-a', subject, savedAt: '2026-11-21T09:14:40-05:00', durationMs: 10, steps: [], result: good });
+    const link = { post: async () => true, supplier: async (id: string) => suppliers[id as keyof typeof suppliers] ?? null, snapshot: async () => null };
+    const b = new Buyer(config(), link, made.d, (async () => new Response('{}')) as unknown as typeof fetch, () => {});
+    // Two orders, one right after the other, as with two judges.
+    await Promise.all([b.handle({ ...marketJob, replay: true }), b.handle({ ...marketJob, id: 'j-9', productId: 'p-glue', replay: true })]);
+    // Only Retailer B went live, once for each part, and never two at once.
+    expect(agent.calls.map((c) => new URL(c.url).host)).toEqual(['b.test', 'b.test']);
+    expect(most).toBe(1);
+  });
+
   it('skips a live price check when nothing is being bought for that part any more', async () => {
     const agent = fakeAgent(() => completed(good));
     const posts: { path: string; body: unknown }[] = [];
