@@ -11,16 +11,7 @@ mkdir -p "$GUARD_DATA"
 # opens the camera read only. This only names the smallest picture it should ask for where it is allowed to ask.
 export REUP_MIN_PIXELS="${REUP_MIN_PIXELS:-921600}"
 # The workshop program opens a window. Started over SSH it has to be told where the desktop is.
-if [ -z "$WAYLAND_DISPLAY" ]; then
-  desk="/var/run/user/$(id -u)"
-  for sock in "$desk"/wayland-*; do
-    case "$sock" in *.lock) continue ;; esac
-    if [ -S "$sock" ]; then
-      export XDG_RUNTIME_DIR="$desk" WAYLAND_DISPLAY="$(basename "$sock")" GDK_BACKEND=wayland GSK_RENDERER="${GSK_RENDERER:-cairo}"
-      break
-    fi
-  done
-fi
+. ./desk.sh
 # The workshop program with the reup hook built in. See README.md.
 WORKSHOP="${WORKSHOP_DIR:-$HOME/QNX-AI-workshop}"
 NODE="$WORKSHOP/install/lib/handtrack/handtrack_node"
