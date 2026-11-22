@@ -1,13 +1,21 @@
 #!/bin/sh
-# Brings the whole station up on the Pi from one command typed on the laptop: at the table the Pi has no keyboard.
-# The clock, the QNX desktop (its lock and its sleep turned off), the shelf node, and the reup site full screen in
-# the Pi's own browser. Run it again any time: it starts only what is not running.
-# Usage: ssh reup-pi "HUB_URL=https://wheredidallmyinventorygo.wtf DEVICE_TOKEN=... ~/reup-node/up.sh"
+# Brings the Pi up from one command typed on the laptop: at the table the Pi has no keyboard.
+# The clock, the QNX desktop (its lock and its sleep turned off), and the shelf node with the hand model's window
+# full screen on the Pi's screen. Run it again any time: it starts only what is not running.
+# From the station laptop use pi_up.ps1, which finds the laptop's address for CAMERA_URL and calls this.
+# Usage: ssh reup-pi "HUB_URL=https://wheredidallmyinventorygo.wtf DEVICE_TOKEN=... CAMERA_URL=http://169.254.138.173:8089/stream/board.mjpg ~/reup-node/up.sh"
+#   CAMERA_URL  the camera's pictures, served by the eye on the laptop. Not set: a camera on the Pi's own USB.
+#   SITE_URL    also open this page full screen in the Pi's browser, and keep the hand window as an inset over it.
 cd "$(dirname "$0")" || exit 1
 : "${HUB_URL:?Set HUB_URL, for example https://wheredidallmyinventorygo.wtf}"
 : "${DEVICE_TOKEN:?Set DEVICE_TOKEN}"
 export HUB_URL DEVICE_TOKEN
-SITE="${SITE_URL:-https://wheredidallmyinventorygo.wtf}"
+SITE="${SITE_URL:-}"
+DATA="${GUARD_DATA:-$PWD/data}"
+mkdir -p "$DATA"
+if [ -n "$CAMERA_URL" ]; then export REUP_CAMERA_URL="$CAMERA_URL"; fi
+# With no page beside it the hand model's window is the whole screen. The screen is 1024 wide on the station's TV.
+if [ -z "$SITE" ]; then export REUP_FULLSCREEN="${REUP_FULLSCREEN:-1}" REUP_WINDOW_WIDTH="${REUP_WINDOW_WIDTH:-1024}"; fi
 running() { pidin ar 2>/dev/null | grep -v grep | grep -q "$1"; }
 
 # The Pi has no clock battery. With the wrong date every https call fails.
@@ -28,9 +36,17 @@ if ! running "/usr/bin/weston"; then
   echo "Started the desktop."
 fi
 
+# A node that runs on another camera address, or another layout, than the one asked for now is started again.
+want="camera=$CAMERA_URL site=$SITE"
+if running "supervisor.py" && [ "$(cat "$DATA/up.txt" 2>/dev/null)" != "$want" ]; then
+  for pid in $(pidin ar 2>/dev/null | grep -v grep | grep -E "supervisor.py|python3 -m guard|handtrack_node" | awk '{ print $1 }'); do kill "$pid" 2>/dev/null; done
+  sleep 2
+  echo "Stopped the shelf node: its camera or its layout changed."
+fi
 if ! running "supervisor.py"; then
+  echo "$want" > "$DATA/up.txt"
   nohup ./run.sh > "$HOME/reup-node.log" 2>&1 &
-  echo "Started the shelf node. It takes about 40 s to set up ROS 2 the first time. Log: ~/reup-node.log"
+  echo "Started the shelf node. Setting up ROS 2 takes about 40 s. Log: ~/reup-node.log"
 fi
 
 # QNX shows one window at a time and switches with Alt and Tab. The desktop has to be the one in front.
@@ -40,7 +56,7 @@ n=0
 while [ -n "$desktop" ] && ! shown && [ $n -lt 4 ]; do sudo python3 tv/keys.py alt+tab; sleep 1; n=$((n + 1)); done
 if shown; then echo "The desktop is in front."; else echo "The desktop is not in front. Press Alt and Tab on the Pi, or run: sudo python3 tv/keys.py alt+tab"; fi
 
-if ! running "epiphany"; then
+if [ -n "$SITE" ] && ! running "epiphany"; then
   . ./desk.sh
   nohup epiphany "$SITE" > /dev/null 2>&1 &
   # The page comes over the venue's network. F11 before the window is up would go to nothing.
@@ -48,3 +64,4 @@ if ! running "epiphany"; then
   sudo python3 tv/keys.py f11
   echo "Opened $SITE full screen. F11 again leaves full screen: sudo python3 tv/keys.py f11"
 fi
+if [ -z "$SITE" ] && running "epiphany"; then slay -f epiphany 2>/dev/null; echo "Closed the browser: the screen is the hand model's."; fi
