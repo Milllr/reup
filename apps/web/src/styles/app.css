@@ -80,3 +80,16 @@
 .menu.fixed > button > i { width: 22px; height: 3px; }
 .menu.fixed > nav { top: 54px; min-width: 240px; padding: 16px 22px 20px; }
 .menu.fixed nav a { font-size: 22px; }
+
+/* ---------- items on the dashboard: a table with no rules, small flat controls, one row of fields to add or change an item ---------- */
+.items table { border-collapse: collapse; width: 100%; }
+.items th, .items td { text-align: left; vertical-align: middle; padding: 10px 22px 10px 0; }
+.items .btn { min-height: 42px; font-size: 16px; padding: 6px 16px; }
+.items input, .items select { font: inherit; font-weight: 500; font-size: 17px; min-height: 42px; padding: 6px 10px; border-radius: 0; border: 2px solid currentColor; background: transparent; color: inherit; }
+.items input:focus-visible, .items select:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+.items input.count { width: 96px; }
+.items .edit { align-items: flex-end; gap: 14px; }
+.items .field { flex: 1 1 170px; min-width: 150px; }
+.items .field.wide { flex: 2 1 300px; }
+.items .field.narrow { flex: 0 1 200px; }
+.items .field input, .items .field select { width: 100%; }

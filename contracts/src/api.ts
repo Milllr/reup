@@ -156,6 +156,35 @@ export const ManualOrderBody = z.object({ productId: Id, units: z.number().int()
  */
 export const CheckAnswerBody = z.object({ answer: z.enum(['right', 'miscount']) });
 
+// ---------- items ----------
+
+/**
+ * POST /api/products (approve key or ops token). A person adds an item in the dashboard.
+ * zoneId is a free zone a camera sees, or null for an item counted by hand. count is what is on the shelf now:
+ * for a camera zone it stands until the camera reports its own.
+ */
+export const ProductAddBody = z.object({
+  name: z.string().trim().min(1).max(80),
+  unit: z.string().trim().min(1).max(40),
+  /** The Offcut Supply SKU it is bought as, or null when it is not matched yet. */
+  sku: z.string().trim().min(1).max(40).nullable(),
+  /** What to type into a store's search box. Left out, it is the name. */
+  searchPhrase: z.string().trim().min(1).max(120).optional(),
+  zoneId: Id.nullable(),
+  count: z.number().int().nonnegative().max(9999),
+});
+
+/** PUT /api/products/:id (approve key or ops token). Only the fields given change. */
+export const ProductEditBody = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  unit: z.string().trim().min(1).max(40).optional(),
+  sku: z.string().trim().min(1).max(40).nullable().optional(),
+  searchPhrase: z.string().trim().min(1).max(120).optional(),
+});
+
+/** POST /api/products/:id/count (approve key or ops token). The count a person read off the shelf. Answers with the Count of record. */
+export const ProductCountBody = z.object({ count: z.number().int().nonnegative().max(9999) });
+
 // ---------- operator ----------
 
 /** PUT /api/zones (ops). Replaces every zone. */
@@ -201,6 +230,7 @@ export const ROUTES = [
   ['GET', '/api/state', 'Snapshot'],
   ['GET', '/api/products/:id/history', 'HistoryResult'],
   ['GET', '/api/analytics', 'AnalyticsResult'],
+  ['GET', '/api/catalog', 'Catalog'],
   ['POST', '/api/ask', 'AskBody -> AskResult (no token)'],
   ['GET', '/api/jobs', 'JobsResult (device token)'],
   ['POST', '/ingest/counts', 'IngestCountsBody -> Ok (device token)'],
@@ -219,6 +249,10 @@ export const ROUTES = [
   ['POST', '/api/orders/:id/approve', 'ApproveBody -> OrderResult (approve key or device token)'],
   ['POST', '/api/orders/:id/cancel', 'OrderResult (ops token)'],
   ['POST', '/api/checks/:id', 'CheckAnswerBody -> Ok (approve key or ops token)'],
+  ['POST', '/api/products', 'ProductAddBody -> Product (approve key or ops token)'],
+  ['PUT', '/api/products/:id', 'ProductEditBody -> Product (approve key or ops token)'],
+  ['POST', '/api/products/:id/count', 'ProductCountBody -> Count (approve key or ops token)'],
+  ['POST', '/api/products/:id/remove', 'Ok (approve key or ops token)'],
   ['PUT', '/api/zones', 'ZonesBody -> Ok (ops token)'],
   ['PUT', '/api/board', 'BoardBody -> Snapshot (ops token)'],
   ['POST', '/api/demo/season', 'SeasonBody -> Ok (ops token)'],
@@ -251,6 +285,9 @@ export type TeachConfirmBody = z.infer<typeof TeachConfirmBody>;
 export type ApproveBody = z.infer<typeof ApproveBody>;
 export type ManualOrderBody = z.infer<typeof ManualOrderBody>;
 export type CheckAnswerBody = z.infer<typeof CheckAnswerBody>;
+export type ProductAddBody = z.infer<typeof ProductAddBody>;
+export type ProductEditBody = z.infer<typeof ProductEditBody>;
+export type ProductCountBody = z.infer<typeof ProductCountBody>;
 export type ZonesBody = z.infer<typeof ZonesBody>;
 export type BoardProduct = z.infer<typeof BoardProduct>;
 export type BoardBody = z.infer<typeof BoardBody>;

@@ -8,12 +8,13 @@ import { useLive } from '../../store/live';
 import { mockAnalytics } from '../../store/mock';
 import type { LiveState } from '../../store/reduce';
 import { alertText } from '../common';
+import { Items } from './items';
 
 /** Reads the analytics again whenever a count, an order or the season changes, and once a minute so the day rolls over. */
 export function useAnalytics(live: LiveState, fetcher: typeof call = call): AnalyticsResult | null {
   const [data, setData] = useState<AnalyticsResult | null>(null);
   const s = live.snapshot;
-  const key = s ? `${s.counts.map((c) => `${c.productId}:${c.count}`).join(',')}|${s.orders.map((o) => `${o.id}:${o.state}`).join(',')}|${s.season.factor}|${s.products.length}` : '';
+  const key = s ? `${s.counts.map((c) => `${c.productId}:${c.count}`).join(',')}|${s.orders.map((o) => `${o.id}:${o.state}`).join(',')}|${s.season.factor}|${s.products.map((p) => `${p.id}:${p.name}:${p.sku ?? ''}`).join(',')}` : '';
   useEffect(() => {
     if (live.mock) {
       setData(AnalyticsResult.parse(mockAnalytics));
@@ -191,6 +192,8 @@ export function AnalyticsView({ live, a }: { live: LiveState; a: AnalyticsResult
         <Tile figure={String(t.ahead.orders)} label={`Orders in the next ${t.ahead.days} days`} note={t.ahead.orders === 0 ? 'None expected.' : `${t.ahead.units} units${t.ahead.cost != null ? `, about ${money(t.ahead.cost)} before tax` : ''}.`} />
         <Tile figure={money(t.placed.total)} label="Ordered so far" note={`${t.placed.orders} ${t.placed.orders === 1 ? 'order' : 'orders'} placed at Offcut Supply.`} />
       </section>
+
+      <Items live={live} />
 
       <section className="stack" style={{ gap: 30 }} aria-label="Each part">
         <div className="stack" style={{ gap: 8 }}>

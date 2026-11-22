@@ -435,6 +435,23 @@
       ],
       "tests": ["the fact sheet has the date, each part's use and the orders with totals", "only fact ids on the sheet reach the screen", "no key, a failure, a blank answer and a slow model all fall back", "Gemini is called as a plain function and each model in GEMINI_MODEL is tried in turn", "the Why screen shows empty, asking, answer, fallback and error states"],
       "screens": ["docs/ui/why.html"], "depends": ["F27"]
+    },
+    {
+      "id": "F33", "title": "Items in the dashboard", "lane": "integrator", "priority": 1, "demo": false,
+      "story": "As the person who runs the shop, I want to manage what reup tracks from the dashboard: fix a count, change what an item is bought as, remove an item, and add one that is on a ledge or that no camera sees.",
+      "acceptance": [
+        "The Analytics page has an Items section under the six figures: one row for each item with its name and unit, the Offcut SKU it is bought as, how it is counted (\"Camera · Wood screws\" or \"By hand\") and its count",
+        "On a screen that holds a key each row has a count field with Set, Edit and Remove. With no key the list is read only and one line says why",
+        "Set posts the typed count (POST /api/products/:id/count). It becomes the count of record the way a camera count does: use is recorded, the reorder point is checked and a delivery is counted in. On a camera ledge it stands until the camera next reports",
+        "Edit changes the name, the unit, the store item and the search words in place (PUT /api/products/:id). Only what changed is changed, and a new store item brings its own delivery time",
+        "Remove needs a second press. It takes the item off every list and frees its ledge (POST /api/products/:id/remove). An order still being shopped for it is withdrawn. While its order is being placed the hub says no, in words",
+        "Add an item: pick a store item from Offcut's catalog (GET /api/catalog) to fill the name and unit, or type them. Counted is By hand or one of the free ledges. POST /api/products. The new item has a count and a reorder point at once",
+        "An item counted by hand has no zone: its count is filed under its own id. It shows on the Shelf index, the phone and the charts like any other, and it is kept by a demo reset",
+        "When the hub says no, its sentence shows in an alert tag. On the sample board (?mock=1) nothing is sent and a line says so"
+      ],
+      "tests": ["adds an item counted by hand with a count, a reorder point and the store delivery time", "adds an item on a free ledge and the camera count takes over", "refuses a ledge that is taken and a name that is in use", "a count typed by hand records use and starts an order at the reorder point", "edits only the fields given", "removes an item, frees its ledge and withdraws an order still being shopped", "will not remove an item while its order is being placed", "the Items section sends valid bodies with the key and nothing without one"],
+      "screens": [],
+      "depends": ["F27"]
     }
   ]
 }

@@ -1,7 +1,7 @@
 // Ingest: counts, picks, reaches and heartbeats from the eye and the shelf node, and the count of record rule.
 import { unitsText } from '@reup/brain';
 import { TEACH_ZONE } from '../seed';
-import type { Count, IngestCountsBody, IngestNodeBody, IngestNodeResult, IngestPicksBody, IngestPicksResult, IngestReachesBody, PickEvent, Zone } from '@reup/contracts';
+import type { Count, IngestCountsBody, IngestNodeBody, IngestNodeResult, IngestPicksBody, IngestPicksResult, IngestReachesBody, PickEvent, Product, Zone } from '@reup/contracts';
 import { TRAIL_MAX, type RoomCore } from '../core/room';
 import { dayIn } from '../core/time';
 import { learnStock } from '../demo';
@@ -82,6 +82,19 @@ function applyRecord(room: RoomCore, zone: Zone, record: Count, sent: PickEvent 
   if (learnStock(room, product, next.count)) room.emit({ type: 'product', product });
   room.recomputePolicy(product.id);
   if (delta !== 0) afterCountChange(room, product.id, prev?.count ?? next.count, next.count, next.source, zone.id);
+}
+
+/**
+ * A count typed by a person. It becomes the count of record the same way a camera's does: one pick, then the policy
+ * and the orders follow. On a camera zone it stands until a camera reports. An item no camera sees has no zone, so
+ * its count is filed under the item's own id.
+ */
+export function countByHand(room: RoomCore, product: Product, count: number): Count {
+  const zone = room.zone(product.zoneId);
+  const at = zone ?? ({ id: product.id, productId: product.id } as Zone);
+  const record: Count = { productId: product.id, zoneId: at.id, count, level: null, pockets: null, source: 'manual', ts: room.iso() };
+  applyRecord(room, at, record, null);
+  return room.count(product.id) ?? record;
 }
 
 function trackDisagreement(room: RoomCore, zone: Zone): void {

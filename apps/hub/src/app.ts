@@ -1,5 +1,5 @@
 // Every hub route: check the token, check the body against the contract, call the Room, answer in the contract's shape.
-import { ApproveBody, AskBody, BoardBody, CheckAnswerBody, IngestCartBody, IngestCountsBody, IngestNodeBody, IngestPicksBody, IngestPlacedBody, IngestQuotesBody, IngestReachesBody, IngestReorderBody, IngestRunsBody, ManualOrderBody, ReplayBody, ScreenBody, Season, SupplyWebhookBody, TeachBody, TeachConfirmBody, ZonesBody, type ApiError } from '@reup/contracts';
+import { ApproveBody, AskBody, BoardBody, CheckAnswerBody, IngestCartBody, IngestCountsBody, IngestNodeBody, IngestPicksBody, IngestPlacedBody, IngestQuotesBody, IngestReachesBody, IngestReorderBody, IngestRunsBody, ManualOrderBody, ProductAddBody, ProductCountBody, ProductEditBody, ReplayBody, ScreenBody, Season, SupplyWebhookBody, TeachBody, TeachConfirmBody, ZonesBody, type ApiError } from '@reup/contracts';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import type { z } from 'zod';
@@ -9,6 +9,7 @@ import { putZones, reset, setBoard, setReplay, setScreen, setSeason } from './de
 import { analyticsResult } from './analytics';
 import { historyResult } from './history';
 import { supplyWebhook } from './hooks';
+import { addItem, countItem, editItem, removeItem } from './items';
 import { ingestCounts, ingestNode, ingestPicks, ingestReaches } from './ingest';
 import { answerCheck, approve, cancel, Conflict, ingestCart, ingestPlaced, ingestQuotes, ingestReorder, ingestRuns, NotFound, openOrder } from './orders';
 import { cancelTeach, catalog, confirmTeach, cropKey, startTeach } from './teach';
@@ -191,6 +192,39 @@ export function createApp(room: RoomCore, options: AppOptions = {}): Hono {
     allow(c, APPROVE_KEY, OPS_TOKEN);
     const b = await body(c, CheckAnswerBody);
     answerCheck(room, c.req.param('id'), b.answer);
+    await done();
+    return c.json(OK);
+  });
+
+  // ---------- items ----------
+  // The store's catalog is public, and the dashboard picks from it when a person adds an item.
+  app.get('/api/catalog', async (c) => c.json({ currency: 'CAD', items: await catalog(room) }));
+  app.post('/api/products', async (c) => {
+    allow(c, APPROVE_KEY, OPS_TOKEN);
+    const b = await body(c, ProductAddBody);
+    // Read the catalog first, so the new item gets the store's delivery time for its SKU.
+    if (b.sku) await catalog(room);
+    const product = addItem(room, b);
+    await done();
+    return c.json(product);
+  });
+  app.put('/api/products/:id', async (c) => {
+    allow(c, APPROVE_KEY, OPS_TOKEN);
+    const b = await body(c, ProductEditBody);
+    if (b.sku) await catalog(room);
+    const product = editItem(room, c.req.param('id'), b);
+    await done();
+    return c.json(product);
+  });
+  app.post('/api/products/:id/count', async (c) => {
+    allow(c, APPROVE_KEY, OPS_TOKEN);
+    const count = countItem(room, c.req.param('id'), (await body(c, ProductCountBody)).count);
+    await done();
+    return c.json(count);
+  });
+  app.post('/api/products/:id/remove', async (c) => {
+    allow(c, APPROVE_KEY, OPS_TOKEN);
+    removeItem(room, c.req.param('id'));
     await done();
     return c.json(OK);
   });

@@ -123,7 +123,7 @@ function trackDelivery(room: RoomCore, order: Order, capacity: number | null, un
 }
 
 /** Cancels an order nobody has said yes to, because the board changed under it. */
-function withdraw(room: RoomCore, order: Order, why: string): void {
+export function withdraw(room: RoomCore, order: Order, why: string): void {
   order.state = 'cancelled';
   room.x.jobs = room.x.jobs.filter((j) => !('orderId' in j) || j.orderId !== order.id);
   delete room.x.shopAfter[order.id];
