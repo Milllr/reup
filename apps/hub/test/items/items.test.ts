@@ -1,4 +1,5 @@
 import { AnalyticsResult, ApiError, Catalog, Count, Product, ProductAddBody, ROUTES, ServerMessage, Snapshot } from '@reup/contracts';
+import { reorderPoint } from '@reup/brain';
 import { describe, expect, it } from 'vitest';
 import catalogMock from '../../../../contracts/mocks/catalog.json';
 import { APPROVE, count, DEVICE, OPS, rig } from '../helpers';
@@ -45,6 +46,38 @@ describe('items in the dashboard', () => {
     expect((await r.call('POST', '/api/products', { ...tape, name: 'Other tape' })).status).toBe(401);
     expect((await r.call('POST', '/api/products', { ...tape, name: 'Other tape' }, DEVICE)).status).toBe(401);
     expect(ApiError.parse(await (await r.call('POST', '/api/products', { ...tape, name: '' }, APPROVE)).json()).code).toBe('bad_request');
+  });
+
+  it('an item that comes with its use a day gets the reorder point that figure gives, and survives a demo reset', async () => {
+    const r = await rig({}, { fetch: catalogFetch });
+    await r.call('GET', '/api/catalog');
+    const row = { name: 'Zinc wood screws #8 x 1-1/4 in', unit: 'box of 100', sku: null, zoneId: null, count: 24, usePerDay: 1.5 };
+    const res = await r.call('POST', '/api/products', ProductAddBody.parse(row), APPROVE);
+    expect(res.status).toBe(200);
+    const product = Product.parse(await res.json());
+    const policy = () => Snapshot.parse(r.room.snapshot()).policies.find((p) => p.productId === product.id);
+    // 1.5 a day over 2 days of delivery and the review day, with its margin: the line the brain draws for that rate.
+    const want = reorderPoint(1.5, 2);
+    expect(want).toBeGreaterThan(3);
+    expect(policy()).toMatchObject({ reorderPoint: want, leadDays: 2, sampleHistory: true });
+    expect(policy()?.ratePerDay).toBeGreaterThan(1);
+    expect(policy()?.ratePerDay).toBeLessThan(2);
+    // Whole units on every day, and none of it counted as today's.
+    const days = Object.values(r.room.x.usage[product.id] ?? {});
+    expect(days).toHaveLength(30);
+    expect(days.every((d) => Number.isInteger(d.used) && d.sample)).toBe(true);
+    // Slow and fast parts land on their own lines too, and a part nobody uses is never reordered.
+    for (const [name, perDay] of [['Slow part', 0.1], ['Fast part', 40], ['Idle part', 0]] as const) {
+      const made = Product.parse(await (await r.call('POST', '/api/products', { name, unit: 'each', sku: null, zoneId: null, count: 2000, usePerDay: perDay }, APPROVE)).json());
+      const p = Snapshot.parse(r.room.snapshot()).policies.find((x) => x.productId === made.id);
+      if (perDay === 40) expect(Math.abs((p?.reorderPoint ?? 0) - reorderPoint(perDay, 2))).toBeLessThanOrEqual(reorderPoint(perDay, 2) * 0.15);
+      else expect(p?.reorderPoint).toBe(reorderPoint(perDay, 2));
+    }
+    expect((await r.call('POST', '/api/products', { ...row, name: 'Too much', usePerDay: 1000 }, APPROVE)).status).toBe(400);
+    // A demo reset writes sample history for every part again. This one keeps the line its own figure gives.
+    expect((await r.call('POST', '/api/demo/reset', undefined, OPS)).status).toBe(200);
+    expect(policy()).toMatchObject({ reorderPoint: want, sampleHistory: true });
+    AnalyticsResult.parse(await (await r.call('GET', '/api/analytics')).json());
   });
 
   it('adds an item on a free ledge, where the camera count takes over, and refuses a ledge that is taken', async () => {

@@ -26,6 +26,15 @@ export function ratePerDay(dailyUse: readonly number[], alpha = ALPHA): number {
   return weights === 0 ? 0 : weighted / weights;
 }
 
+/**
+ * A rate spread over days as whole units: the same number every so many days. 1.5 a day is 1, 2, 1, 2.
+ * For use that came as one figure from a shop's own records and has to stand as days.
+ */
+export function spreadUse(perDay: number, days = 30): number[] {
+  const rate = Math.max(0, perDay);
+  return Array.from({ length: days }, (_, i) => Math.floor((i + 1) * rate) - Math.floor(i * rate));
+}
+
 /** d is use per day after the season factor. */
 export function reorderPoint(d: number, leadDays: number, reviewDays = REVIEW_DAYS, z = Z, capacity: number | null = null): number {
   // A part nobody uses is never reordered. This is what keeps a part that was only just taught off the reorder list.

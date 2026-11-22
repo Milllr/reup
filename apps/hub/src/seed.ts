@@ -1,7 +1,7 @@
 // The demo's starting state: suppliers, the four parts on the board, and 30 days of sample use.
 // The sample is chosen so wood screws (capacity 12) use about 0.56 a day and reorder at 4.
 // The demo starts with 6 on the board, so taking two boxes crosses the line.
-import { ratePerDay, reorderPoint } from '@reup/brain';
+import { ratePerDay, reorderPoint, spreadUse } from '@reup/brain';
 import { Supplier, type Product, type Snapshot } from '@reup/contracts';
 import buyerSuppliers from '../../../services/buyer/suppliers.json';
 import type { Config } from './config';
@@ -135,6 +135,8 @@ function sampleOf(room: RoomCore, product: Product): Sample | null {
 
 /** Writes the sample over the 30 days before today for one part. Real use on those days is replaced. Today's stays. */
 export function applySampleFor(room: RoomCore, product: Product): void {
+  const imported = room.x.board[product.id]?.usePerDay;
+  if (imported != null) return applyImportedUse(room, product, imported);
   const sample = sampleOf(room, product);
   if (!sample) {
     // A board part with too little on its ledge to have a line: no use yet, so it is never reordered.
@@ -153,6 +155,26 @@ export function applySampleFor(room: RoomCore, product: Product): void {
   if (today) byDay[room.today()] = today;
   room.x.usage[product.id] = byDay;
   room.x.leadDays[product.id] = sample.leadDays;
+}
+
+/**
+ * A month of days for an item whose use a day came from the shop's own records. The days are made so that they give
+ * the reorder point that figure gives: read as plain days, a slow part's rate swings with the day its last unit fell on.
+ * They are marked as sample, because reup did not count them. Its delivery time stays the store's.
+ */
+export function applyImportedUse(room: RoomCore, product: Product, perDay: number): void {
+  const leadDays = room.x.leadDays[product.id] ?? BOARD_LEAD_DAYS;
+  const target = reorderPoint(perDay, leadDays);
+  const fitted = target > 0 ? sampleUse(target, leadDays) : [];
+  // Past the rates sampleUse walks, the figure is spread as it is.
+  const use = fitted.length > 0 ? fitted : spreadUse(perDay);
+  const today = room.x.usage[product.id]?.[room.today()];
+  const byDay: RoomCore['x']['usage'][string] = {};
+  if (perDay > 0) daysBefore(room.today(), 30).forEach((day, i) => {
+    byDay[day] = { used: use[i] ?? 0, restocked: 0, sample: true };
+  });
+  if (today) byDay[room.today()] = today;
+  room.x.usage[product.id] = byDay;
 }
 
 /** Writes the sample for every part that has one: the seeded parts and the parts set up on the board. */

@@ -5,6 +5,7 @@ import { Tag } from '../../components';
 import { call, yesKey } from '../../lib/hub';
 import { mockCatalog } from '../../store/mock';
 import type { LiveState } from '../../store/reduce';
+import { ImportItems } from './import';
 
 export const ITEMS_NO_KEY = 'This screen has no key, so it can only show the items. Open the board with its key first, then come back here.';
 export const ITEMS_MOCK = 'This is the sample board. Nothing is saved.';
@@ -219,6 +220,7 @@ export function Items({ live, k: given, send = call }: { live: LiveState; k?: st
         <div className="stack" style={{ gap: 14 }}>
           <h3 className="name" style={{ margin: 0 }}>Add an item</h3>
           <AddItem s={s} catalog={catalog} act={act} busy={busy} />
+          <ImportItems s={s} catalog={catalog} act={act} busy={busy} />
         </div>
       ) : <p className="copy small">{ITEMS_NO_KEY}</p>}
     </section>

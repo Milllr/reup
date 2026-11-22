@@ -172,6 +172,11 @@ export const ProductAddBody = z.object({
   searchPhrase: z.string().trim().min(1).max(120).optional(),
   zoneId: Id.nullable(),
   count: z.number().int().nonnegative().max(9999),
+  /**
+   * Units used a day, from the shop's own records: an export of its inventory system. Given, the item's reorder point
+   * comes from this figure. Left out, the item gets sample use like any part set up on the board.
+   */
+  usePerDay: z.number().nonnegative().max(999).optional(),
 });
 
 /** PUT /api/products/:id (approve key or ops token). Only the fields given change. */

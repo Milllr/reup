@@ -51,7 +51,8 @@ export interface Internal {
   /** For each order that is on its way: the lowest count seen since it was placed. What has come in is measured from there. */
   deliveries: Record<string, { low: number }>;
   /** Parts set up with PUT /api/board. learn: the part has no fixed capacity, it holds what is stocked. */
-  board: Record<string, { learn: boolean }>;
+  /** A part set up on the board or in the dashboard. usePerDay: its use came from the shop's own records, and its history is made from that figure. */
+  board: Record<string, { learn: boolean; usePerDay?: number }>;
   /** When the new part card gives up waiting for a name or a yes, so the screens are never held by it for good. Null when no card is up. */
   teachUntil: number | null;
   /** Every change of a count, oldest first, at most TRAIL_MAX. The Analytics page draws the day from it. A demo reset keeps it. */

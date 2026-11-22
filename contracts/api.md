@@ -46,7 +46,7 @@ Every error is `ApiError`: `{ ok: false, code, message }` with status 400 bad_re
 | POST | /api/orders/:id/cancel | | Order | |
 | POST | /api/checks/:id | CheckAnswerBody | Ok | check-answer.json |
 | GET | /api/catalog | | Catalog | catalog.json |
-| POST | /api/products | ProductAddBody | Product | product-add.json |
+| POST | /api/products | ProductAddBody | Product | product-add.json, product-import.json (a row of an inventory export, with its use a day) |
 | PUT | /api/products/:id | ProductEditBody | Product | product-edit.json |
 | POST | /api/products/:id/count | ProductCountBody | Count | product-count.json |
 | POST | /api/zones/:id/quad | ZoneQuadBody | Zone | zone-quad.json |

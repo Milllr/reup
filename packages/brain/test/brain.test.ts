@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Policy, type Quote, type Supplier } from '@reup/contracts';
-import { coverText, daysOfCover, forecast, marketNote, orderQty, orderReason, packsFor, policyFor, project, ratePerDay, reasonText, reorderPoint, unitsText, unitWord } from '../src/index';
+import { coverText, daysOfCover, forecast, marketNote, orderQty, orderReason, packsFor, policyFor, project, ratePerDay, reasonText, reorderPoint, spreadUse, unitsText, unitWord } from '../src/index';
 
 const now = '2026-11-21T09:14:00-05:00';
 const supplier = (id: string, name: string, kind: 'account' | 'market'): Supplier => ({ id, name, kind, baseUrl: 'https://example.com', searchUrl: 'https://example.com/s?q={q}', country: 'CA' });
@@ -152,5 +152,16 @@ describe('policyFor', () => {
   it('a busy season raises the reorder point', () => {
     const base = { productId: 'p', dailyUse: [1, 0, 1, 0, 1, 0, 1], leadDays: 2, capacity: 12, count: 6, sampleHistory: false, now };
     expect(policyFor({ ...base, seasonFactor: 1.4 }).reorderPoint).toBeGreaterThan(policyFor({ ...base, seasonFactor: 1 }).reorderPoint);
+  });
+});
+
+describe('spreadUse', () => {
+  it('spreads a rate over days as whole units that add up to it', () => {
+    expect(spreadUse(1.5, 6)).toEqual([1, 2, 1, 2, 1, 2]);
+    expect(spreadUse(0.2, 10)).toEqual([0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+    expect(spreadUse(3, 4)).toEqual([3, 3, 3, 3]);
+    expect(spreadUse(2.4).reduce((a, b) => a + b, 0)).toBe(72);
+    expect(spreadUse(0)).toEqual(Array(30).fill(0));
+    expect(spreadUse(-1, 3)).toEqual([0, 0, 0]);
   });
 });

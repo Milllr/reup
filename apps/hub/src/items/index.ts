@@ -24,6 +24,7 @@ function itemOr404(room: RoomCore, id: string): Product {
  * A new item. On a free zone the camera counts it from its next look. With no zone it is counted by hand: its count is
  * filed under its own id, since a count always names where it was taken. Either way it behaves like a part set up on
  * the board: what the shelf holds is learned from what is on it, and its sample use gives it a reorder point at once.
+ * An item that comes with its use a day, from an inventory export, gets its reorder point from that figure.
  */
 export function addItem(room: RoomCore, body: ProductAddBody): Product {
   let zone: Zone | undefined;
@@ -46,7 +47,8 @@ export function addItem(room: RoomCore, body: ProductAddBody): Product {
     searchPhrase: body.searchPhrase ?? body.name, imageUrl: null, createdAt: now,
   };
   room.s.products.push(product);
-  room.x.board[id] = { learn: pockets == null };
+  // Kept with the item, so a demo reset gives it this history again and not the board's sample.
+  room.x.board[id] = body.usePerDay != null ? { learn: pockets == null, usePerDay: body.usePerDay } : { learn: pockets == null };
   room.x.leadDays[id] = leadDaysFor(room, body.sku);
   if (zone) {
     zone.productId = id;
@@ -58,6 +60,7 @@ export function addItem(room: RoomCore, body: ProductAddBody): Product {
   }
   const count: Count = { productId: id, zoneId: zone?.id ?? id, count: body.count, level: null, pockets: null, source: 'manual', ts: now };
   room.s.counts.push(count);
+  // Use from the shop's own records gives the reorder point. With none, the item gets sample use like a part on the board.
   applySampleFor(room, product);
   room.emit({ type: 'product', product });
   room.emit({ type: 'count', count });
