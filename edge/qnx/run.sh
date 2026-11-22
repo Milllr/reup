@@ -10,6 +10,9 @@ mkdir -p "$GUARD_DATA"
 # The camera's size and format are set in the Pi's sensor config (vision/set_camera.py), not here: the workshop program
 # opens the camera read only. This only names the smallest picture it should ask for where it is allowed to ask.
 export REUP_MIN_PIXELS="${REUP_MIN_PIXELS:-921600}"
+# REUP_CAMERA_URL set: the camera is on another machine (the laptop) and its pictures come from there. The Pi then
+# serves no stream of its own: the eye is where the pictures came from.
+if [ -n "$REUP_CAMERA_URL" ]; then export REUP_CAMERA_URL REUP_STREAM_PORT="${REUP_STREAM_PORT:-0}"; fi
 # The workshop program opens a window. Started over SSH it has to be told where the desktop is.
 . ./desk.sh
 # The workshop program with the reup hook built in. See README.md.

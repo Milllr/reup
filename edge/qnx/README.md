@@ -35,14 +35,49 @@ Check Python can reach an https hub: `python3 -c "import ssl, json, urllib.reque
 
 Build vision:
 
-1. Get the workshop code onto the Pi at `~/QNX-AI-workshop` and build it once as its README says (`sudo ./configure.sh`, then `./build.sh`). Run `./start.sh --ros-args -p camera_unit:=5` and see hand landmarks from the C270.
-2. Copy `vision/src/reup_math.hpp`, `vision/src/reup_vision.hpp` and `vision/src/reup_hook.hpp` next to `handtrack_node.cpp`.
-3. In `handtrack_node.cpp` add `#include "reup_hook.hpp"` under the other includes, and in `infer_worker`, on the line after `auto hands = pipe->detect(frame, 2);`, add `reup::feed(hands, frame);`
-4. `./build.sh` again. That is the whole change: two lines in one file.
+1. Get the workshop code onto the Pi at `~/QNX-AI-workshop` and set it up once as its README says: `sudo ./configure.sh`
+2. Copy this folder to the Pi as `~/reup-node`.
+3. Put the reup lines into the workshop program: `python3 ~/reup-node/vision/patch_workshop.py ~/QNX-AI-workshop`
+4. Build: `cd ~/QNX-AI-workshop && ./build.sh`
 
-Run it: `HUB_URL=https://wheredidallmyinventorygo.wtf DEVICE_TOKEN=... ./run.sh`
+The patch is seven lines in three files and is listed at the top of `vision/patch_workshop.py`. Running it again changes nothing.
 
-The workshop program opens its window, so the Pi needs its display attached, as in the workshop.
+Set the camera's size once: `sudo python3 ~/reup-node/vision/set_camera.py` then restart the Pi.
+
+Bring everything up, from the laptop: `ssh reup-pi "HUB_URL=https://wheredidallmyinventorygo.wtf DEVICE_TOKEN=... ~/reup-node/up.sh"`
+
+`up.sh` sets the clock, starts the QNX desktop with its lock and sleep off, starts the node, puts the desktop in front and opens the site full screen in the Pi's browser. It starts only what is not running, so it is also the command after a reboot. The node alone: `HUB_URL=... DEVICE_TOKEN=... ./run.sh`
+
+## The camera is on the Pi
+
+The station has one camera and it is plugged into the Pi. The hand model on QNX looks at every frame, and the node serves the same frames as MJPEG on port 8089 (`vision/src/reup_stream.hpp`): `/stream/board.mjpg`, `/frame.jpg`, `/health`. The eye on the laptop reads that stream as its board camera and counts the parts (`url` under `[cameras.board]` in `services/eye/config.toml`). The Pi's own browser shows the same stream on the board page, from localhost.
+
+Measured on the Pi 5 with an Elgato Facecam MK.2. The camera sends uncompressed pictures and the USB link on QNX carries about 8 MB of them a second, whatever the size:
+
+| Size and format | Pictures a second |
+| --- | --- |
+| 640x360 YCbYCr | 17.4 |
+| 1280x720 NV12 | 5.9 |
+| 1920x1080 YCbYCr | 1.9 |
+
+The station runs 1280x720 NV12. The hand model takes 27 to 53 ms a frame, so the camera is the limit, not the model. The workshop program opens the camera read only and may not change its size, so the size is set in the sensor config by `vision/set_camera.py`.
+
+Counting stays on the laptop. The part detector is a PyTorch model and there is no PyTorch for QNX. When nothing answers at the Pi's address the eye opens a camera of the same name on the laptop's own USB, so moving the cable back is the whole fallback.
+
+## The Pi's screen, with no keyboard
+
+At the table the Pi has a mouse and no keyboard. QNX shows one window at a time (the launcher, the login terminal, the desktop) and switches with Alt and Tab, so after a boot the screen shows a login prompt until something presses keys.
+
+`tv/keys.py` presses them from SSH. It starts QNX's own VNC server on a spare port for as long as the keys take, sends them, and stops it.
+
+* The next QNX window: `sudo python3 ~/reup-node/tv/keys.py alt+tab`
+* Full screen in the browser, and out again: `sudo python3 ~/reup-node/tv/keys.py f11`
+* A click, in the screen's own pixels: `sudo python3 ~/reup-node/tv/keys.py click:512,310`
+* What is on the screen right now, as a file: `sudo screenshot -file=/tmp/tv.bmp`
+
+The hand tracker's window opens 480 wide over the browser (`REUP_WINDOW_WIDTH` changes that). Drag it with the mouse. Do not send `q` or `esc` while it has the keyboard: both close it, and the supervisor starts it again.
+
+The screen came up at 1024 x 600 on the station's TV, not the 1920 x 1080 in the screen config. Not solved.
 
 ## Level 2: teach the Pi where the pockets are
 
@@ -58,7 +93,9 @@ The Pi's camera sees the board from its own angle, so it needs its own corners f
 
 ## The wooden button
 
-The Grove button goes on GPIO 16 (D16 on the Grove hat), read through the `rpi_gpio` module on the QNX image. Another pin: `GUARD_BUTTON_PIN=5 ./run.sh`. No GPIO module: point `GUARD_BUTTON_FILE` at any file that holds 1 while the button is down. A press approves the oldest order that is waiting for a yes. Presses within one second count once.
+The Grove button goes on GPIO 16 (D16 on the Grove hat, a BCM number), read through the `rpi_gpio` module on the QNX image. Another pin: `GUARD_BUTTON_PIN=5 ./run.sh`. No GPIO module: point `GUARD_BUTTON_FILE` at any file that holds 1 while the button is down. A press approves the oldest order that is waiting for a yes. Presses within one second count once.
+
+A press counts only after the pin was at rest for 0.3 s and then down for 0.04 s. The level the pin starts at is never a press. On the station's Pi every free pin read high with nothing wired, through `rpi_gpio` and through `/dev/gpio`, with either pull. Before this rule a guard that started while an order waited would have approved it by itself. The guard says so once in the log when the pin has read pressed since the start.
 
 ## Priorities
 
@@ -81,6 +118,15 @@ The Grove button goes on GPIO 16 (D16 on the Grove hat), read through the `rpi_g
 
 ## What was checked, and what was not
 
-Checked on a laptop: every guard and supervisor rule in `tests/`, the C++ math and the whole C++ pipeline on drawn frames, and the full node run against a local hub with `tools/fake_vision.py` (offline queue, the reorder call, the button, a killed vision).
+Checked on a laptop: every guard and supervisor rule in `tests/`, the C++ math, the camera stream and the whole C++ pipeline on drawn frames, and the full node run against a local hub with `tools/fake_vision.py` (offline queue, the reorder call, the button, a killed vision).
 
-Not checked, because it needs the Pi: the build inside the workshop program, the camera, the `rpi_gpio` button, and the `on -p` priority. Those are the human tasks NH1 to NH4.
+Checked on the Pi, Sunday Nov 22 from 3:20 AM to 4:20 AM:
+
+* The patched workshop program builds on the Pi and runs: camera unit 5, 1280x720, 5.9 pictures a second, inference 27 to 53 ms.
+* The eye on the laptop read the Pi's stream and counted the live board right: washers 3, bolts 3, MWAX 4, 9V 3.
+* The hub showed the node online at level 1, and the board page showed the tag for it.
+* The guard runs at priority 20 and vision at 10 (`pidin`).
+* Vision killed with `slay -f handtrack_node`: the picture was served again 3.2 s after the kill. Through the workshop's `start.sh` it took 36 s, so `run.sh` sets ROS 2 up once and starts the program itself.
+* The Pi's browser (Epiphany on the QNX desktop) showed the live site full screen with the board stream from localhost, and followed a take to the Shopping screen.
+
+Not checked: a real button on a pin (every pin read high with nothing wired), the pockets at level 2, a reach written to the ledger by a real hand, and the network cable pulled with the camera on the Pi.
