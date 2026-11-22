@@ -708,3 +708,85 @@ def test_a_card_the_hub_took_down_is_let_go_and_what_stays_on_the_spot_stops_bei
     # The next part is announced.
     t = still(e, wood([(ITEM, (20, 20, 20))]), t, 2.0)
     assert len(hub.teaches) == 2
+
+
+def test_a_new_part_that_looks_like_an_old_one_does_not_take_it_out_of_its_count(tmp_path):
+    """Sun Nov 22, 5 AM: a hook was taught, the detector read the leftmost bolt as a hook, and an order for bolts began."""
+    snap = snapshot()
+    snap["zones"] = [z for z in snap["zones"] if z["kind"] != "pockets"]
+    logs: list[str] = []
+    e, _hub, _ = eye(tmp_path, '[teach]\ncamera = "aux"\n[open]\nwrong_hold = 3', with_reference=False)
+    e.log = logs.append
+    e.set_zones(snap)
+    e.yolo_zones = {"z-glue", "z-discs"}
+    box = lambda cx, cy: [[cx - 0.03, cy - 0.05], [cx + 0.03, cy - 0.05], [cx + 0.03, cy + 0.05], [cx - 0.03, cy + 0.05]]  # noqa: E731
+    glue = [{"productId": "p-glue", "centre": [0.1 + i * 0.08, 0.7], "points": box(0.1 + i * 0.08, 0.7), "conf": 0.9} for i in range(3)]
+    old, new = ["p-discs", "p-glue"], ["p-discs", "p-glue", "p-hook"]
+    t = still(e, frame(), 0.0, 1.0)
+    for _ in range(3):
+        e.take_detections("board", glue, old)
+    assert e.counts["z-glue"] == (3, None)
+    # The hook is taught. The same three bottles stand where they stood, and the first now carries the hook's name.
+    as_hook = [{**glue[0], "productId": "p-hook", "conf": 0.96}] + glue[1:]
+    for _ in range(4):
+        e.take_detections("board", as_hook, new)
+    assert e.counts["z-glue"] == (3, None)
+    assert e.confused["board"] == {("z-glue", "p-hook")}
+    assert e.misplaced["board"] == []
+    assert [d["productId"] for d in e.detected["board"]] == ["p-glue"] * 3
+    assert sum("still counts as p-glue" in line for line in logs) == 1
+    # It flickers between the two names from look to look: the count does not.
+    for seen in (glue, as_hook, glue, as_hook):
+        e.take_detections("board", seen, new)
+    assert e.counts["z-glue"] == (3, None)
+    # A thing under the hook's name where nothing was at home before is a stranger, as ever: pointed at, in no count.
+    stray = {"productId": "p-hook", "centre": [0.7, 0.8], "points": box(0.7, 0.8), "conf": 0.9}
+    for _ in range(3):
+        e.take_detections("board", as_hook + [stray], new)
+    assert [(m["productId"], m["zoneId"]) for m in e.misplaced["board"]] == [("p-hook", "z-discs")]
+    assert e.counts["z-discs"] == (0, None)
+    # The eye is started again (the watchdog does that): what it learned is on disk.
+    again, _hub2, _ = eye(tmp_path, '[teach]\ncamera = "aux"\n[open]\nwrong_hold = 3', with_reference=False)
+    again.set_zones(snap)
+    again.yolo_zones = {"z-glue", "z-discs"}
+    still(again, frame(), 0.0, 1.0)
+    for _ in range(3):
+        again.take_detections("board", as_hook, new)
+    assert again.counts["z-glue"] == (3, None)
+    # The hook is removed from the board's parts: its name means nothing in any box now.
+    for _ in range(3):
+        e.take_detections("board", glue, old)
+    assert e.confused["board"] == set()
+    still(e, frame(), t, 0.2)
+
+
+def test_a_part_that_was_always_known_is_never_excused_in_another_parts_box(tmp_path):
+    snap = snapshot()
+    snap["zones"] = [z for z in snap["zones"] if z["kind"] != "pockets"]
+    e, _hub, _ = eye(tmp_path, '[teach]\ncamera = "aux"\n[open]\nwrong_hold = 3', with_reference=False)
+    e.set_zones(snap)
+    e.yolo_zones = {"z-glue", "z-discs"}
+    box = lambda cx, cy: [[cx - 0.03, cy - 0.05], [cx + 0.03, cy - 0.05], [cx + 0.03, cy + 0.05], [cx - 0.03, cy + 0.05]]  # noqa: E731
+    glue = [{"productId": "p-glue", "centre": [0.1 + i * 0.08, 0.7], "points": box(0.1 + i * 0.08, 0.7), "conf": 0.9} for i in range(3)]
+    parts = ["p-discs", "p-glue"]
+    still(e, frame(), 0.0, 1.0)
+    for _ in range(3):
+        e.take_detections("board", glue, parts)
+    # A bottle is swapped for a disc in the same place. Both parts were known all along: it is a disc in the glue box.
+    swapped = [{**glue[0], "productId": "p-discs"}] + glue[1:]
+    for _ in range(3):
+        e.take_detections("board", swapped, parts)
+    assert e.counts["z-glue"] == (2, None)
+    assert e.confused["board"] == set()
+    assert [(m["productId"], m["zoneId"]) for m in e.misplaced["board"]] == [("p-discs", "z-glue")]
+
+
+def test_a_box_that_is_gone_keeps_no_count(tmp_path):
+    snap = snapshot()
+    snap["zones"] = [z for z in snap["zones"] if z["kind"] != "pockets"]
+    e, _hub, _ = eye(tmp_path, '[teach]\ncamera = "aux"', with_reference=False)
+    e.set_zones(snap)
+    e.counts["z-glue"] = (3, None)
+    snap["zones"] = [z for z in snap["zones"] if z["id"] != "z-glue"]
+    e.set_zones(snap)
+    assert "z-glue" not in e.counts

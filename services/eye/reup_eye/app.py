@@ -60,6 +60,14 @@ class Eye:
         # Parts seen sitting in another part's box: what is shown, and for how many looks in a row each has been there.
         self.misplaced: dict[str, list[dict]] = {}
         self.wrong_runs: dict[str, dict[tuple, int]] = {}
+        # A new part the detector takes an old one for. The detector gives every thing one name, the likeliest. Teach it
+        # a new part and a thing that was counted a moment ago can come back under the new part's name. residents is
+        # what sat at home in each box in the last still look, confused is the (box, name) pairs where a resident
+        # turned up under a new part's name, and fresh is the new parts still being checked for that. See take_detections.
+        self.residents: dict[str, list[tuple[str, list]]] = {}
+        self.confused: dict[str, set[tuple[str, str]]] = self._load_confused()
+        self.known_parts: Optional[frozenset] = None
+        self.fresh_parts: dict[str, int] = {}
         # Zones the detector counts. The runtime turns detector_on when a detector is meant to run. From then on a zone
         # whose part has an example is the detector's, even while the detector is still loading: the difference blobs
         # must never count it in the meantime, or a full ledge reads as empty for the first seconds after a start.
@@ -103,6 +111,12 @@ class Eye:
         with self.lock:
             before = {z["id"]: z.get("productId") for z in self.zones}
             self.zones = zones
+            # A box that is gone has no count. It stayed in /health after its part was removed.
+            for gone in set(self.counts) - {z["id"] for z in zones}:
+                self.counts.pop(gone, None)
+                self.gate.forget(gone)
+                self.smoother.runs.pop(gone, None)
+                self.smoother.stable.pop(gone, None)
             self.capacity = {p["zoneId"]: int(p["capacity"]) for p in snapshot.get("products", []) if p.get("zoneId") and p.get("capacity")}
             for zone in zones:
                 # A zone that changed hands starts its count again.
@@ -642,17 +656,25 @@ class Eye:
             per_zone = {z["id"]: 0 for z in zones}
             shown = []
             at_home, strangers = [], []
-            for inst in instances:
-                zid = assign(inst["centre"], lookup)
+            still = self.settled.get(camera_id, False)
+            placed = [(assign(inst["centre"], lookup), inst) for inst in instances]
+            confused = self._confusion(camera_id, placed, product, loaded, still)
+            home = []
+            for zid, inst in placed:
                 if zid is None:
                     continue
                 if product[zid] != inst["productId"]:
-                    strangers.append((zid, inst))
-                    continue
+                    if (zid, inst["productId"]) not in confused:
+                        strangers.append((zid, inst))
+                        continue
+                    # The detector's name for it is a new part's. It is this box's own part, as it was before.
+                    inst = {**inst, "productId": product[zid]}
                 per_zone[zid] += 1
                 at_home.append(inst)
+                home.append((zid, inst["points"]))
                 shown.append({"productId": inst["productId"], "points": [[round(x, 4), round(y, 4)] for x, y in simplify(inst["points"], 24)]})
-            still = self.settled.get(camera_id, False)
+            if still and not self.fresh_parts:
+                self.residents[camera_id] = home
             self._note_strangers(camera_id, strangers, at_home, still)
             for zid, n in per_zone.items():
                 if not still:
@@ -663,6 +685,65 @@ class Eye:
                 if stable is not None:
                     self.counts[zid] = (stable, None)
             self.detected[camera_id] = shown
+
+    FRESH_LOOKS = 40
+
+    def confused_path(self) -> Path:
+        return self.data_dir / "confused.json"
+
+    def _load_confused(self) -> dict[str, set[tuple[str, str]]]:
+        try:
+            raw = json.loads(self.confused_path().read_text(encoding="utf-8"))
+            return {cam: {(str(z), str(p)) for z, p in pairs} for cam, pairs in raw.items()}
+        except (OSError, ValueError, TypeError):
+            return {}
+
+    def _confusion(self, camera_id: str, placed: list, product: dict, loaded: Optional[list[str]], still: bool) -> set:
+        """The (box, name) pairs where that name, in that box, means the box's own part. Learns new ones.
+
+        The detector gives each thing one name: the part it looks most like. Teach it a new part and a thing it counted
+        a moment ago can come back under the new name. On Sun Nov 22 a hook was taught, the leftmost bolt was read as a
+        hook at 0.96, the bolts went from 3 to 2 and an order for bolts started. So for FRESH_LOOKS still looks after a
+        part is new to the detector, anything under the new name that sits where a part was at home in the last look
+        before it is still that part, and the pair is kept: in that box the new name is not believed. A new part put
+        in that box later counts as the box's own part too. The detector cannot tell them apart, and a count that
+        holds is worth more than a pointer that is wrong.
+        """
+        pairs = self.confused.setdefault(camera_id, set())
+        if loaded is None:
+            return pairs
+        parts = frozenset(loaded)
+        if self.known_parts is not None:
+            for pid in parts - self.known_parts:
+                self.fresh_parts[pid] = self.FRESH_LOOKS
+        self.known_parts = parts
+        # A pair whose box or part is gone means nothing now.
+        gone = {(zid, pid) for zid, pid in pairs if zid not in product or pid not in parts}
+        changed_pairs = bool(gone)
+        pairs -= gone
+        for pid in [p for p in self.fresh_parts if p not in parts]:
+            del self.fresh_parts[pid]
+        if still and self.fresh_parts:
+            before = self.residents.get(camera_id, [])
+            for zid, inst in placed:
+                name = inst["productId"]
+                if zid is None or name not in self.fresh_parts or product[zid] == name or (zid, name) in pairs:
+                    continue
+                if any(z == zid and overlap(inst["points"], points) > 0.5 for z, points in before):
+                    pairs.add((zid, name))
+                    changed_pairs = True
+                    self.log(f"The detector reads a part in {zid} as the new part {name}. In that box it still counts as {product[zid]}.")
+            for pid in list(self.fresh_parts):
+                self.fresh_parts[pid] -= 1
+                if self.fresh_parts[pid] <= 0:
+                    del self.fresh_parts[pid]
+        if changed_pairs:
+            try:
+                self.data_dir.mkdir(parents=True, exist_ok=True)
+                self.confused_path().write_text(json.dumps({cam: sorted(map(list, found)) for cam, found in self.confused.items() if found}), encoding="utf-8")
+            except OSError as err:
+                self.log(f"Could not save which new parts look like old ones: {err}")
+        return pairs
 
     def _note_strangers(self, camera_id: str, strangers: list, at_home: list, still: bool) -> None:
         """Keeps the parts that sit in another part's box, for the board to point at. They are in no count.
