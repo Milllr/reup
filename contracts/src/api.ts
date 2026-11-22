@@ -118,6 +118,17 @@ export const AnalyticsResult = z.object({
   placed: z.array(z.object({ poNumber: z.string(), productId: Id, name: z.string(), units: z.number().int().positive(), total: Money.nullable(), confirmation: z.string(), ts: IsoTime })),
 });
 
+/** POST /api/ask (no token). A plain question about use, stock and orders, answered from the hub's own data. */
+export const AskBody = z.object({ question: z.string().trim().min(1).max(200) });
+export const AskResult = z.object({
+  /** One or two plain sentences with numbers. */
+  answer: z.string().min(1),
+  /** gemini: the model answered from the facts. fallback: no key, or the model failed, and the hub answered by itself. */
+  source: z.enum(['gemini', 'fallback']),
+  /** The fact lines the answer rests on, as short plain text. Empty when the data does not answer the question. */
+  facts: z.array(z.string()),
+});
+
 // ---------- teaching ----------
 
 /** POST /api/teach (eye). A new item is sitting on the teach spot. jpegBase64 is the crop, at most 400 kB. */
@@ -190,6 +201,7 @@ export const ROUTES = [
   ['GET', '/api/state', 'Snapshot'],
   ['GET', '/api/products/:id/history', 'HistoryResult'],
   ['GET', '/api/analytics', 'AnalyticsResult'],
+  ['POST', '/api/ask', 'AskBody -> AskResult (no token)'],
   ['GET', '/api/jobs', 'JobsResult (device token)'],
   ['POST', '/ingest/counts', 'IngestCountsBody -> Ok (device token)'],
   ['POST', '/ingest/picks', 'IngestPicksBody -> IngestPicksResult (device token)'],
@@ -232,6 +244,8 @@ export type JobsResult = z.infer<typeof JobsResult>;
 export type HistoryResult = z.infer<typeof HistoryResult>;
 export type AnalyticsPart = z.infer<typeof AnalyticsPart>;
 export type AnalyticsResult = z.infer<typeof AnalyticsResult>;
+export type AskBody = z.infer<typeof AskBody>;
+export type AskResult = z.infer<typeof AskResult>;
 export type TeachBody = z.infer<typeof TeachBody>;
 export type TeachConfirmBody = z.infer<typeof TeachConfirmBody>;
 export type ApproveBody = z.infer<typeof ApproveBody>;

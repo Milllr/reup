@@ -40,6 +40,8 @@ const cases: Record<string, z.ZodType> = {
   'count-check': C.CountCheck,
   'check-answer': C.CheckAnswerBody,
   board: C.BoardBody,
+  ask: C.AskBody,
+  'ask-result': C.AskResult,
 };
 
 describe('contract mocks', () => {

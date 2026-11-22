@@ -36,6 +36,8 @@ export function Tv() {
     if (!ops) return;
     const onKey = (e: KeyboardEvent) => {
       if (!(e.key in KEYS) || e.metaKey || e.ctrlKey || e.altKey) return;
+      // A digit typed into a field, such as a question to Ask reup, is text, not a screen change.
+      if (e.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
       const screen = KEYS[e.key] ?? null;
       const snap = live.snapshot;
       const focusProductId = snap?.focusProductId ?? snap?.orders.at(-1)?.productId ?? snap?.products[0]?.id ?? null;

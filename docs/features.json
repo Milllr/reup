@@ -420,6 +420,21 @@
       ],
       "tests": ["wrangler config files parse and name the bindings the code uses"],
       "screens": [], "depends": []
+    },
+    {
+      "id": "F32", "title": "Ask reup", "lane": "integrator", "priority": 1, "demo": false,
+      "story": "As a judge or the person who runs the shop, I want to ask a plain question like \"What did we use most this week?\" and get a short answer with numbers from what reup has counted.",
+      "acceptance": [
+        "The Why screen has an Ask reup box under the season control: a text field with the hint \"What did we use most this week?\", an Ask button, and one answer line",
+        "Empty: a quiet line says what it can answer. Waiting: \"Asking.\" and the button is off. Error: \"Could not ask.\" with the hub's message",
+        "POST /api/ask takes AskBody and answers AskResult with no token. The hub builds a numbered fact sheet (date, season, per part the count, use today, in the last 7 and 30 days, rate, reorder point, days of cover, and the recent orders with totals) and asks Gemini to answer only from it in one or two sentences with numbers",
+        "When the facts do not answer the question, the answer says so and invents no numbers",
+        "With no key, a failed or slow Gemini (10 seconds), or more than 20 questions a minute, the hub answers by itself from the same facts with source fallback, and the screen says it is reup reading its own numbers",
+        "Under each answer, one line says where it came from: Gemini and how many facts it used, or the fallback",
+        "Answers keep the house style: no exclamation marks, no dashes, no markdown, at most 320 characters"
+      ],
+      "tests": ["the fact sheet has the date, each part's use and the orders with totals", "only fact ids on the sheet reach the screen", "no key, a failure, a blank answer and a slow model all fall back", "Gemini is called as a plain function and each model in GEMINI_MODEL is tried in turn", "the Why screen shows empty, asking, answer, fallback and error states"],
+      "screens": ["docs/ui/why.html"], "depends": ["F27"]
     }
   ]
 }

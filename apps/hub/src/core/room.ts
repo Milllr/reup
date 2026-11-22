@@ -6,6 +6,7 @@ import { policyFor } from '@reup/brain';
 import type { Config } from '../config';
 import type { History } from '../history';
 import { applySampleHistory, seedSnapshot } from '../seed';
+import type { Asker } from '../ask/gemini';
 import type { Namer } from '../teach/gemini';
 import { dayIn, daysBefore, isoIn } from './time';
 
@@ -73,6 +74,8 @@ export interface Deps {
   now?: () => number;
   fetch?: typeof fetch;
   namer?: Namer;
+  /** Answers Ask reup questions. Absent with no Gemini key; the hub then answers by itself. */
+  asker?: Asker;
   /** Keeps the Worker alive for work that outlives the request. */
   waitUntil?: (p: Promise<unknown>) => void;
 }

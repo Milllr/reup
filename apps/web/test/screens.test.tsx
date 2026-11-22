@@ -1,4 +1,4 @@
-import type { HistoryResult, Order, Snapshot, TeachState } from '@reup/contracts';
+import type { AskResult, HistoryResult, Order, Snapshot, TeachState } from '@reup/contracts';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import history from '../../../contracts/mocks/history.json';
@@ -11,7 +11,8 @@ import { NO_FEED, NO_PARTS, Shelf, WATCHING } from '../src/screens/shelf';
 import { panes, Shop, shopSentence } from '../src/screens/shop';
 import { Teach } from '../src/screens/teach';
 import { Tv } from '../src/screens/tv';
-import { Chart, scales } from '../src/screens/why';
+import { ASK_EMPTY, ASK_FALLBACK, ASK_WAIT, AskReup, Chart, scales, sourceLine, Why } from '../src/screens/why';
+import askMock from '../../../contracts/mocks/ask-result.json';
 import { store } from '../src/store/live';
 import { mockSnapshot } from '../src/store/mock';
 import { initial, type LiveState } from '../src/store/reduce';
@@ -207,6 +208,54 @@ describe('Why', () => {
     rerender(<Chart history={h} count={4} capacity={12} reorderPoint={5} />);
     expect(line()).toBe('translateY(300px)');
     expect(container.querySelectorAll('.bar').length).toBeGreaterThan(5);
+  });
+});
+
+describe('Ask reup', () => {
+  const result = (patch: Partial<AskResult> = {}): AskResult => ({ answer: 'Wood screws, 14 boxes in the last 7 days.', source: 'gemini', facts: ['a', 'b'], ...patch });
+  const askOnce = (q = 'What did we use most this week?') => {
+    fireEvent.change(screen.getByPlaceholderText('What did we use most this week?'), { target: { value: q } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
+  };
+
+  it('starts empty with a hint, and Ask waits for a question', () => {
+    render(<AskReup ask={vi.fn()} />);
+    expect(screen.getByText(ASK_EMPTY)).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Ask' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('shows Asking while it waits, then the answer and where it came from', async () => {
+    let answer: (r: Reply<AskResult>) => void = () => {};
+    const ask = vi.fn(() => new Promise<Reply<AskResult>>((resolve) => (answer = resolve)));
+    render(<AskReup ask={ask} />);
+    askOnce('  What did we use most this week?  ');
+    expect(ask).toHaveBeenCalledWith('What did we use most this week?');
+    expect(screen.getByText(ASK_WAIT)).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Ask' }) as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => answer(ok(result())));
+    expect(screen.getByText('Wood screws, 14 boxes in the last 7 days.')).toBeTruthy();
+    expect(screen.getByText('Gemini, from 2 facts on this board.')).toBeTruthy();
+    expect(screen.queryByText(ASK_WAIT)).toBeNull();
+  });
+
+  it('says so when the answer is the hub reading its own numbers', async () => {
+    render(<AskReup ask={async () => ok(result({ source: 'fallback' }))} />);
+    askOnce();
+    await waitFor(() => expect(screen.getByText(ASK_FALLBACK)).toBeTruthy());
+    expect(sourceLine(result({ facts: [] }))).toBe('Gemini, from the board. The numbers here do not cover it.');
+    expect(sourceLine(result({ facts: ['a'] }))).toBe('Gemini, from 1 fact on this board.');
+  });
+
+  it('shows the hub message when asking fails', async () => {
+    render(<AskReup ask={async () => ({ ok: false, status: 0, data: null, message: 'Hub unreachable.' })} />);
+    askOnce();
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('Could not ask. Hub unreachable.'));
+  });
+
+  it('sits on the Why screen and answers from the mock in mock mode', async () => {
+    render(<Why live={live('why')} />);
+    askOnce();
+    await waitFor(() => expect(screen.getByText(String(askMock.answer))).toBeTruthy());
   });
 });
 

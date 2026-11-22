@@ -1,8 +1,9 @@
 // Every hub route: check the token, check the body against the contract, call the Room, answer in the contract's shape.
-import { ApproveBody, BoardBody, CheckAnswerBody, IngestCartBody, IngestCountsBody, IngestNodeBody, IngestPicksBody, IngestPlacedBody, IngestQuotesBody, IngestReachesBody, IngestReorderBody, IngestRunsBody, ManualOrderBody, ReplayBody, ScreenBody, Season, SupplyWebhookBody, TeachBody, TeachConfirmBody, ZonesBody, type ApiError } from '@reup/contracts';
+import { ApproveBody, AskBody, BoardBody, CheckAnswerBody, IngestCartBody, IngestCountsBody, IngestNodeBody, IngestPicksBody, IngestPlacedBody, IngestQuotesBody, IngestReachesBody, IngestReorderBody, IngestRunsBody, ManualOrderBody, ReplayBody, ScreenBody, Season, SupplyWebhookBody, TeachBody, TeachConfirmBody, ZonesBody, type ApiError } from '@reup/contracts';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import type { z } from 'zod';
+import { ask } from './ask';
 import type { RoomCore } from './core/room';
 import { putZones, reset, setBoard, setReplay, setScreen, setSeason } from './demo';
 import { analyticsResult } from './analytics';
@@ -73,6 +74,8 @@ export function createApp(room: RoomCore, options: AppOptions = {}): Hono {
   });
   // The store's catalog gives a price to a part nobody has bought yet. It is cached, and a store that is down costs only the prices.
   app.get('/api/analytics', async (c) => c.json(analyticsResult(room, await catalog(room))));
+  // Ask reup: no token, like the other reads. It changes nothing, so there is no save after it.
+  app.post('/api/ask', async (c) => c.json(await ask(room, await body(c, AskBody))));
   app.get('/api/teach/:id/crop.jpg', async (c) => {
     const data = await room.deps.store.get<string>(cropKey(c.req.param('id')));
     if (!data) throw new NotFound('No picture for that id.');

@@ -6,6 +6,9 @@ import { call, token } from '../../lib/hub';
 import { mockHistory } from '../../store/mock';
 import type { LiveState } from '../../store/reduce';
 import { alertText, BottomBar } from '../common';
+import { askHub, askMock, AskReup } from './ask';
+
+export { AskReup, sourceLine, ASK_EMPTY, ASK_FALLBACK, ASK_WAIT } from './ask';
 
 export const SEASONS = [
   { label: 'Normal', factor: 1 },
@@ -89,7 +92,7 @@ export function Why({ live }: { live: LiveState }) {
       <Frame label={`${product?.name ?? 'Part'}: use, stock and forecast`} waiting={!history} settle style={{ left: 96, top: 284, width: 1100, height: 580 }}>
         {history && product ? <Chart history={history} count={count} capacity={product.capacity} reorderPoint={policy?.reorderPoint ?? history.reorderPoint} /> : null}
       </Frame>
-      <div className="abs stack" style={{ left: 1284, top: 420, width: 588, gap: 30 }}>
+      <div className="abs stack" style={{ left: 1284, top: 396, width: 588, gap: 26 }}>
         <div className="row">
           <span className="figure">{policy?.reorderPoint ?? 0}</span>
           <div className="stack" style={{ gap: 8, paddingBottom: 4 }}><span className="name">{product?.name ?? 'No part'}</span><span className="meta">Reorder point</span></div>
@@ -103,6 +106,7 @@ export function Why({ live }: { live: LiveState }) {
             ))}
           </div>
         </div>
+        <AskReup ask={live.mock ? askMock : askHub} />
       </div>
       <p className="copy small abs" style={{ left: 268, bottom: 40, maxWidth: '30em' }}>Bars are what was used each day. The line is what was on the board. The shaded part is what reup expects next.</p>
       <BottomBar credit={sample ? 'Sample history' : null} alert={alertText(live)} />

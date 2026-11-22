@@ -48,6 +48,14 @@ In the demo: the 8 bags in the Delivery box go into the pockets after "Ordered".
 5. Hub creates the Product and a starting Policy. Eye saves the crop as the visual prompt. Counting starts.
 6. Failure: Gemini times out. TeachState failed. The phone form is empty but still works.
 
+## Ask flow
+
+1. On the Why screen someone types a question, for example "What did we use most this week?", and presses Ask. The answer line says "Asking."
+2. Web posts AskBody to `/api/ask`. The hub builds the fact sheet: today, the season, one line per part with its count and use, one line per recent order with its total.
+3. Hub asks Gemini, model by model from GEMINI_MODEL, to answer only from the sheet in one or two sentences and to name the fact ids it used.
+4. The screen shows the answer and one line under it: "Gemini, from 2 facts on this board."
+5. Failure: no key, Gemini fails or takes 10 seconds, or too many questions. The hub answers by itself from the same facts and the line under it says so.
+
 ## Setup flow (operator, once)
 
 0. The station as built (ledges, one camera): `npm run board -- <hub url>` sets its zones and parts. Start the eye, then give the detector one example of each part: `curl -X POST "http://localhost:8089/prompt/z-9v?box=0.61,0.71,0.64,0.80"` with the box around one battery, and the same for the other ledges. The counts follow within a second. Steps 2 to 4 are for pockets and the teach spot.

@@ -7,6 +7,7 @@ import { createApp } from './app';
 import { configFrom } from './config';
 import { RoomCore, type Audience, type Role } from './core/room';
 import { D1History, noHistory } from './history';
+import { GeminiAsker } from './ask/gemini';
 import { GeminiNamer } from './teach/gemini';
 
 export interface Env {
@@ -35,6 +36,7 @@ export class Room extends DurableObject<Env> {
       send: (msg, to) => this.broadcast(msg, to),
       waitUntil: (p) => ctx.waitUntil(p),
       namer: config.GEMINI_API_KEY ? new GeminiNamer(config.GEMINI_API_KEY, config.GEMINI_MODEL) : undefined,
+      asker: config.GEMINI_API_KEY ? new GeminiAsker(config.GEMINI_API_KEY, config.GEMINI_MODEL) : undefined,
     });
     this.app = createApp(this.core, { after: () => this.settle() });
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('{"type":"ping"}', '{"type":"pong"}'));
