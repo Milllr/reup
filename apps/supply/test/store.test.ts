@@ -118,6 +118,20 @@ describe('account, cart, checkout and orders', () => {
     expect((await a.submit('/cart/empty')).text).toContain('Your cart is empty');
   });
 
+  it('Checkout is a button of its own, well away from Empty cart, so an agent told to press it cannot empty the cart', async () => {
+    const b = rig().browser();
+    await b.post('/cart', { sku: 'OC-7009', pack: '0', qty: '2' });
+    const html = (await b.get('/cart')).text;
+    expect(html).toMatch(/<form method="get" action="\/checkout"[^>]*><button type="submit" id="checkout"[^>]*>Checkout<\/button><\/form>/);
+    expect(html).not.toMatch(/<a[^>]*href="\/checkout"/);
+    // The two are in separate forms, Checkout first, and Empty cart is not inside the form that checks out.
+    expect(html.indexOf('id="checkout"')).toBeLessThan(html.indexOf('id="empty-cart"'));
+    expect(html).toMatch(/<form method="post" action="\/cart\/empty" style="margin-top:56px">/);
+    // Pressing Checkout is a GET to /checkout, which asks a browser that is not signed in to sign in, cart kept.
+    expect((await b.get('/checkout')).location).toBe('/signin?next=/checkout');
+    expect((await b.get('/cart')).text).toContain('Cart (2)');
+  });
+
   it('sends checkout to sign in first, and refuses a wrong password', async () => {
     const b = rig().browser();
     await b.post('/cart', { sku: 'OC-1008-114', pack: '0', qty: '8' });

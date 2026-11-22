@@ -57,10 +57,14 @@ cart.get('/cart', async (c) => {
           </table>
           <table class="totals"><tbody><tr><td>Subtotal</td><td class="num" id="subtotal">{money(sums.subtotal)}</td></tr></tbody></table>
           <p class="muted" style="text-align:right">Tax and shipping are shown at checkout.</p>
-          <div style="display:flex;gap:10px;justify-content:flex-end">
-            <form method="post" action="/cart/empty"><button type="submit" class="plain">Empty cart</button></form>
-            <a class="button" href="/checkout">Checkout</a>
-          </div>
+          {/* Checkout is a real button, alone on its row. It used to be a link beside the "Empty cart" button, and a
+              browser agent told to press Checkout pressed the only button there: its cart was emptied, every time. */}
+          <form method="get" action="/checkout" style="display:flex;justify-content:flex-end;margin-top:14px">
+            <button type="submit" id="checkout" style="font-size:18px;padding:12px 32px">Checkout</button>
+          </form>
+          <form method="post" action="/cart/empty" style="margin-top:56px">
+            <button type="submit" class="plain" id="empty-cart">Empty cart</button>
+          </form>
         </>
       )}
     </>
