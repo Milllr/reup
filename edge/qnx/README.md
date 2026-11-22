@@ -42,42 +42,41 @@ Build vision:
 
 The patch is seven lines in three files and is listed at the top of `vision/patch_workshop.py`. Running it again changes nothing.
 
-Set the camera's size once: `sudo python3 ~/reup-node/vision/set_camera.py` then restart the Pi.
+Bring everything up, from the station laptop: `powershell -NoProfile -ExecutionPolicy Bypass -File edge\qnx\pi_up.ps1`
 
-Bring everything up, from the laptop: `ssh reup-pi "HUB_URL=https://wheredidallmyinventorygo.wtf DEVICE_TOKEN=... ~/reup-node/up.sh"`
+`pi_up.ps1` checks the eye has its camera, asks the Pi which of the laptop's addresses it can reach, and runs `up.sh` on the Pi with that address as the camera. `up.sh` sets the clock, starts the QNX desktop with its lock and sleep off, starts the node, and puts the desktop in front with the hand model's window full screen. Both start only what is not running, so they are also the commands after a reboot. The node alone, on the Pi: `HUB_URL=... DEVICE_TOKEN=... REUP_CAMERA_URL=http://169.254.138.173:8089/stream/board.mjpg ./run.sh`
 
-`up.sh` sets the clock, starts the QNX desktop with its lock and sleep off, starts the node, puts the desktop in front and opens the site full screen in the Pi's browser. It starts only what is not running, so it is also the command after a reboot. The node alone: `HUB_URL=... DEVICE_TOKEN=... ./run.sh`
+## Where the camera is
 
-## The camera is on the Pi
+The station has one camera and it is plugged into the laptop. The eye there counts the parts and serves its pictures on port 8089. The Pi reads that stream over the direct cable (`REUP_CAMERA_URL`, `vision/src/reup_netcam.hpp`) and QNX's hand model looks at every picture. The Pi is beside the counting, not in its way: unplug the Pi and the board is still counted and orders are still placed.
 
-The station has one camera and it is plugged into the Pi. The hand model on QNX looks at every frame, and the node serves the same frames as MJPEG on port 8089 (`vision/src/reup_stream.hpp`): `/stream/board.mjpg`, `/frame.jpg`, `/health`. The eye on the laptop reads that stream as its board camera and counts the parts (`url` under `[cameras.board]` in `services/eye/config.toml`). The Pi's own browser shows the same stream on the board page, from localhost.
+It was the other way round for twenty minutes (Sunday 3:55 AM to 4:15 AM): the camera on the Pi, the Pi serving the frames (`vision/src/reup_stream.hpp`, port 8089) and the eye reading them. It worked and the counts were right. It was dropped for one measured reason. The camera sends uncompressed pictures, and the USB link on QNX carried about 8 MB of them a second whatever the size:
 
-Measured on the Pi 5 with an Elgato Facecam MK.2. The camera sends uncompressed pictures and the USB link on QNX carries about 8 MB of them a second, whatever the size:
-
-| Size and format | Pictures a second |
+| On the Pi's USB, size and format | Pictures a second |
 | --- | --- |
 | 640x360 YCbYCr | 17.4 |
 | 1280x720 NV12 | 5.9 |
 | 1920x1080 YCbYCr | 1.9 |
 
-The station runs 1280x720 NV12. The hand model takes 27 to 53 ms a frame, so the camera is the limit, not the model. The workshop program opens the camera read only and may not change its size, so the size is set in the sensor config by `vision/set_camera.py`.
+Over the cable from the laptop the Pi gets 1280x720 at 9 to 18 pictures a second, the rate the eye serves them. It drops to about 5 while the eye is busy with a hand in the picture. The hand model takes 27 to 59 ms a picture.
 
-Counting stays on the laptop. The part detector is a PyTorch model and there is no PyTorch for QNX. When nothing answers at the Pi's address the eye opens a camera of the same name on the laptop's own USB, so moving the cable back is the whole fallback.
+A camera on the Pi's own USB still works: leave `REUP_CAMERA_URL` out, and set the camera's size once with `sudo python3 ~/reup-node/vision/set_camera.py` (the workshop program opens the camera read only and may not change it). The node then serves its frames on port 8089, and `url` under `[cameras.board]` in `services/eye/config.toml` points the eye at them.
+
+Counting stays on the laptop either way. The part detector is a PyTorch model and there is no PyTorch for QNX.
 
 ## The Pi's screen, with no keyboard
 
-At the table the Pi has a mouse and no keyboard. QNX shows one window at a time (the launcher, the login terminal, the desktop) and switches with Alt and Tab, so after a boot the screen shows a login prompt until something presses keys.
+At the table the Pi has a mouse and no keyboard. QNX shows one window at a time (the launcher, the login terminal, the desktop) and switches with Alt and Tab, so after a boot the screen shows a login prompt until something presses keys. `up.sh` does that.
 
-`tv/keys.py` presses them from SSH. It starts QNX's own VNC server on a spare port for as long as the keys take, sends them, and stops it.
+`tv/keys.py` presses keys from SSH. It starts QNX's own VNC server on a spare port for as long as the keys take, sends them, and stops it.
 
 * The next QNX window: `sudo python3 ~/reup-node/tv/keys.py alt+tab`
-* Full screen in the browser, and out again: `sudo python3 ~/reup-node/tv/keys.py f11`
 * A click, in the screen's own pixels: `sudo python3 ~/reup-node/tv/keys.py click:512,310`
 * What is on the screen right now, as a file: `sudo screenshot -file=/tmp/tv.bmp`
 
-The hand tracker's window opens 480 wide over the browser (`REUP_WINDOW_WIDTH` changes that). Drag it with the mouse. Do not send `q` or `esc` while it has the keyboard: both close it, and the supervisor starts it again.
+The hand model's window is the whole screen (`REUP_FULLSCREEN`, `REUP_WINDOW_WIDTH`). Do not send `q` or `esc` to it: both close it, and the supervisor starts it again.
 
-The screen came up at 1024 x 600 on the station's TV, not the 1920 x 1080 in the screen config. Not solved.
+The site in the Pi's own browser was tried (`SITE_URL=https://wheredidallmyinventorygo.wtf` for `up.sh` opens it full screen, with the hand window as an inset). Epiphany on the QNX desktop showed the live site and followed a take to the Shopping screen. It was soft and slow, and the screen came up at 1024 x 600 on the station's TV, not the 1920 x 1080 in the screen config. So the site is shown on the laptop.
 
 ## Level 2: teach the Pi where the pockets are
 
@@ -120,13 +119,13 @@ A press counts only after the pin was at rest for 0.3 s and then down for 0.04 s
 
 Checked on a laptop: every guard and supervisor rule in `tests/`, the C++ math, the camera stream and the whole C++ pipeline on drawn frames, and the full node run against a local hub with `tools/fake_vision.py` (offline queue, the reorder call, the button, a killed vision).
 
-Checked on the Pi, Sunday Nov 22 from 3:20 AM to 4:20 AM:
+Checked on the Pi, Sunday Nov 22 from 3:20 AM to 4:25 AM:
 
-* The patched workshop program builds on the Pi and runs: camera unit 5, 1280x720, 5.9 pictures a second, inference 27 to 53 ms.
-* The eye on the laptop read the Pi's stream and counted the live board right: washers 3, bolts 3, MWAX 4, 9V 3.
-* The hub showed the node online at level 1, and the board page showed the tag for it.
+* The patched workshop program builds on the Pi and runs.
+* With the laptop's camera as its camera: 1280x720, 9 to 18 pictures a second, inference 27 to 59 ms, hands found, full screen on the TV.
+* Reaches by real hands are in the ledger on the Pi's disk (`data/ledger.jsonl`), and the hub shows the node online at level 1.
 * The guard runs at priority 20 and vision at 10 (`pidin`).
-* Vision killed with `slay -f handtrack_node`: the picture was served again 3.2 s after the kill. Through the workshop's `start.sh` it took 36 s, so `run.sh` sets ROS 2 up once and starts the program itself.
-* The Pi's browser (Epiphany on the QNX desktop) showed the live site full screen with the board stream from localhost, and followed a take to the Shopping screen.
+* Vision killed with `slay -f handtrack_node`: the hand model was ready again 3.5 s after the kill. Through the workshop's `start.sh` it took 36 s, so `run.sh` sets ROS 2 up once and starts the program itself.
+* With the camera on the Pi's own USB (the earlier layout): the eye read the Pi's stream and counted the live board right, washers 3, bolts 3, MWAX 4, 9V 3.
 
-Not checked: a real button on a pin (every pin read high with nothing wired), the pockets at level 2, a reach written to the ledger by a real hand, and the network cable pulled with the camera on the Pi.
+Not checked: a real button on a pin (every pin read high with nothing wired), a reach that names its ledge (the node has no zones for this board yet), the pockets at level 2, and the network cable pulled on purpose.
