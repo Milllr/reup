@@ -2,7 +2,7 @@
 // With no key, a failed call, a slow call or too many questions at once, the hub answers by itself from the same facts.
 import type { AskBody, AskResult } from '@reup/contracts';
 import type { RoomCore } from '../core/room';
-import { factSheet, STATE_WORDS, type FactSheet, type ProductFacts } from './facts';
+import { and, factSheet, groupText, STATE_WORDS, weekGroups, type FactSheet, type ProductFacts } from './facts';
 
 export const ASK_TIMEOUT_MS = 10_000;
 /** The route takes no token, so Gemini is asked at most this many times a minute. Past it, the hub answers by itself. */
@@ -46,15 +46,22 @@ export function fallbackAnswer(question: string, sheet: FactSheet): Pick<AskResu
   const products = sheet.products;
   if (products.length === 0) return { answer: 'There are no parts on the board yet.', facts: [] };
 
-  const byUse = [...products].sort((a, b) => b.used7 + b.usedToday - (a.used7 + a.usedToday));
   const covered = products.filter((p) => p.daysOfCover != null).sort((a, b) => (a.daysOfCover ?? 0) - (b.daysOfCover ?? 0));
+  const ranking = sheet.lines.find((l) => l.text.startsWith('Most used this week') || l.text === 'Nothing was used this week.')?.text;
 
   const most = () => {
-    const [first, second] = byUse;
-    if (!first || first.used7 + first.usedToday === 0) return { answer: 'Nothing was used this week.', facts: [] };
-    const used = (p: ProductFacts) => p.used7 + p.usedToday;
-    const answer = `${first.name} was used most this week: ${used(first)} (${first.unit}).` + (second && used(second) > 0 ? ` Next is ${second.name} at ${used(second)}.` : '');
-    return { answer, facts: [first, second].filter((p): p is ProductFacts => p != null && used(p) > 0).map((p) => lineFor(sheet, p)).filter((t): t is string => t != null) };
+    const [first, second] = weekGroups(products);
+    if (!first) return { answer: 'Nothing was used this week.', facts: ranking ? [ranking] : [] };
+    const lead = first.names.length > 1 ? `${and(first.names)} tie for most used this week, ${first.used} each.` : `${first.names[0]} was used most this week, ${first.used}.`;
+    const answer = second ? `${lead} Next: ${groupText(second)}.` : lead;
+    const top = products.filter((p) => first.names.includes(p.name)).slice(0, 3);
+    return { answer, facts: [ranking, ...top.map((p) => lineFor(sheet, p))].filter((t): t is string => t != null) };
+  };
+  const held = () => {
+    const lines = sheet.lines.filter((l) => l.text.startsWith('Count check on ')).map((l) => l.text);
+    const [check] = sheet.checks;
+    if (!check) return null;
+    return { answer: sheet.checks.length === 1 ? check.text : `${sheet.checks.length} count checks are waiting for a person. ${check.text}`, facts: lines };
   };
   const lowest = () => {
     const p = covered[0];
@@ -72,6 +79,10 @@ export function fallbackAnswer(question: string, sheet: FactSheet): Pick<AskResu
     return { answer, facts: lines.slice(0, 3).map((l) => l.text) };
   };
 
+  if (/\b(why|check|checks|held|hold|holding|miscount|wrong)\b/.test(q) || /\b(not|n't|no)\b.*\border/.test(q) || /didn.t|hasn.t|isn.t/.test(q)) {
+    const h = held();
+    if (h) return h;
+  }
   if (/\b(order|orders|ordered|spend|spent|cost|total|bought|buy|paid|price)\b/.test(q)) return orders();
   if (/\b(low|lowest|run out|running out|runs out|empty|cover|soon|reorder|left)\b/.test(q)) return lowest();
   if (/\b(most|top|busiest|popular|used|use|usage)\b/.test(q)) return most();

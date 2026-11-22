@@ -1,6 +1,6 @@
 // The fact sheet for Ask reup: what the hub knows about use, stock and orders, as short numbered lines.
 // The model answers from these lines and names the ones it used, so the screen can show what an answer rests on.
-import type { Order } from '@reup/contracts';
+import type { CountCheck, Order } from '@reup/contracts';
 import type { RoomCore } from '../core/room';
 import { weekdayIn } from '../core/time';
 
@@ -12,6 +12,8 @@ export interface ProductFacts {
   capacity: number | null;
   usedToday: number;
   used7: number;
+  /** This week: the 7 days before today plus today. */
+  usedWeek: number;
   used30: number;
   ratePerDay: number | null;
   reorderPoint: number | null;
@@ -24,6 +26,8 @@ export interface FactSheet {
   lines: { id: string; text: string }[];
   products: ProductFacts[];
   orders: Order[];
+  /** Count checks holding an order until a person looks. */
+  checks: CountCheck[];
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -48,14 +52,17 @@ export function productFacts(room: RoomCore): ProductFacts[] {
     const use = room.dailyUse(p.id);
     const policy = room.s.policies.find((x) => x.productId === p.id);
     const last7 = use.used.slice(-7);
+    const usedToday = room.x.usage[p.id]?.[today]?.used ?? 0;
+    const used7 = last7.reduce((a, b) => a + b, 0);
     return {
       id: p.id,
       name: p.name,
       unit: p.unit,
       count: room.count(p.id)?.count ?? 0,
       capacity: p.capacity,
-      usedToday: room.x.usage[p.id]?.[today]?.used ?? 0,
-      used7: last7.reduce((a, b) => a + b, 0),
+      usedToday,
+      used7,
+      usedWeek: used7 + usedToday,
       used30: use.used.reduce((a, b) => a + b, 0),
       ratePerDay: policy ? round1(policy.ratePerDay * policy.seasonFactor) : null,
       reorderPoint: policy?.reorderPoint ?? null,
@@ -63,6 +70,29 @@ export function productFacts(room: RoomCore): ProductFacts[] {
       sample: use.sample,
     };
   });
+}
+
+/** "A", "A and B", "A, B and C". */
+export const and = (names: string[]) => (names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
+
+/** Parts used this week, grouped by how many, most first. Parts that tie share a group. */
+export function weekGroups(products: readonly ProductFacts[]): { used: number; names: string[] }[] {
+  const by = new Map<number, string[]>();
+  for (const p of products) if (p.usedWeek > 0) by.set(p.usedWeek, [...(by.get(p.usedWeek) ?? []), p.name]);
+  return [...by.entries()].sort((a, b) => b[0] - a[0]).map(([used, names]) => ({ used, names }));
+}
+
+/** "Wood screws 3" or "Flat washers and Hex bolts 1 each". */
+export const groupText = (g: { used: number; names: string[] }) => (g.names.length > 1 ? `${and(g.names)} ${g.used} each` : `${g.names[0]} ${g.used}`);
+
+/** One line that ranks this week's use, so the model reads the order and the ties rather than adding them up itself. */
+export function rankingLine(products: readonly ProductFacts[]): string {
+  const groups = weekGroups(products);
+  if (groups.length === 0) return 'Nothing was used this week.';
+  const shown = groups.slice(0, 4).map(groupText).join(', then ');
+  const rest = groups.length > 4 ? ', and less for the rest' : '';
+  const idle = products.filter((p) => p.usedWeek === 0).length;
+  return `Most used this week, in units of each part: ${shown}${rest}.${idle > 0 ? ` ${idle} ${idle === 1 ? 'part was' : 'parts were'} not used this week.` : ''}`;
 }
 
 export function factSheet(room: RoomCore): FactSheet {
@@ -76,7 +106,7 @@ export function factSheet(room: RoomCore): FactSheet {
     const parts = [
       `${p.name} (unit: ${p.unit})`,
       `${p.count} on the board${p.capacity != null ? ` of ${p.capacity} it holds` : ''}`,
-      `${p.usedToday} used today`,
+      `${p.usedWeek} used this week (${p.usedToday} of them today)`,
       `${p.used7} used in the 7 days before today`,
       `${p.used30} used in the 30 days before today`,
     ];
@@ -86,7 +116,12 @@ export function factSheet(room: RoomCore): FactSheet {
     if (p.sample) parts.push('history is partly sample data');
     texts.push(`${parts.join(', ')}.`);
   }
+  texts.push(rankingLine(products));
   const names = new Map(room.s.products.map((p) => [p.id, p.name]));
+  // A held count check is why a part at its reorder point has no order yet.
+  for (const c of room.s.checks ?? []) {
+    texts.push(`Count check on ${names.get(c.productId) ?? c.productId}, waiting for a person since ${c.ts.slice(11, 16)}: the count went from ${c.before} to ${c.after} at once. ${c.text}`);
+  }
   const suppliers = new Map(room.s.suppliers.map((s) => [s.id, s.name]));
   if (orders.length === 0) texts.push('There are no orders yet.');
   for (const o of orders) {
@@ -102,5 +137,5 @@ export function factSheet(room: RoomCore): FactSheet {
   }
   const spent = room.s.orders.filter((o) => ['placed', 'shipped', 'received'].includes(o.state) && o.total != null);
   if (spent.length > 0) texts.push(`Placed orders: ${spent.length}, together ${money(spent.reduce((a, o) => a + (o.total ?? 0), 0))} CAD.`);
-  return { lines: texts.map((text, i) => ({ id: `F${i + 1}`, text })), products, orders };
+  return { lines: texts.map((text, i) => ({ id: `F${i + 1}`, text })), products, orders, checks: room.s.checks ?? [] };
 }

@@ -1,13 +1,18 @@
-import { AskResult, Order } from '@reup/contracts';
+import { AskResult, Order, type CountCheck } from '@reup/contracts';
 import { describe, expect, it } from 'vitest';
 import orderMock from '../../../../contracts/mocks/order-placed.json';
 import { ask, ASK_PER_MINUTE, ASK_TIMEOUT_MS, fallbackAnswer, tidy } from '../../src/ask';
-import { factSheet } from '../../src/ask/facts';
+import { factSheet, rankingLine, type ProductFacts } from '../../src/ask/facts';
 import { buildAskPrompt, GeminiAsker, parseAskAnswer, type Asker } from '../../src/ask/gemini';
 import { daysBefore } from '../../src/core/time';
 import { rig, type Rig } from '../helpers';
 
 const QUESTION = 'What did we use most this week?';
+const CHECK: CountCheck = {
+  id: 'c-1', productId: 'p-screws', zoneId: 'z-screws', before: 11, after: 2, usualPerDay: 0.6,
+  text: '9 boxes of wood screws gone at once. Usually about 0.6 a day. Holding the order until someone looks.',
+  ts: '2026-11-21T09:10:00-05:00',
+};
 
 /** Discs used 9 this week, screws 3 of them today: discs lead, then screws. */
 function busyWeek(r: Rig): void {
@@ -37,10 +42,27 @@ describe('the fact sheet', () => {
     expect(sheet.lines[0]).toMatchObject({ id: 'F1' });
     expect(text[0]).toContain('2026-11-21');
     expect(text.find((t) => t.startsWith('Sanding discs'))).toContain('9 used in the 7 days before today');
-    expect(text.find((t) => t.startsWith('Wood screws'))).toContain('3 used today');
+    expect(text.find((t) => t.startsWith('Sanding discs'))).toContain('9 used this week (0 of them today)');
+    expect(text.find((t) => t.startsWith('Wood screws'))).toContain('3 used this week (3 of them today)');
+    expect(text).toContain('Most used this week, in units of each part: Sanding discs 120 grit 9, then Wood screws #8 x 1-1/4 in 3. 2 parts were not used this week.');
     expect(text.some((t) => t.startsWith('Order RU-1042') && t.includes('total $67.71 CAD') && t.includes('Offcut Supply'))).toBe(true);
     expect(text.at(-1)).toBe('Placed orders: 1, together $67.71 CAD.');
     for (const t of text) expect(t).not.toMatch(/[\u2013\u2014!]/);
+  });
+
+  it('ranks this week with ties named as ties', () => {
+    const p = (name: string, usedWeek: number) => ({ name, usedWeek }) as ProductFacts;
+    expect(rankingLine([p('Flat washers', 1), p('Hex bolts', 1), p('MWAX', 1), p('9V batteries', 1)])).toBe('Most used this week, in units of each part: Flat washers, Hex bolts, MWAX and 9V batteries 1 each.');
+    expect(rankingLine([p('A', 2), p('B', 5), p('C', 2), p('D', 0)])).toBe('Most used this week, in units of each part: B 5, then A and C 2 each. 1 part was not used this week.');
+    expect(rankingLine([p('A', 5), p('B', 4), p('C', 3), p('D', 2), p('E', 1)])).toBe('Most used this week, in units of each part: A 5, then B 4, then C 3, then D 2, and less for the rest.');
+    expect(rankingLine([p('A', 0)])).toBe('Nothing was used this week.');
+  });
+
+  it('has a line for each count check that is holding an order', async () => {
+    const r = await rig();
+    r.room.s.checks = [CHECK];
+    const text = factSheet(r.room).lines.map((l) => l.text);
+    expect(text).toContain(`Count check on Wood screws #8 x 1-1/4 in, waiting for a person since 09:10: the count went from 11 to 2 at once. ${CHECK.text}`);
   });
 });
 
@@ -51,6 +73,9 @@ describe('the prompt and the answer', () => {
     expect(prompt).toContain('one or two short plain sentences');
     expect(prompt).toContain('No exclamation marks');
     expect(prompt).toContain('The data here does not answer that.');
+    expect(prompt).toContain('say they tie');
+    expect(prompt).toContain('Do not add numbers up yourself');
+    expect(prompt).toContain('count check is waiting');
     expect(prompt).toContain('{"F1":"Wood glue: 3 on the board."}');
     expect(prompt).toContain(JSON.stringify(QUESTION));
   });
@@ -151,7 +176,7 @@ describe('POST /api/ask', () => {
     busyWeek(r);
     const result = AskResult.parse(await (await r.call('POST', '/api/ask', { question: QUESTION })).json());
     expect(result.source).toBe('fallback');
-    expect(result.answer).toBe('Sanding discs 120 grit was used most this week: 9 (pack of 10). Next is Wood screws #8 x 1-1/4 in at 3.');
+    expect(result.answer).toBe('Sanding discs 120 grit was used most this week, 9. Next: Wood screws #8 x 1-1/4 in 3.');
     expect(result.facts).toHaveLength(2);
   });
 
@@ -198,6 +223,28 @@ describe('the fallback answer', () => {
   it('says so when nothing was used', async () => {
     const r = await rig();
     for (const p of r.room.s.products) for (const d of [...daysBefore(r.room.today(), 7), r.room.today()]) r.room.usageDay(p.id, d).used = 0;
-    expect(fallbackAnswer(QUESTION, factSheet(r.room))).toEqual({ answer: 'Nothing was used this week.', facts: [] });
+    expect(fallbackAnswer(QUESTION, factSheet(r.room))).toEqual({ answer: 'Nothing was used this week.', facts: ['Nothing was used this week.'] });
+  });
+
+  it('names a tie at the top as a tie', async () => {
+    const r = await rig();
+    for (const p of r.room.s.products) for (const d of [...daysBefore(r.room.today(), 7), r.room.today()]) r.room.usageDay(p.id, d).used = 0;
+    r.room.usageDay('p-glue', r.room.today()).used = 1;
+    r.room.usageDay('p-brackets', r.room.today()).used = 1;
+    expect(fallbackAnswer(QUESTION, factSheet(r.room)).answer).toBe('Corner brackets 2 in and Wood glue 473 mL tie for most used this week, 1 each.');
+  });
+
+  it('says why an order is held when a count check is waiting', async () => {
+    const r = await rig();
+    r.room.s.checks = [CHECK];
+    const sheet = factSheet(r.room);
+    for (const q of ['Why did it not order wood screws?', "Why didn't we reorder screws?", 'Is anything held?']) {
+      const result = fallbackAnswer(q, sheet);
+      expect(result.answer).toBe(CHECK.text);
+      expect(result.facts).toHaveLength(1);
+    }
+    expect(fallbackAnswer('How much did we spend?', sheet).answer).toBe('There are no orders yet.');
+    r.room.s.checks = [];
+    expect(fallbackAnswer('Why did it not order wood screws?', factSheet(r.room)).answer).toBe('There are no orders yet.');
   });
 });
