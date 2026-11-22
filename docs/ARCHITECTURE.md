@@ -61,8 +61,8 @@ Offline rule: the node keeps a copy of each product's reorder point. If it canno
 
 | Thing | Local | Deployed |
 | --- | --- | --- |
-| Hub and web | `wrangler dev` on the worktree PORT | https://wheredidallmyinventorygo.wtf (workers.dev URL until DNS is live) |
-| Supply | `wrangler dev` on PORT + 1 | https://offcut.wheredidallmyinventorygo.wtf (workers.dev URL until DNS is live) |
+| Hub and web | `wrangler dev` on the worktree PORT | https://wheredidallmyinventorygo.wtf (https://wheredidallmyinventorygo.wtf still answers) |
+| Supply | `wrangler dev` on PORT + 1 | https://offcut.wheredidallmyinventorygo.wtf (https://offcut.wheredidallmyinventorygo.wtf still answers) |
 | Eye stream | http://localhost:8089/stream/board.mjpg (the TV's browser runs on the eye's laptop) | local only |
 | Node | the Pi on the venue or hotspot network | local only |
 

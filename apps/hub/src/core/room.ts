@@ -5,7 +5,7 @@ import type { Activity, CatalogItem, Count, Job, Order, PickEvent, Policy, Produ
 import { policyFor } from '@reup/brain';
 import type { Config } from '../config';
 import type { History } from '../history';
-import { applySampleHistory, seedSnapshot } from '../seed';
+import { applySampleHistory, seedSnapshot, suppliersFor } from '../seed';
 import type { Asker } from '../ask/gemini';
 import type { Namer } from '../teach/gemini';
 import { dayIn, daysBefore, isoIn } from './time';
@@ -122,6 +122,8 @@ export class RoomCore {
       this.s = saved.s;
       this.x = { ...freshInternal(), ...saved.x };
       this.s.buyerOnline = false;
+      // Suppliers are settings, not state: a saved Room takes the store's address and the retailer list as they are set now.
+      this.s.suppliers = suppliersFor(this.config);
       return;
     }
     this.x = freshInternal();

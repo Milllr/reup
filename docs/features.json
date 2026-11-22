@@ -415,7 +415,7 @@
         "apps/hub/wrangler.jsonc defines the Worker, the Room Durable Object, the D1 database and static assets from apps/web/dist; apps/supply/wrangler.jsonc defines the store and its D1",
         "`npm run deploy` at the root builds web, applies D1 migrations and deploys both Workers",
         "Secrets are pushed from Infisical with one documented line per Worker; none are in the repo",
-        "Custom domains are set when DNS is on Cloudflare; until then the workers.dev URLs work and are written in docs/DECISIONS.md",
+        "Custom domains are set: the hub on wheredidallmyinventorygo.wtf and the store on offcut.wheredidallmyinventorygo.wtf; the workers.dev URLs still answer and are written in docs/DEPLOY.md",
         "A GitHub Action deploys main after CI passes, using a Cloudflare API token secret"
       ],
       "tests": ["wrangler config files parse and name the bindings the code uses"],

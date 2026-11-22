@@ -23,9 +23,11 @@ Deployed Sat Nov 21 with wrangler from Miller's laptop.
 
 | What | Address |
 | --- | --- |
-| Hub: TV, phone, operator, API | https://wheredidallmyinventorygo.wtf |
+| Hub: board, phone, operator, API | https://wheredidallmyinventorygo.wtf |
 | Analytics | https://wheredidallmyinventorygo.wtf/analytics |
 | Offcut Supply | https://offcut.wheredidallmyinventorygo.wtf |
+
+The workers.dev addresses still answer (`workers_dev` is on in both configs): https://wheredidallmyinventorygo.wtf and https://offcut.wheredidallmyinventorygo.wtf. Anything that still posts to them keeps working.
 
 The two D1 databases exist and their ids are in `apps/hub/wrangler.jsonc` and `apps/supply/wrangler.jsonc`. Deploy again after a change, from the repo root: `npm run deploy`
 
@@ -41,7 +43,7 @@ Still to do:
 1. The other secrets. The Workers run on their `dev-` values for the tokens and passwords until this is done. From Infisical, one line a Worker, with the hub's secrets under the Infisical path `/hub` and the store's under `/supply`.
    * From apps/hub: `infisical export --path=/hub --format=dotenv | npx wrangler secret bulk`
    * From apps/supply: `infisical export --path=/supply --format=dotenv | npx wrangler secret bulk`
-2. The domain. wheredidallmyinventorygo.wtf has its DNS at GoDaddy, so wrangler cannot put the Workers on it yet. Move the nameservers to Cloudflare, then add a custom domain to each Worker and change `SUPPLY_URL` and `HUB_URL` in the two wrangler.jsonc files back to the domain.
+2. The domain is done. The nameservers moved from GoDaddy to Cloudflare on Saturday night, each Worker has a custom domain in its wrangler.jsonc, and `SUPPLY_URL` and `HUB_URL` are the domain. One thing to know if it is ever set up again: Cloudflare copies the old host's records when a domain is added, and it will not attach a Worker to a name that already has records (error 100117). Delete the copied A records for that name in the dashboard, then deploy.
 
 | Worker | Secrets it reads |
 | --- | --- |

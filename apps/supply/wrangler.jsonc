@@ -6,7 +6,7 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-11-01",
   // global_fetch_strictly_public: the store tells the hub about an order with a fetch, and both Workers sit on the same
-  // workers.dev zone. Without the flag Cloudflare refuses that fetch from a request (error 1042), so "order confirmed"
+  // zone. On workers.dev, without the flag, Cloudflare refused that fetch from a request (error 1042), so "order confirmed"
   // never reached the hub. Only "shipped", sent from the Shipper's alarm 20 seconds later, did.
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   // The store's address on the team's domain. workers_dev stays on so the old address keeps answering.
@@ -16,7 +16,7 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Shipper"] }],
   "d1_databases": [{ "binding": "DB", "database_name": "offcut-supply", "migrations_dir": "migrations" }],
   "vars": {
-    // The workers.dev address until the domain's DNS is on Cloudflare. Then: https://wheredidallmyinventorygo.wtf
+    // The hub's address on the team's domain. The store posts "order confirmed" and "shipped" to it.
     "HUB_URL": "https://wheredidallmyinventorygo.wtf",
     "ACCOUNT_EMAIL": "shop@reup.test",
     "SHIP_DELAY_MS": "20000",

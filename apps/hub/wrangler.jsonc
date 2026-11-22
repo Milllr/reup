@@ -5,7 +5,9 @@
   "name": "reup-hub",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-01",
-  "compatibility_flags": ["nodejs_compat"],
+  // global_fetch_strictly_public: the hub reads the store's catalog with a fetch, and both Workers now sit on the same zone.
+  // With the flag that fetch goes in through the front door like anyone else's (see apps/supply/wrangler.jsonc).
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   // The team's address. The zone is on Cloudflare since Saturday night (nameservers moved from GoDaddy).
   // workers_dev stays on: the eye, the buyer and the shelf node may still post to the workers.dev address.
   "workers_dev": true,
@@ -22,7 +24,7 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
   "d1_databases": [{ "binding": "DB", "database_name": "reup-hub", "migrations_dir": "migrations" }],
   "vars": {
-    // The workers.dev address until the domain's DNS is on Cloudflare. Then: https://offcut.wheredidallmyinventorygo.wtf
+    // The store's address on the team's domain. It is what the buyer's browser opens, so it is what a judge reads in the live pane.
     "SUPPLY_URL": "https://offcut.wheredidallmyinventorygo.wtf",
     // Asked in this order until one answers. The newest Flash is last: it was overloaded on demo weekend.
     "GEMINI_MODEL": "gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.6-flash,gemini-3.8-flash",

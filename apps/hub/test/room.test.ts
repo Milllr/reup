@@ -29,6 +29,17 @@ describe('the Room', () => {
     expect(again.room.x.seq).toBe(r.room.x.seq);
   });
 
+  it('a saved Room takes the store address that is set now, not the one it was seeded with', async () => {
+    const first = await rig({ SUPPLY_URL: 'https://old-store.example' });
+    await first.room.save();
+    expect(first.room.s.suppliers[0]).toMatchObject({ id: 's-offcut', baseUrl: 'https://old-store.example' });
+    const second = await rig({ SUPPLY_URL: 'https://offcut.example' }, {}, first.store);
+    expect(second.room.s.suppliers[0]).toMatchObject({ id: 's-offcut', baseUrl: 'https://offcut.example', searchUrl: 'https://offcut.example/search?q={q}' });
+    // The rest of what was saved is still there.
+    expect(second.room.s.products).toHaveLength(4);
+    expect(second.room.s.suppliers.length).toBe(first.room.s.suppliers.length);
+  });
+
   it('sends job messages to buyers only, and everything else to everyone', async () => {
     const r = await rig();
     await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 4)] }, DEVICE);
