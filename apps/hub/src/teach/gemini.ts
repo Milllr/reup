@@ -9,6 +9,8 @@ export interface NameResult {
   name: string;
   unit: string;
   confidence: 'sure' | 'fairly_sure' | 'not_sure';
+  /** True when the photo shows no item at all: the bare spot. There is then nothing to name, and no card. */
+  empty?: boolean;
 }
 
 export interface Namer {
@@ -24,7 +26,8 @@ export function buildPrompt(catalog: readonly CatalogItem[]): string {
     'If one catalog item matches what is in the photo, answer with its SKU exactly as written. Read any label, size or count printed on the packaging to choose between similar items.',
     'If nothing in the catalog matches, answer with sku null and give your own short name and unit (for example "box of 100", "bag of 10", "each").',
     'confidence is "sure" when a printed label confirms it, "fairly_sure" when it matches by look, "not_sure" otherwise.',
-    'Answer with JSON only: {"sku": string or null, "name": string, "unit": string, "confidence": "sure" | "fairly_sure" | "not_sure"}.',
+    'If the photo shows no item at all, only a bare shelf, ledge, board, wall or table, answer with "empty": true, sku null and name "". Never name the shelf, the wood or the room as the item.',
+    'Answer with JSON only: {"sku": string or null, "name": string, "unit": string, "confidence": "sure" | "fairly_sure" | "not_sure", "empty": boolean}.',
   ].join('\n');
 }
 
@@ -35,9 +38,18 @@ const SCHEMA = {
     name: { type: 'string' },
     unit: { type: 'string' },
     confidence: { type: 'string', enum: ['sure', 'fairly_sure', 'not_sure'] },
+    empty: { type: 'boolean' },
   },
   required: ['sku', 'name', 'unit', 'confidence'],
 };
+
+/**
+ * A name that says there is no item, for a model that names the bare spot in place of setting the flag:
+ * "Empty wooden cabinet or shelf", "Bare wooden ledge", "Nothing", "No item on the shelf". A part that is sold empty
+ * or bare ("Empty spray bottles", "Bare copper wire") is a part: the word alone is not enough, it has to be about the
+ * shelf itself.
+ */
+const NOTHING = /^(?:an?\s+|the\s+)?(?:(?:empty|bare|blank)\b.*\b(?:shelf|shelves|cabinet|ledge|board|table|surface|background|wall|spot|wood)\b|(?:nothing|none|no\s+(?:item|part|object|product|thing)s?)\b)/i;
 
 /** Reads the model's answer even when it wraps the JSON in a code fence. */
 export function parseAnswer(text: string): NameResult {
@@ -47,6 +59,8 @@ export function parseAnswer(text: string): NameResult {
   const confidence = raw.confidence === 'sure' || raw.confidence === 'fairly_sure' ? raw.confidence : 'not_sure';
   const sku = typeof raw.sku === 'string' && raw.sku.trim() !== '' && raw.sku !== 'null' ? raw.sku.trim() : null;
   const name = typeof raw.name === 'string' ? raw.name.trim() : '';
+  // The bare spot: the model says so, or it named the shelf itself ("Empty wooden cabinet or shelf") with no store item.
+  if (raw.empty === true || raw.empty === 'true' || (sku == null && NOTHING.test(name))) return { sku: null, name: '', unit: 'each', confidence: 'not_sure', empty: true };
   if (sku == null && name === '') throw new Error('The model gave no name.');
   return { sku, name, unit: typeof raw.unit === 'string' && raw.unit.trim() !== '' ? raw.unit.trim() : 'each', confidence };
 }

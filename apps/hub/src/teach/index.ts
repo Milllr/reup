@@ -10,6 +10,9 @@ export const NAME_TIMEOUT_MS = 18_000;
 
 export const cropKey = (id: string) => `crop:${id}`;
 
+/** The line the screens show while a new part is being named. */
+export const NAMING = 'A new part is on the teach spot. Naming it.';
+
 /** Offcut's public catalog, cached for 5 minutes. A failed fetch falls back to the last good copy. */
 export async function catalog(room: RoomCore): Promise<CatalogItem[]> {
   const cached = room.x.catalog;
@@ -51,6 +54,15 @@ async function nameIt(room: RoomCore, id: string, jpegBase64: string): Promise<v
       if (timer != null) clearTimeout(timer);
     });
     if (room.s.teach?.id !== id || room.s.teach.status !== 'naming') return;
+    if (result.empty) {
+      // Nothing is on the spot: the eye took a shadow or a bumped camera for a part. There never was one, so the card
+      // comes down, its line goes, and nothing is said. An empty spot is never offered as a part.
+      await room.deps.store.delete(cropKey(id));
+      setTeach(room, null);
+      room.s.activity = room.s.activity.filter((a) => a.text !== NAMING);
+      room.emit({ type: 'snapshot', snapshot: room.snapshot() });
+      return;
+    }
     const item = result.sku ? items.find((i) => i.sku === result.sku) : undefined;
     // A SKU that is not in the catalog is treated as no match.
     const suggestion = item
@@ -72,7 +84,7 @@ export async function startTeach(room: RoomCore, body: TeachBody): Promise<Teach
   await room.deps.store.put(cropKey(id), body.jpegBase64);
   const teach: TeachState = { id, status: 'naming', cropUrl: `/api/teach/${id}/crop.jpg`, suggestion: null, zoneId: body.zoneId, error: null, ts: room.iso() };
   setTeach(room, teach);
-  room.activity('working', 'A new part is on the teach spot. Naming it.');
+  room.activity('working', NAMING);
   room.later(nameIt(room, id, body.jpegBase64));
   return teach;
 }

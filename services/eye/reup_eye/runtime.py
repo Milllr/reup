@@ -193,6 +193,8 @@ class Runtime:
         before = steady.is_moved()
         if steady.update(found):
             self._put_back(cam_id, steady.matrix if steady.is_moved() else None)
+            # Every edge in the picture just shifted. The teach spot must not read that as a new part.
+            self.eye.teach_relearn(cam_id)
             px = moved(steady.matrix) * src.raw.shape[1] / WIDTH
             self._say(state, f"The {cam_id} camera moved {px:.0f} pixels. The picture is lined up again." if steady.is_moved() else f"The {cam_id} camera is back where it was.")
             return  # the picture just changed: the next look checks it

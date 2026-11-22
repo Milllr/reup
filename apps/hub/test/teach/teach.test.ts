@@ -155,6 +155,41 @@ describe('naming a new part', () => {
     expect(await crop.text()).toBe('not really a jpeg');
   });
 
+  it('an empty teach spot is never offered as a part: the card comes down by itself and nothing is said', async () => {
+    const r = await rig({}, { fetch: catalogFetch, namer: namer({ sku: null, name: '', unit: 'each', confidence: 'not_sure', empty: true }) });
+    const lines = r.room.s.activity.length;
+    const res = await r.call('POST', '/api/teach', body, DEVICE);
+    const naming = TeachState.parse(await res.json());
+    await r.room.idle();
+    expect(r.room.s.teach).toBeNull();
+    expect(r.room.x.teachUntil).toBeNull();
+    expect(r.of('teach').map((m) => m.teach?.status ?? null)).toEqual(['naming', null]);
+    expect(r.room.s.activity).toHaveLength(lines);
+    expect(r.room.s.activity.some((a) => /teach spot|new part/i.test(a.text))).toBe(false);
+    expect(r.room.s.products.some((p) => /empty|shelf/i.test(p.name))).toBe(false);
+    expect((await r.call('GET', naming.cropUrl ?? '')).status).toBe(404);
+    // The spot takes a real part afterwards as usual.
+    const next = await rig({}, { fetch: catalogFetch, namer: namer({ sku: 'OC-1008-200', name: '', unit: '', confidence: 'sure' }) });
+    await next.call('POST', '/api/teach', body, DEVICE);
+    await next.room.idle();
+    expect(next.room.s.teach?.status).toBe('needs_confirm');
+  });
+
+  it('reads the bare spot from the model\'s flag, and from a name that only describes the shelf', () => {
+    expect(parseAnswer('{"sku":null,"name":"","unit":"","confidence":"not_sure","empty":true}')).toMatchObject({ empty: true, sku: null, name: '' });
+    expect(parseAnswer('{"sku":null,"name":"Empty wooden cabinet or shelf","unit":"each","confidence":"not_sure"}')).toMatchObject({ empty: true });
+    expect(parseAnswer('{"sku":null,"name":"Nothing on the ledge","unit":"each","confidence":"not_sure"}')).toMatchObject({ empty: true });
+    expect(parseAnswer('{"sku":null,"name":"No item","unit":"each","confidence":"not_sure"}')).toMatchObject({ empty: true });
+    // A real part is not taken for nothing: a store item always stands, and so does a name that only has such a word inside it.
+    expect(parseAnswer('{"sku":"OC-1008-200","name":"Empty","unit":"box","confidence":"sure"}').empty).toBeUndefined();
+    expect(parseAnswer('{"sku":null,"name":"Bare wooden ledge","unit":"each","confidence":"not_sure"}')).toMatchObject({ empty: true });
+    expect(parseAnswer('{"sku":null,"name":"Blank keys, brass","unit":"each","confidence":"fairly_sure"}').empty).toBeUndefined();
+    expect(parseAnswer('{"sku":null,"name":"Empty spray bottles 16 oz","unit":"each","confidence":"fairly_sure"}').empty).toBeUndefined();
+    expect(parseAnswer('{"sku":null,"name":"Bare copper wire","unit":"roll","confidence":"fairly_sure"}').empty).toBeUndefined();
+    expect(parseAnswer('{"sku":null,"name":"Wood screws, none plated","unit":"box","confidence":"fairly_sure"}').empty).toBeUndefined();
+    expect(buildPrompt(items)).toContain('"empty": true');
+  });
+
   it('treats a SKU that is not in the catalog as no match', async () => {
     const r = await rig({}, { fetch: catalogFetch, namer: namer({ sku: 'OC-0000', name: 'Mystery bolts', unit: 'bag of 10', confidence: 'sure' }) });
     await r.call('POST', '/api/teach', body, DEVICE);

@@ -407,6 +407,22 @@ class Eye:
         self.teach_last = {"frame": frame, "zone": zone, "blob": parts[0] if parts else None}
         self._teach_step(frame, zone, parts[0] if parts and not reaching else None, moving, now, reaching)
 
+    def teach_relearn(self, camera_id: str) -> None:
+        """The picture from this camera was just moved to line up again, or moved back. The empty spot is learned afresh.
+
+        A bumped camera shifts every edge in the picture by a few pixels, and so does the move that puts it right.
+        Against the old picture of the empty spot that shift read as something new on it: at 3:00 AM on Sun Nov 22 a
+        card went up for the bare ledge after the camera was knocked 9 pixels. A part that is waiting for its name keeps
+        its card. Anything else on the spot becomes part of the empty spot, as if it had been there when the eye started.
+        """
+        with self.lock:
+            if self.teach_zone()["camera"] != camera_id or self.pending_teach is not None:
+                return
+            self.teach_base, self.teach_before, self.teach_still_since, self.teach_present_since = None, None, None, None
+            self.teach_spot.armed = False
+            self.teach_spot.empty_since = None
+            self.teach_spot.still_since = None
+
     def _teach_cells(self, quad: list, frame: np.ndarray) -> int:
         """How many cells across the teach spot is read in: one for every teach.fine pixels of the picture.
 

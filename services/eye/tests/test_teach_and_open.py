@@ -325,6 +325,35 @@ def test_something_moved_beside_the_teach_spot_does_not_blind_it(tmp_path):
     assert not any("empty picture was taken again" in line for line in logs)
 
 
+def test_a_bumped_camera_does_not_raise_a_card_for_the_bare_spot(tmp_path):
+    def ledge(shift: int):
+        # The bare spot with a ledge across it. A bumped camera moves the ledge a few pixels in the picture.
+        img = np.full((H, W, 3), 150, dtype=np.uint8)
+        img[int(0.8 * H) + shift : int(0.86 * H) + shift, int(0.66 * W) : int(0.84 * W)] = 40
+        return img
+
+    # Without the relearn the shifted ledge reads as a patch of another surface on the spot, and a card goes up.
+    plain, plain_hub, _ = eye(tmp_path / "plain", TEACH, with_reference=False)
+    t = still(plain, ledge(0), 0.0, 2.5)
+    still(plain, ledge(5), t, 2.5)
+    assert len(plain_hub.teaches) == 1
+    # The runtime says the picture was moved to line up: the eye learns the spot again and nothing is sent.
+    e, hub, _ = eye(tmp_path / "bumped", TEACH, with_reference=False)
+    t = still(e, ledge(0), 0.0, 2.5)
+    e.teach_relearn("board")
+    t = still(e, ledge(5), t, 4.0)
+    assert hub.teaches == [] and e.health()["teach"]["learned"]
+    # A real part set down afterwards is still found.
+    with_part = ledge(5)
+    fill(with_part, ITEM, 40)
+    still(e, with_part, t, 3.0)
+    assert len(hub.teaches) == 1
+    # Another camera's move is not this spot's business, and a part waiting for its name keeps its card.
+    e.teach_relearn("aux")
+    e.teach_relearn("board")
+    assert e.pending_teach is not None and e.teach_base is not None
+
+
 def test_a_person_can_ask_for_what_is_on_the_teach_spot_to_be_named(tmp_path):
     e, hub, logs = eye(tmp_path, TEACH, with_reference=False)
     assert "not looked" in e.teach_now()
