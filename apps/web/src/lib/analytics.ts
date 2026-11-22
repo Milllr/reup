@@ -17,6 +17,14 @@ export function dayLabel(day: string): string {
 /** "Nov 24" */
 export const shortDay = (day: string) => new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' }).format(new Date(noon(day)));
 
+/**
+ * Which columns of a chart get a date under them: today, and every so many days either side of it.
+ * Counted from today so the dates stay put as the chart's first day moves on.
+ */
+export function dateTicks(days: readonly string[], today: number, every: number): { index: number; label: string }[] {
+  return days.flatMap((day, index) => ((index - today) % every === 0 ? [{ index, label: shortDay(day) }] : []));
+}
+
 /** "in 12 days", "tomorrow", "today" */
 export function inDays(n: number): string {
   if (n <= 0) return 'today';
@@ -162,7 +170,7 @@ export function stepped(points: readonly [number, number][]): string {
 export function describe(col: Column, part: AnalyticsPart): string[] {
   const lines = [col.when === 'today' ? `Today, ${shortDay(col.day)}` : dayLabel(col.day)];
   if (col.when === 'ahead') lines.push(col.low === col.high ? `${col.stock} expected` : `${col.stock} expected, ${col.low} to ${col.high}`);
-  else lines.push(`${col.stock} on the board${col.sample ? ', sample' : ''}`);
+  else lines.push(`${col.stock} on the board`);
   if (col.used > 0) lines.push(`${unitsText(col.used, part.unit)} used`);
   if (col.arrives > 0) lines.push(`${unitsText(col.arrives, part.unit)} ${col.when === 'ahead' ? 'arrive' : 'came in'}`);
   if (col.ordered > 0) lines.push(`reup orders ${unitsText(col.ordered, part.unit)}`);

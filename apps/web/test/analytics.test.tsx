@@ -2,7 +2,7 @@ import { AnalyticsResult, type AnalyticsPart } from '@reup/contracts';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import analytics from '../../../contracts/mocks/analytics.json';
-import { byHour, columns, coming, dayLabel, daysBetween, describe as say, feed, hourLabel, inDays, movers, nextOrder, partLine, scale, standing, stepped, totals, useByDay, weekChange } from '../src/lib/analytics';
+import { byHour, columns, coming, dateTicks, dayLabel, daysBetween, describe as say, feed, hourLabel, inDays, movers, nextOrder, partLine, scale, standing, stepped, totals, useByDay, weekChange } from '../src/lib/analytics';
 import { AnalyticsView, StockChart, useAnalytics } from '../src/screens/analytics';
 import { mockSnapshot } from '../src/store/mock';
 import { initial, type LiveState } from '../src/store/reduce';
@@ -73,7 +73,7 @@ describe('the numbers on the Analytics page', () => {
     expect(say(cols[30] as never, p)).toEqual(['Today, Nov 21', '4 on the board']);
     const order = cols.find((c) => c.ordered > 0);
     expect(say(order as never, p).at(-1)).toMatch(/^reup orders 2/);
-    expect(say(cols[4] as never, p)).toEqual(['Mon Oct 26', '3 on the board, sample', '1 pack used']);
+    expect(say(cols[4] as never, p)).toEqual(['Mon Oct 26', '3 on the board', '1 pack used']);
   });
 
   it('draws a stepped line with a corner at every change and none in between', () => {
@@ -109,14 +109,20 @@ describe('the Analytics page', () => {
     expect(now.getByText('Flat washers 3/4 in. Empty Fri Dec 11 if nothing more came in.')).toBeTruthy();
     expect(now.getByText('18 units, about $181.02 before tax.')).toBeTruthy();
     expect(now.getByText('$17.68')).toBeTruthy();
-    expect(screen.getByText('Before today: sample history')).toBeTruthy();
+    // No tags over the figures unless something is wrong: nothing about who counted, nothing about sample days.
+    expect(screen.queryByText(/sample/i)).toBeNull();
+    expect(screen.queryByText(/Counted by the cameras/)).toBeNull();
 
     const parts = within(screen.getByLabelText('Each part'));
     for (const p of A.parts) expect(parts.getByLabelText(p.name)).toBeTruthy();
     expect(container.querySelectorAll('.card svg.chart')).toHaveLength(4);
     expect(parts.getByText('More on the way')).toBeTruthy();
     expect(parts.getByText('2 units on the way, here Tue Nov 24.')).toBeTruthy();
-    expect(parts.getByText('Reorder at 2 · uses 0.18 a day · 22 days of cover · $14.99 each')).toBeTruthy();
+    expect(parts.getByText('Uses 0.18 a day · 22 days of cover · $14.99 each')).toBeTruthy();
+    // A date under the axis every two weeks, counted from today.
+    const waxTicks = dateTicks(columns(part('p-wax'), A.today).map((c) => c.day), 30, 14);
+    expect(waxTicks.map((x) => x.index - 30)).toEqual([-28, -14, 0, 14, 28, 42, 56]);
+    expect(within(parts.getByLabelText('MWAX synthetic lubricant')).getAllByText(/^[A-Z][a-z]{2} \d{1,2}$/).map((n) => n.textContent)).toEqual(waxTicks.map((x) => x.label));
     // Every order day and every delivery ahead is marked on its chart.
     const wax = parts.getByLabelText('MWAX synthetic lubricant');
     expect(wax.querySelectorAll('rect.order')).toHaveLength(part('p-wax').projection.filter((d) => d.ordered > 0).length);

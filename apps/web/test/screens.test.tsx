@@ -1,5 +1,5 @@
 import type { AskResult, HistoryResult, Order, Snapshot, TeachState } from '@reup/contracts';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import history from '../../../contracts/mocks/history.json';
 import { yesKey, type Reply } from '../src/lib/hub';
@@ -12,7 +12,8 @@ import { EYE_AWAY, LEDGES_HINT, LEDGES_SAVE, LOOKING, nameTeachSpot } from '../s
 import { panes, Shop, shopSentence } from '../src/screens/shop';
 import { Teach } from '../src/screens/teach';
 import { Tv } from '../src/screens/tv';
-import { ASK_EMPTY, ASK_FALLBACK, ASK_WAIT, AskReup, Chart, scales, sourceLine, Why } from '../src/screens/why';
+import { ASK_FALLBACK, ASK_WAIT, AskReup, Chart, scales, SEASONS, sourceLine, Why } from '../src/screens/why';
+import { forgetHistory, HISTORY_RETRY, HISTORY_WAIT, prefetchHistory, useHistory } from '../src/screens/why/history';
 import askMock from '../../../contracts/mocks/ask-result.json';
 import { store } from '../src/store/live';
 import { mockSnapshot } from '../src/store/mock';
@@ -35,7 +36,8 @@ describe('Shelf', () => {
     expect(container.textContent).not.toContain('Wood screws ·');
     expect(container.querySelectorAll('.feed .zone')).toHaveLength(4);
     expect(container.querySelectorAll('.pocket.full')).toHaveLength(6 + 5);
-    expect(screen.getByText('Reorder at 4 · 11 days of cover')).toBeTruthy();
+    expect(screen.getByText('11 days of cover')).toBeTruthy();
+    expect(screen.queryByText(/Reorder at \d+ ·/)).toBeNull();
     expect(screen.getByText(WATCHING)).toBeTruthy();
     expect(screen.getByText('Counted by the shelf node on QNX')).toBeTruthy();
   });
@@ -228,6 +230,93 @@ describe('Why', () => {
     expect(line()).toBe('translateY(300px)');
     expect(container.querySelectorAll('.bar').length).toBeGreaterThan(5);
   });
+
+  it('puts a date under the axis every week, counted from today, and nothing else under it', () => {
+    const { container } = render(<Chart history={h} count={4} capacity={12} reorderPoint={4} />);
+    const dates = [...container.querySelectorAll('text')].map((n) => n.textContent ?? '').filter((s) => /^[A-Z][a-z]{2} \d{1,2}$/.test(s));
+    // 30 days behind, today, 7 ahead: a date four weeks back, each week since, today and a week on.
+    expect(dates).toHaveLength(6);
+    const day = (iso: string) => new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' }).format(new Date(`${iso}T12:00:00Z`));
+    expect(dates.at(-1)).toBe(day(h.forecast.at(-1)?.day ?? ''));
+    expect(dates[0]).toBe(day(h.days[2]?.day ?? ''));
+    expect(container.querySelectorAll('.tick')).toHaveLength(6);
+    expect(screen.queryByText('30 days ago')).toBeNull();
+  });
+
+  it('has the chart, the reason and the switch, and none of the lines Miller took off', () => {
+    render(<Why live={live('why')} />);
+    expect(screen.queryByText(/Bars are what was used/)).toBeNull();
+    expect(screen.queryByText(/sample/i)).toBeNull();
+    expect(screen.queryByText(/Ask about use/)).toBeNull();
+    expect(within(screen.getByRole('group', { name: 'Season' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['Slow', 'Normal', 'Busy']);
+    expect(SEASONS.map((x) => x.factor)).toEqual([0.6, 1, 1.4]);
+  });
+});
+
+describe('the Forecast chart is there when the screen opens', () => {
+  const h = history as HistoryResult;
+  const s = mockSnapshot('why');
+  const id = s.focusProductId ?? s.products[0]?.id ?? '';
+  const state = (patch: Partial<LiveState> = {}): LiveState => ({ ...live('why'), mock: false, ...patch });
+  function Probe({ send, again = 'a' }: { send: never; again?: string }) {
+    const { history: got, failed } = useHistory(id, again, false, send);
+    return <p>{got ? `days ${got.days.length}` : failed ? HISTORY_RETRY : HISTORY_WAIT}</p>;
+  }
+
+  it('says what it is reading, asks again when the hub does not answer, and then draws', async () => {
+    forgetHistory();
+    let n = 0;
+    const send = vi.fn(async () => (++n < 2 ? { ok: false, status: 0, data: null, message: 'Hub unreachable.' } : ok({ ...h, productId: id })));
+    vi.useFakeTimers();
+    render(<Probe send={send as never} />);
+    expect(screen.getByText(HISTORY_WAIT)).toBeTruthy();
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByText(HISTORY_RETRY)).toBeTruthy();
+    await act(async () => { await vi.advanceTimersByTimeAsync(2100); });
+    expect(screen.getByText('days 30')).toBeTruthy();
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenLastCalledWith('GET', `/api/products/${id}/history`);
+    vi.useRealTimers();
+  });
+
+  it('what was read is kept: the next time it is on screen at once, and read again behind it', async () => {
+    forgetHistory();
+    const send = vi.fn(async () => ok({ ...h, productId: id }));
+    prefetchHistory([id, id], send as never);
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    // Already kept: reading ahead again asks for nothing.
+    prefetchHistory([id], send as never);
+    expect(send).toHaveBeenCalledTimes(2);
+    render(<Probe send={send as never} />);
+    expect(screen.getByText('days 30')).toBeTruthy();
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+    // Something the hub does not send as a history is not drawn.
+    forgetHistory();
+    cleanup();
+    render(<Probe send={(async () => ok({ nope: true })) as never} />);
+    expect(await screen.findByText(HISTORY_RETRY)).toBeTruthy();
+    cleanup();
+  });
+
+  it('on the screen itself: the waiting line in the frame, and the switch works with the key this screen says yes with', async () => {
+    forgetHistory();
+    const fetched: [string, RequestInit | undefined][] = [];
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+      fetched.push([String(url), init]);
+      return new Response(JSON.stringify(String(url).includes('/history') ? { ...h, productId: id } : { ok: true }), { status: 200 });
+    });
+    render(<Why live={state()} />);
+    expect(screen.getByText(HISTORY_WAIT)).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText(HISTORY_WAIT)).toBeNull());
+    const busy = screen.getByRole('button', { name: 'Busy' }) as HTMLButtonElement;
+    expect(busy.disabled).toBe(false);
+    fireEvent.click(busy);
+    await waitFor(() => expect(fetched.some(([u]) => u.endsWith('/api/demo/season'))).toBe(true));
+    const [, init] = fetched.find(([u]) => u.endsWith('/api/demo/season')) ?? [];
+    expect(JSON.parse(String(init?.body))).toEqual({ label: 'Busy', factor: 1.4 });
+    spy.mockRestore();
+    forgetHistory();
+  });
 });
 
 describe('Ask reup', () => {
@@ -237,9 +326,9 @@ describe('Ask reup', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
   };
 
-  it('starts empty with a hint, and Ask waits for a question', () => {
-    render(<AskReup ask={vi.fn()} />);
-    expect(screen.getByText(ASK_EMPTY)).toBeTruthy();
+  it('starts with the field alone, and Ask waits for a question', () => {
+    const { container } = render(<AskReup ask={vi.fn()} />);
+    expect(container.querySelectorAll('p')).toHaveLength(0);
     expect((screen.getByRole('button', { name: 'Ask' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -673,13 +762,13 @@ describe('the operator page', () => {
   it('posts the season factor, the replay switch, a manual order and a cancel', async () => {
     const send = vi.fn(async () => ok({ ok: true }));
     render(<Controls s={s} ops="ops-1" send={send as never} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Busy week' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Busy' }));
     fireEvent.click(screen.getByRole('button', { name: 'cart' }));
     fireEvent.click(screen.getByRole('button', { name: 'Start order' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel order RU-1042' }));
     await waitFor(() => expect(send).toHaveBeenCalledTimes(4));
     expect(send.mock.calls.map((c) => (c as unknown[]).slice(0, 3))).toEqual([
-      ['POST', '/api/demo/season', { label: 'Busy week', factor: 1.4 }],
+      ['POST', '/api/demo/season', { label: 'Busy', factor: 1.4 }],
       ['POST', '/api/demo/replay', { kind: 'cart', on: true }],
       ['POST', '/api/orders', { productId: 'p-screws' }],
       ['POST', '/api/orders/o-1/cancel', undefined],

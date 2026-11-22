@@ -251,7 +251,8 @@ export function createApp(room: RoomCore, options: AppOptions = {}): Hono {
     return c.json(snapshot);
   });
   app.post('/api/demo/season', async (c) => {
-    allow(c, OPS_TOKEN);
+    // The switch is on the Forecast screen, so the key that says yes sets it too.
+    allow(c, APPROVE_KEY, OPS_TOKEN);
     setSeason(room, await body(c, Season));
     await done();
     return c.json(OK);

@@ -5,7 +5,6 @@ import { call, type Reply } from '../../lib/hub';
 import { mockAsk } from '../../store/mock';
 
 export const ASK_HINT = 'What did we use most this week?';
-export const ASK_EMPTY = 'Ask about use, stock or orders. The answer comes from the counts on this board.';
 export const ASK_WAIT = 'Asking.';
 export const ASK_FALLBACK = 'Gemini did not answer, so this is reup reading its own numbers.';
 
@@ -51,7 +50,6 @@ export function AskReup({ ask, style }: { ask: Ask; style?: CSSProperties }) {
         </span>
       </label>
       <div aria-live="polite" className="stack" style={{ gap: 6 }}>
-        {view.kind === 'empty' ? <p className="copy small" style={{ opacity: 0.7 }}>{ASK_EMPTY}</p> : null}
         {view.kind === 'asking' ? <p className="copy small">{ASK_WAIT}</p> : null}
         {view.kind === 'answer' ? (
           <>

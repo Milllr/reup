@@ -1,6 +1,6 @@
 import { Snapshot } from '@reup/contracts';
 import { describe, expect, it } from 'vitest';
-import { count, DEVICE, OPS, rig, toAwaiting } from '../helpers';
+import { APPROVE, count, DEVICE, OPS, rig, toAwaiting } from '../helpers';
 
 describe('seed, season, reset, replay', () => {
   it('seeds the demo so wood screws reorder at 4 and every part reads like the mockups', async () => {
@@ -18,20 +18,28 @@ describe('seed, season, reset, replay', () => {
 
   it('season recomputes every policy and tells the screens', async () => {
     const r = await rig();
-    const res = await r.call('POST', '/api/demo/season', { factor: 1.4, label: 'Busy week' }, OPS);
+    const res = await r.call('POST', '/api/demo/season', { factor: 1.4, label: 'Busy' }, OPS);
     expect(res.status).toBe(200);
-    expect(r.of('season')).toEqual([{ type: 'season', season: { factor: 1.4, label: 'Busy week' } }]);
+    expect(r.of('season')).toEqual([{ type: 'season', season: { factor: 1.4, label: 'Busy' } }]);
     expect(r.of('policy')).toHaveLength(4);
     expect(r.room.policy('p-screws')).toMatchObject({ seasonFactor: 1.4, reorderPoint: 5 });
-    await r.call('POST', '/api/demo/season', { factor: 0.6, label: 'Exam week' }, OPS);
+    await r.call('POST', '/api/demo/season', { factor: 0.6, label: 'Slow' }, OPS);
     expect(r.room.policy('p-screws')?.reorderPoint).toBe(3);
     expect(r.room.s.orders).toHaveLength(0);
+    // The switch is on the Forecast screen: the key that says yes sets it, and no key at all does not.
+    expect((await r.call('POST', '/api/demo/season', { factor: 1, label: 'Normal' }, APPROVE)).status).toBe(200);
+    expect(r.room.s.season).toEqual({ factor: 1, label: 'Normal' });
+    expect((await r.call('POST', '/api/demo/season', { factor: 1.4, label: 'Busy' })).status).toBe(401);
+    // On a hub that takes changes from any screen, the board's own switch works with no key.
+    const open = await rig({ APPROVE_OPEN: true });
+    expect((await open.call('POST', '/api/demo/season', { factor: 1.4, label: 'Busy' })).status).toBe(200);
+    expect(open.room.s.season.factor).toBe(1.4);
   });
 
   it('reset cancels and clears orders, keeps zones, products and counts, and restores the demo numbers', async () => {
     const r = await rig();
     await toAwaiting(r);
-    await r.call('POST', '/api/demo/season', { factor: 1.4, label: 'Busy week' }, OPS);
+    await r.call('POST', '/api/demo/season', { factor: 1.4, label: 'Busy' }, OPS);
     await r.call('POST', '/api/demo/screen', { screen: 'why', focusProductId: 'p-screws' }, OPS);
     const res = await r.call('POST', '/api/demo/reset', undefined, OPS);
     const snap = Snapshot.parse(await res.json());

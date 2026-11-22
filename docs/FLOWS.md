@@ -15,7 +15,7 @@ Each step names the screen and the data. Shapes are in contracts/.
 9. Order. The plate cuts to wine, the word is "Placing", and the frame holds the live browser: "Placing the order at Offcut Supply." The agent enters the PO number and places the order. Buyer posts IngestPlacedBody. Order becomes placed: the plate cuts to olive, the word is "Ordered", the figure is the confirmation number OC-58213. "Ordered. Arrives Tuesday."
 10. Offcut's webhook: order.confirmed, then order.shipped 20 seconds later. Order becomes shipped.
 11. After 20 seconds on placed, `screen` returns to shelf. Olive plate, the word "On the way". The wood screws row says "8 boxes on the way · arrives Tuesday".
-12. Why (operator presses 4). The chart and the season control. Flip to Busy week: the reorder line rises.
+12. Why (operator presses 4). The chart and the season control. Flip to Busy: the reorder line rises.
 13. Teach (operator presses 1, then puts a new part on the teach spot). Eye posts the crop. Overlay: "Looks like: Wood screws #8 x 2 in, box of 100." Confirm on the phone. "Counting it now."
 14. Reset. Parts go back: counts rise, order o-1 becomes received. Operator presses Reset demo.
 

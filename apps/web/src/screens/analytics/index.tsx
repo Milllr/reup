@@ -2,7 +2,7 @@
 import { AnalyticsResult, type AnalyticsPart } from '@reup/contracts';
 import { useEffect, useState, type MouseEvent } from 'react';
 import { Frame, Tag, Units, Word, Wordmark } from '../../components';
-import { BOX, byHour, columns, dayLabel, daysBetween, describe, feed, hourLabel, money, movers, nextOrder, partLine, scale, shortDay, standing, stepped, timeOf, totals, useByDay, weekChange } from '../../lib/analytics';
+import { BOX, byHour, columns, dateTicks, dayLabel, daysBetween, describe, feed, hourLabel, money, movers, nextOrder, partLine, scale, shortDay, standing, stepped, timeOf, totals, useByDay, weekChange } from '../../lib/analytics';
 import { call } from '../../lib/hub';
 import { useLive } from '../../store/live';
 import { mockAnalytics } from '../../store/mock';
@@ -84,8 +84,13 @@ export function StockChart({ part, today }: { part: AnalyticsPart; today: string
       <rect className="mark" x={sc.x(now) - 6} y={sc.y(part.count) - 6} width={12} height={12} />
       <text x={sc.x(now) - 10} y={22} textAnchor="end">Today</text>
       <text x={sc.x(now) + 10} y={22}>{`Next ${part.projection.length} days`}</text>
-      <text x={BOX.x0} y={BOX.h - 12}>{shortDay(cols[0]?.day ?? today)}</text>
-      <text x={BOX.x1} y={BOX.h - 12} textAnchor="end">{shortDay(cols.at(-1)?.day ?? today)}</text>
+      {/* A mark every week, a date every second one: 13 dates across 90 days would run into each other. */}
+      {dateTicks(cols.map((c) => c.day), now, 7).map((t) => (
+        <g key={t.index}>
+          <line className="tick" x1={sc.x(t.index)} y1={BOX.y0} x2={sc.x(t.index)} y2={BOX.y0 + ((t.index - now) % 14 === 0 ? 10 : 5)} />
+          {(t.index - now) % 14 === 0 ? <text x={sc.x(t.index)} y={BOX.h - 12} textAnchor="middle">{t.label}</text> : null}
+        </g>
+      ))}
       {tip && hover != null ? (
         <g className="tip" pointerEvents="none">
           <line className="cross" x1={sc.x(hover)} y1={34} x2={sc.x(hover)} y2={BOX.y0} />
@@ -100,7 +105,7 @@ export function StockChart({ part, today }: { part: AnalyticsPart; today: string
 function PartCard({ part, today }: { part: AnalyticsPart; today: string }) {
   const st = standing(part, today);
   const facts = part.ratePerDay > 0
-    ? `Reorder at ${part.reorderPoint} · uses ${part.ratePerDay.toFixed(2)} a day · ${Math.round(part.daysOfCover ?? 0)} days of cover${part.unitPrice != null ? ` · ${money(part.unitPrice)} each` : ''}`
+    ? `Uses ${part.ratePerDay.toFixed(2)} a day · ${Math.round(part.daysOfCover ?? 0)} days of cover${part.unitPrice != null ? ` · ${money(part.unitPrice)} each` : ''}`
     : 'Counting · not in use yet';
   return (
     <article className="stack card" aria-label={part.name}>
@@ -177,8 +182,7 @@ export function AnalyticsView({ live, a }: { live: LiveState; a: AnalyticsResult
       <header className="stack" style={{ gap: 18 }}>
         <p className="copy" style={{ maxWidth: '30em' }}>Every part on the board: what it held, what was used, and what reup expects to order next.</p>
         <div className="wrap">
-          <Tag tone={alert ? 'alert' : 'blue'}>{alert ?? `Counted by the cameras · ${timeOf(a.now)}`}</Tag>
-          {t.sample ? <Tag>Before today: sample history</Tag> : null}
+          {alert ? <Tag tone="alert">{alert}</Tag> : null}
         </div>
       </header>
 
@@ -208,7 +212,7 @@ export function AnalyticsView({ live, a }: { live: LiveState; a: AnalyticsResult
           <div className="stack" style={{ gap: 8 }}><h2 className="name">Used each day, every part</h2><span className="meta">{`${t.used30} units in 30 days · today is the bright bar`}</span></div>
           <Frame label="Units used each day over the last 30 days" className="plot short">
             <Columns label={`Units used on each of the last 30 days. ${t.used30} in all, ${t.usedToday} today.`} empty="Nothing was used in these 30 days."
-              items={days.map((d, i) => ({ key: d.day, value: d.used, now: d.today, title: `${dayLabel(d.day)}: ${d.used} used${d.sample ? ', sample' : ''}`, tick: i === 0 || d.today ? shortDay(d.day) : undefined }))} />
+              items={days.map((d, i) => ({ key: d.day, value: d.used, now: d.today, title: `${dayLabel(d.day)}: ${d.used} used`, tick: (days.length - 1 - i) % 7 === 0 ? shortDay(d.day) : undefined }))} />
           </Frame>
         </div>
         <div className="stack" style={{ gap: 18 }}>

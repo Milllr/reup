@@ -113,7 +113,6 @@ export function factSheet(room: RoomCore): FactSheet {
     if (p.ratePerDay != null) parts.push(`about ${p.ratePerDay} a day`);
     if (p.reorderPoint != null) parts.push(`reorder point ${p.reorderPoint}`);
     parts.push(p.daysOfCover != null ? `${p.daysOfCover} days of cover` : 'no use yet, so no days of cover');
-    if (p.sample) parts.push('history is partly sample data');
     texts.push(`${parts.join(', ')}.`);
   }
   texts.push(rankingLine(products));

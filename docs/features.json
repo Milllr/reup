@@ -364,8 +364,8 @@
       "story": "As a judge, I want to see that the reorder point is reasoning, not a setting.",
       "acceptance": [
         "Matches docs/ui/why.html: paper plate, the word \"Forecast\", an SVG chart in the frame with 30 days of use (bars), the stepped stock line, a 7 day forecast band, the reorder point as an orange line, today as a dotted line",
-        "Beside it: the reorder point as a figure, the policy reason, and a season control (Normal 1.0, Busy week 1.4, Exam week 0.6) that calls POST /api/demo/season when opened with the ops token; the line moves within 300 ms of the policy message",
-        "The tag \"Sample history\" shows bottom right when any day is flagged sample"
+        "Beside it: the reorder point as a figure, the policy reason, and a season control (Slow 0.6, Normal 1.0, Busy 1.4) that calls POST /api/demo/season with the key this screen says yes with, so it works on any screen when the hub is open; the line moves within 300 ms of the policy message. Under it Ask reup, with no hint under the field",
+        "Under the axis there is a date every week, counted from today. No line explains the chart and no tag says a day is sample. The chart is there when the screen opens: the board reads every part's history as soon as it has its parts and keeps the last one read. Until one is read the frame says \"Reading 30 days of counts.\", and when the hub does not answer it says so and asks again every 2 seconds"
       ],
       "tests": ["scales map the history mock into the chart box", "the reorder line follows a policy message", "season control posts the right factor"],
       "screens": ["docs/ui/why.html"], "depends": ["F23"]
@@ -428,7 +428,7 @@
       "story": "As a judge or the person who runs the shop, I want to ask a plain question like \"What did we use most this week?\" and get a short answer with numbers from what reup has counted.",
       "acceptance": [
         "The Why screen has an Ask reup box under the season control: a text field with the hint \"What did we use most this week?\", an Ask button, and one answer line",
-        "Empty: a quiet line says what it can answer. Waiting: \"Asking.\" and the button is off. Error: \"Could not ask.\" with the hub's message",
+        "Empty: the field alone, with nothing under it. Waiting: \"Asking.\" and the button is off. Error: \"Could not ask.\" with the hub's message",
         "POST /api/ask takes AskBody and answers AskResult with no token. The hub builds a numbered fact sheet (date, season, per part the count, use today, in the last 7 and 30 days, rate, reorder point, days of cover, and the recent orders with totals) and asks Gemini to answer only from it in one or two sentences with numbers",
         "When the facts do not answer the question, the answer says so and invents no numbers",
         "With no key, a failed or slow Gemini (10 seconds), or more than 20 questions a minute, the hub answers by itself from the same facts with source fallback, and the screen says it is reup reading its own numbers",

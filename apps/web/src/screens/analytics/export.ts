@@ -20,7 +20,7 @@ export interface ImportRow {
   count: number;
   /** Units used a day, or null when the file has no column for use. */
   usePerDay: number | null;
-  /** Where reup would reorder, from the use. Null with no use column: the item gets sample use, like a part on the board. */
+  /** Where reup would reorder, from the use. Null with no use column: the hub sets it from what is on hand, like a part on the board. */
   reorderAt: number | null;
   /** Why this row is left out, or null. */
   skip: string | null;

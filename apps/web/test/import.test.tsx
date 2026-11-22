@@ -116,7 +116,7 @@ describe('Import a list on the dashboard', () => {
     expect(screen.getByLabelText('Items in the file')).toBeTruthy();
     choose('Name,On Hand\nZip ties,40');
     expect(await screen.findByText(new RegExp(NO_USE_COLUMN.slice(0, 40)))).toBeTruthy();
-    expect(screen.getByText('From sample use')).toBeTruthy();
+    expect(screen.getByText('From what is on hand')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Add 1 item' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
     expect(screen.queryByLabelText('Items in the file')).toBeNull();

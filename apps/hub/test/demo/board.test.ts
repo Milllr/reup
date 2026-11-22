@@ -170,9 +170,9 @@ describe('a ledge holds what is stocked', () => {
   it('the season switch still moves the line', async () => {
     const r = await built({ 'z-9v': 6 });
     expect(r.room.policy('p-9v')?.reorderPoint).toBe(4);
-    await r.call('POST', '/api/demo/season', { factor: 1.4, label: 'Busy week' }, OPS);
+    await r.call('POST', '/api/demo/season', { factor: 1.4, label: 'Busy' }, OPS);
     expect(r.room.policy('p-9v')?.reorderPoint).toBe(5);
-    await r.call('POST', '/api/demo/season', { factor: 0.6, label: 'Exam week' }, OPS);
+    await r.call('POST', '/api/demo/season', { factor: 0.6, label: 'Slow' }, OPS);
     expect(r.room.policy('p-9v')?.reorderPoint).toBe(3);
   });
 

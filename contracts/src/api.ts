@@ -214,7 +214,7 @@ export const BoardProduct = z.object({
  * and its sample use is sized so that taking two crosses its reorder point.
  */
 export const BoardBody = z.object({ zones: z.array(Zone), products: z.array(BoardProduct) });
-/** POST /api/demo/season (ops) */
+/** POST /api/demo/season (approve key or ops). How busy the shop is: Slow 0.6, Normal 1, Busy 1.4. */
 export const SeasonBody = Season;
 /** POST /api/demo/reset (ops). Cancels open orders, clears runs and activity, restores seeded history and policies. Zones and products stay. */
 /** POST /api/demo/screen (ops). Force a screen, or null to let the hub choose again. */
@@ -264,7 +264,7 @@ export const ROUTES = [
   ['POST', '/api/products/:id/remove', 'Ok (approve key or ops token)'],
   ['PUT', '/api/zones', 'ZonesBody -> Ok (ops token)'],
   ['PUT', '/api/board', 'BoardBody -> Snapshot (ops token)'],
-  ['POST', '/api/demo/season', 'SeasonBody -> Ok (ops token)'],
+  ['POST', '/api/demo/season', 'SeasonBody -> Ok (approve key or ops token)'],
   ['POST', '/api/demo/reset', 'Snapshot (ops token)'],
   ['POST', '/api/demo/screen', 'ScreenBody -> Ok (ops token)'],
   ['POST', '/api/demo/replay', 'ReplayBody -> Ok (ops token)'],

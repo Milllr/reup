@@ -33,7 +33,7 @@ describe('the plate and the word for each moment', () => {
 
   it('writes each part row the way the mockups do', () => {
     const rows = partRows(mockSnapshot('shelf'));
-    expect(rows.map((r) => r.meta)).toEqual(['Reorder at 4 · 11 days of cover', 'Reorder at 2 · 4 weeks of cover', 'Reorder at 1 · 6 weeks of cover', 'Reorder at 2 · 5 weeks of cover']);
+    expect(rows.map((r) => r.meta)).toEqual(['11 days of cover', '4 weeks of cover', '6 weeks of cover', '5 weeks of cover']);
     expect(partRows(mockSnapshot('low'))[0]).toMatchObject({ low: true, meta: 'At the reorder point · 7 days of cover' });
     expect(partRows(mockSnapshot('ontheway'))[0]).toMatchObject({ low: false, onTheWay: true, meta: '8 boxes on the way · arrives Tuesday' });
     expect(partRows(mockSnapshot('order'))[0]?.meta).toBe('Ordering 8 boxes');

@@ -41,7 +41,7 @@ describe('the reducer', () => {
     let s = start();
     s = apply(s, { type: 'screen', screen: 'order', focusProductId: 'p-glue' });
     s = apply(s, { type: 'buyer', online: false });
-    s = apply(s, { type: 'season', season: { factor: 1.4, label: 'Busy week' } });
+    s = apply(s, { type: 'season', season: { factor: 1.4, label: 'Busy' } });
     expect(s.snapshot).toMatchObject({ screen: 'order', focusProductId: 'p-glue', buyerOnline: false, season: { factor: 1.4 } });
     for (let i = 0; i < 30; i++) s = apply(s, { type: 'activity', activity: { id: `a-x${i}`, ts: '2026-11-21T09:20:00-05:00', tone: 'info', text: `line ${i}` } });
     expect(s.snapshot?.activity).toHaveLength(20);

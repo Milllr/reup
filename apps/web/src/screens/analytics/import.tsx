@@ -4,13 +4,13 @@ import { useMemo, useState, type ChangeEvent } from 'react';
 import { readExport, rowBody } from './export';
 
 export const IMPORT_HINT = 'An export from Zoho Inventory, Cin7 Core, Fishbowl or any sheet, saved as CSV. reup reads the name, the unit, what is on hand and what was used, and works out when to reorder. Nothing is written back to that system.';
-export const NO_USE_COLUMN = 'The file has no column for what was used or sold, so each item starts on sample use.';
+export const NO_USE_COLUMN = 'The file has no column for what was used or sold, so reup sets each reorder point from what is on hand.';
 
 /** One change sent to the hub with this screen's key. True when the hub said yes. */
 type Act = (what: string, method: 'POST' | 'PUT', path: string, body?: unknown) => Promise<boolean>;
 
 const perDay = (n: number | null) => (n == null ? '' : String(Math.round(n * 100) / 100));
-const reorderText = (n: number | null) => (n == null ? 'From sample use' : n === 0 ? 'Never, not used' : String(n));
+const reorderText = (n: number | null) => (n == null ? 'From what is on hand' : n === 0 ? 'Never, not used' : String(n));
 
 export function ImportItems({ s, catalog, act, busy }: { s: Snapshot; catalog: CatalogItem[]; act: Act; busy: boolean }) {
   const [text, setText] = useState<string | null>(null);

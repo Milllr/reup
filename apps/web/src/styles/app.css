@@ -58,6 +58,7 @@
 .chart .mark { fill: var(--line); }
 .chart .order { fill: var(--orange); }
 .chart .base { stroke: var(--line); stroke-width: 2; opacity: 0.4; }
+.chart .tick { stroke: var(--line); stroke-width: 2; opacity: 0.5; }
 .plot.short .bar { opacity: 0.5; }
 .chart .bar.now { opacity: 1; }
 .chart .cross { stroke: var(--line); stroke-width: 1.5; opacity: 0.7; }

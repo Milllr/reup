@@ -233,7 +233,7 @@ describe('restocking', () => {
   it('shops again when a put back means the order no longer fits on the board', async () => {
     const r = await rig();
     // A busy week: the reorder point is 5 and the order wants more than the board has room for.
-    await r.call('POST', '/api/demo/season', { factor: 1.4, label: 'Busy week' }, OPS);
+    await r.call('POST', '/api/demo/season', { factor: 1.4, label: 'Busy' }, OPS);
     expect(r.room.policy('p-screws')?.reorderPoint).toBe(5);
     await put(r, 2);
     const first = r.room.s.orders.at(-1);

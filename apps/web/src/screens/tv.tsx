@@ -14,6 +14,7 @@ import { nameTeachSpot } from './shelf/ledges';
 import { Shop } from './shop';
 import { Teach } from './teach';
 import { Why } from './why';
+import { prefetchHistory } from './why/history';
 
 const KEYS: Record<string, 'shelf' | 'shop' | 'order' | 'why' | null> = { '1': 'shelf', '2': 'shop', '3': 'order', '4': 'why', '0': null };
 
@@ -28,6 +29,11 @@ export function Tv() {
   useEffect(() => {
     setHeld((h) => (h && h.over !== hubScreen ? null : h));
   }, [hubScreen]);
+  // Every part's 30 days are read as soon as the board has its parts, so the Forecast chart is there when it is opened.
+  const partIds = live.mock ? '' : (s?.products.map((p) => p.id).join(',') ?? '');
+  useEffect(() => {
+    if (partIds) prefetchHistory(partIds.split(','));
+  }, [partIds]);
   const look = held?.look ?? null;
   const pick = (next: Look | null) => setHeld(next && s ? { look: next, over: s.screen } : null);
   // The ledge boxes are being moved on this screen.

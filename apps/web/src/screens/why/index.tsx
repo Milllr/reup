@@ -1,19 +1,21 @@
 /** Why: the chart that shows the reorder point is reasoning, not a setting, and the season switch that moves it. */
 import type { HistoryResult, Snapshot } from '@reup/contracts';
-import { useEffect, useState } from 'react';
 import { Frame, Plate, Word } from '../../components';
-import { call, token } from '../../lib/hub';
+import { dateTicks } from '../../lib/analytics';
+import { call, yesKey } from '../../lib/hub';
 import { mockHistory } from '../../store/mock';
 import type { LiveState } from '../../store/reduce';
 import { alertText, BottomBar } from '../common';
 import { askHub, askMock, AskReup } from './ask';
+import { HISTORY_RETRY, HISTORY_WAIT, useHistory } from './history';
 
-export { AskReup, sourceLine, ASK_EMPTY, ASK_FALLBACK, ASK_WAIT } from './ask';
+export { AskReup, sourceLine, ASK_FALLBACK, ASK_WAIT } from './ask';
 
+/** How busy the shop is. It scales the use reup plans for, so the reorder line moves with it. */
 export const SEASONS = [
+  { label: 'Slow', factor: 0.6 },
   { label: 'Normal', factor: 1 },
-  { label: 'Busy week', factor: 1.4 },
-  { label: 'Exam week', factor: 0.6 },
+  { label: 'Busy', factor: 1.4 },
 ] as const;
 
 const X0 = 40;
@@ -28,6 +30,15 @@ export function scales(history: HistoryResult, count: number, capacity: number |
   const max = Math.max(1, capacity ?? 0, count, history.reorderPoint, ...history.days.map((d) => d.endCount), ...history.forecast.map((f) => f.high));
   const unit = (Y0 - TOP) / max;
   return { x: (i: number) => Math.round((X0 + i * step) * 10) / 10, y: (v: number) => Math.round((Y0 - v * unit) * 10) / 10, step, unit, today: history.days.length };
+}
+
+/** Today as a day: the day after the last day behind it. The history lists the days before today and the days after. */
+function todayDay(history: HistoryResult): string {
+  const last = history.days.at(-1)?.day ?? history.forecast[0]?.day;
+  if (!last) return '';
+  const at = new Date(`${last}T12:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + (history.days.length > 0 ? 1 : -1));
+  return at.toISOString().slice(0, 10);
 }
 
 export function Chart({ history, count, capacity, reorderPoint }: { history: HistoryResult; count: number; capacity: number | null; reorderPoint: number }) {
@@ -57,7 +68,12 @@ export function Chart({ history, count, capacity, reorderPoint }: { history: His
       </g>
       <text x={x(today) - 12} y={28} textAnchor="end">Today</text>
       <text x={x(today) + 14} y={28}>Next 7 days</text>
-      <text x={20} y={494}>30 days ago</text>
+      {dateTicks([...history.days.map((d) => d.day), todayDay(history), ...history.forecast.map((f) => f.day)], today, 7).map((t) => (
+        <g key={t.index}>
+          <line className="tick" x1={x(t.index)} y1={Y0} x2={x(t.index)} y2={Y0 + 8} />
+          <text x={x(t.index)} y={494} textAnchor="middle">{t.label}</text>
+        </g>
+      ))}
     </svg>
   );
 }
@@ -67,30 +83,18 @@ export function Why({ live }: { live: LiveState }) {
   const product = s.products.find((p) => p.id === s.focusProductId) ?? s.products[0];
   const policy = s.policies.find((p) => p.productId === product?.id);
   const count = s.counts.find((c) => c.productId === product?.id)?.count ?? 0;
-  const [history, setHistory] = useState<HistoryResult | null>(null);
-  const ops = token('ops');
-  const refetchOn = `${product?.id}|${count}|${s.season.factor}|${s.orders.length}`;
+  const k = yesKey(s);
+  const read = useHistory(product?.id, `${count}|${s.season.factor}|${s.orders.length}`, live.mock);
+  const history = live.mock && product ? { ...(mockHistory as HistoryResult), productId: product.id } : read.history;
 
-  useEffect(() => {
-    if (!product) return;
-    if (live.mock) return setHistory({ ...(mockHistory as HistoryResult), productId: product.id });
-    let stale = false;
-    void call<HistoryResult>('GET', `/api/products/${encodeURIComponent(product.id)}/history`).then((r) => {
-      if (!stale && r.ok && r.data) setHistory(r.data);
-    });
-    return () => {
-      stale = true;
-    };
-  }, [refetchOn, live.mock]);
-
-  const setSeason = (season: (typeof SEASONS)[number]) => void call('POST', '/api/demo/season', season, ops);
-  const sample = history?.days.some((d) => d.sample) ?? policy?.sampleHistory ?? false;
+  const setSeason = (season: (typeof SEASONS)[number]) => void call('POST', '/api/demo/season', season, k);
 
   return (
     <Plate tone="paper" label="Why">
       <Word text="Forecast" at="top" quiet={!live.connected && !live.mock} />
       <Frame label={`${product?.name ?? 'Part'}: use, stock and forecast`} waiting={!history} settle style={{ left: 96, top: 284, width: 1100, height: 580 }}>
         {history && product ? <Chart history={history} count={count} capacity={product.capacity} reorderPoint={policy?.reorderPoint ?? history.reorderPoint} /> : null}
+        {!history && product ? <p className="copy small abs" role="status" style={{ left: 40, top: 36 }}>{read.failed ? HISTORY_RETRY : HISTORY_WAIT}</p> : null}
       </Frame>
       <div className="abs stack" style={{ left: 1284, top: 396, width: 588, gap: 26 }}>
         <div className="row">
@@ -102,14 +106,13 @@ export function Why({ live }: { live: LiveState }) {
           <span className="meta">Season</span>
           <div className="seg" role="group" aria-label="Season">
             {SEASONS.map((season) => (
-              <button key={season.label} className="btn" type="button" aria-pressed={Math.abs(s.season.factor - season.factor) < 0.01} disabled={!ops && !live.mock} onClick={() => setSeason(season)}>{season.label}</button>
+              <button key={season.label} className="btn" type="button" aria-pressed={Math.abs(s.season.factor - season.factor) < 0.01} disabled={k == null && !live.mock} onClick={() => setSeason(season)}>{season.label}</button>
             ))}
           </div>
         </div>
         <AskReup ask={live.mock ? askMock : askHub} />
       </div>
-      <p className="copy small abs" style={{ left: 268, bottom: 40, maxWidth: '30em' }}>Bars are what was used each day. The line is what was on the board. The shaded part is what reup expects next.</p>
-      <BottomBar credit={sample ? 'Sample history' : null} alert={alertText(live)} />
+      <BottomBar credit={null} alert={alertText(live)} />
     </Plate>
   );
 }

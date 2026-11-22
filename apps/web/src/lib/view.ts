@@ -66,7 +66,7 @@ export function partRows(s: Snapshot): PartRow[] {
     const atLine = policy != null && inUse && count <= policy.reorderPoint;
     const placed = openOrder != null && PLACED.has(openOrder.state);
     const cover = coverText(policy?.daysOfCover ?? null);
-    let meta = policy && inUse ? `Reorder at ${policy.reorderPoint} · ${cover}` : policy ? 'Counting · not in use yet' : 'Counting';
+    let meta = policy && inUse ? cover : policy ? 'Counting · not in use yet' : 'Counting';
     if (placed && openOrder) {
       // Once some of the delivery is on the board, say how much of it is in.
       const got = openOrder.unitsReceived ?? 0;
