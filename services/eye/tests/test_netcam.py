@@ -5,7 +5,7 @@ import threading
 import numpy as np
 import pytest
 
-from reup_eye.netcam import MjpegCapture, addresses
+from reup_eye.netcam import MjpegCapture, addresses, own_link_local, sources
 
 
 def serve(parts: list[bytes], status: bytes = b"HTTP/1.1 200 OK", hold: bool = False):
@@ -83,3 +83,38 @@ def test_a_link_local_pi_is_tried_on_ipv6_first():
     v6 = (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("fe80::8aa2:9eff:fea9:d00c", 8089, 0, 51))
     assert addresses("qnxpi.local", 8089, lambda *_a: [v4, v6]) == [v6, v4]
     assert addresses("qnxpi.local", 8089, lambda *_a: [v4]) == [v4]
+
+
+def test_a_link_local_pi_on_ipv4_is_reached_from_the_adapter_the_cable_is_in():
+    # Each of the laptop's own link local addresses first, then whatever the system picks.
+    own = lambda: ["169.254.138.173", "169.254.83.107"]
+    assert sources(socket.AF_INET, ("169.254.30.27", 8089), own) == ["169.254.138.173", "169.254.83.107", None]
+    # Any other address is left to the system, and so is IPv6: its address names the adapter already.
+    assert sources(socket.AF_INET, ("192.168.1.20", 8089), own) == [None]
+    assert sources(socket.AF_INET6, ("fe80::8aa2:9eff:fea9:d00c", 8089, 0, 51), own) == [None]
+    found = [(socket.AF_INET, 1, 6, "", (ip, 0)) for ip in ("172.30.1.33", "169.254.83.107", "169.254.138.173", "169.254.83.107")]
+    assert own_link_local(lambda *_a: found, lambda: "milla") == ["169.254.138.173", "169.254.83.107"]
+
+    def no_name(*_a):
+        raise OSError("no such host")
+
+    assert own_link_local(no_name, lambda: "milla") == []
+
+
+def test_a_source_that_cannot_be_used_is_passed_over(monkeypatch):
+    import reup_eye.netcam as netcam
+
+    url, _seen, _ = serve([b"\x10" * 300])
+    # Here the loopback address stands in for a link local one. 203.0.113.9 is not an address of this machine, so
+    # binding to it fails, and the next way (the system's own choice) is the one that connects.
+    monkeypatch.setattr(netcam, "LINK_LOCAL", "127.")
+    asked: list[str] = []
+
+    def own() -> list[str]:
+        asked.append("own")
+        return ["203.0.113.9"]
+
+    cam = MjpegCapture(url, decode, own=own)
+    assert asked == ["own"]
+    assert cam.read()[0]
+    cam.release()

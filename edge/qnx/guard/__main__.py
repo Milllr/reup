@@ -8,7 +8,7 @@ import threading
 import time
 from pathlib import Path
 
-from .button import pin_reader
+from .button import Presses, pin_reader
 from .core import Guard
 from .hub import Hub
 
@@ -36,15 +36,22 @@ def main() -> None:
 
     def button() -> None:
         down = pin_reader(args.button_pin, os.environ.get("GUARD_BUTTON_FILE", ""), log)
-        was = False
+        presses = Presses()
+        began = time.monotonic()
+        rested = said = False
         while down is not None:
-            now = down()
-            if now and not was:
+            now = time.monotonic()
+            is_down = down()
+            rested = rested or not is_down
+            if presses.look(is_down, now):
                 try:
                     guard.on_button()
                 except Exception as err:  # noqa: BLE001
                     log(f"Button error: {err}")
-            was = now
+            # Said once: a pin that has read pressed since the start is not a button being held.
+            if not rested and not said and now - began > 5:
+                log(f"The button's pin ({args.button_pin}) has read pressed since the start. It is ignored until it rests. Approve on the screen.")
+                said = True
             time.sleep(0.02)
 
     threading.Thread(target=sender, daemon=True).start()

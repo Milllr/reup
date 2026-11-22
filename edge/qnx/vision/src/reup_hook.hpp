@@ -106,8 +106,10 @@ class Sender {
 
 // Call for every frame the camera gives, at the camera's own size.
 inline void offer(const cv::Mat& bgr) {
-  static Sender sender;
-  sender.offer(bgr);
+  // Never destroyed: its threads wait on it until the process is gone. Destroyed at exit, the wait threw and every
+  // stop of the program ended as a crash (exit code 250).
+  static Sender* sender = new Sender;
+  sender->offer(bgr);
 }
 
 }  // namespace reup
