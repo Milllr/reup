@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-from guard.button import Debounce
+from guard.button import Debounce, Presses
 from guard.core import Guard
 from guard.ledger import Ledger
 from guard.outbox import DROP, OK, RETRY, Outbox
@@ -333,3 +333,39 @@ def test_calls_to_the_hub_carry_a_user_agent_cloudflare_lets_through():
     assert Hub("https://hub.example/", "device-1", opener=opener).post("/ingest/node", {"level": 2}) == ("ok", {"ok": True})
     # Python's default (Python-urllib/3.x) is answered 403 with error 1010 on workers.dev, and the node would retry for ever.
     assert seen[0].get_header("User-agent") == "reup-node/1" and seen[0].get_header("Authorization") == "Bearer device-1"
+
+
+def looks(presses, rows):
+    return [presses.look(down, t) for down, t in rows]
+
+
+def test_the_level_the_pin_starts_at_is_never_a_press():
+    # Nothing wired, or a pin that floats high: down from the first look, for as long as it likes.
+    p = Presses(rest_s=0.3, firm_s=0.04)
+    assert not any(looks(p, [(True, t / 50) for t in range(500)]))
+    # It rests for a moment, too short to trust, and reads down again: still nothing.
+    assert not any(looks(p, [(False, 10.0), (False, 10.1), (True, 10.2), (True, 10.4)]))
+
+
+def test_a_press_counts_once_after_the_pin_was_at_rest():
+    p = Presses(rest_s=0.3, firm_s=0.04)
+    rest = [(False, t / 50) for t in range(20)]  # 0.38 s at rest
+    assert not any(looks(p, rest))
+    # Down, a bounce, down again, held for two seconds: one press, on the look where it has been down for 0.04 s.
+    held = [(True, 0.40), (False, 0.41), (True, 0.42), (True, 0.44), (True, 0.46)] + [(True, 0.5 + t / 50) for t in range(100)]
+    got = looks(p, held)
+    assert got.count(True) == 1 and got.index(True) == 4
+    # Let go for a blink and press again: not at rest long enough, so no second yes.
+    assert not any(looks(p, [(False, 2.6), (True, 2.7), (True, 2.8)]))
+    # Let go properly, then press: the second press counts.
+    assert looks(p, [(False, 3.0), (False, 3.2), (False, 3.4), (True, 3.5), (True, 3.56)]) == [False, False, False, False, True]
+
+
+def test_a_guard_that_starts_with_the_pin_down_says_yes_to_nothing(tmp_path):
+    g, hub, _clock, _logs = make(tmp_path)
+    hub.answer = {**hub.answer, "awaitingApproval": ["o-7"]}
+    p = Presses()
+    for t in range(200):
+        if p.look(True, t / 50):
+            g.on_button()
+    assert not [route for route, _ in hub.posts if route.endswith("/approve")]

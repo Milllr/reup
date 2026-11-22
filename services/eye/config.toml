@@ -17,8 +17,12 @@ board_pad = 0.04
 
 # Camera choice: a camera with a name is only ever opened under that name (needs cv2-enumerate-cameras). With no name
 # the index is used. List them with: python -m reup_eye --list-cameras
+# url: for a camera that is plugged into another machine and served as MJPEG over HTTP. Tried first when set, with
+# a camera of this name on the laptop's own USB as the fallback. Empty on the station: the camera is on the laptop,
+# and the Pi takes its pictures from the eye (edge/qnx/vision/src/reup_netcam.hpp), not the other way round.
 [cameras.board]
 name = "Elgato Facecam"
+url = ""
 index = 0
 width = 1920
 height = 1080

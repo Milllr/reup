@@ -66,6 +66,14 @@ def camera_listings() -> list[tuple[int, Optional[dict[int, str]]]]:
 
 def cv_opener(cam):
     def open_(way):
+        if isinstance(way, str):
+            # A camera on another machine, by its address: the Pi serves the picture and the eye reads it.
+            from .netcam import MjpegCapture  # noqa: PLC0415
+
+            try:
+                return MjpegCapture(way, lambda data: cv().imdecode(np.frombuffer(data, np.uint8), cv().IMREAD_COLOR))
+            except (OSError, ValueError):
+                return None
         backend, index = way
         cv2 = cv()
         capture = cv2.VideoCapture(index, backend)
@@ -133,7 +141,12 @@ class Runtime:
         said: list[Optional[str]] = [None]
 
         def ways():
+            url = getattr(cam, "url", "")
             found, note = camera_ways(cam.name, cam.index, camera_listings())
+            # With an address, the camera is on another machine (the Pi) and its picture comes from there. A camera of
+            # that name on this laptop's own USB is the fallback, so moving the cable back is all it takes.
+            if url:
+                return [url, *found] if cam.name else [url]
             if note and note != said[0]:
                 self.log(f"The {cam_id} camera: {note}")
             said[0] = note
