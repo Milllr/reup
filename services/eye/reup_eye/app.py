@@ -15,7 +15,7 @@ from .config import FULL
 from .counting import ChangeGate, CountSmoother, SettleFilter, assign, blob_count, changed, gain, label_blobs, motion_energy, other_surface, pocket_levels, pockets_full
 from .frames import ReferenceStore, block_mean, sample, small_colour
 from .geometry import apply, border_samples, cell_corners, cell_samples, grid_samples, hull, simplify, unit_to_quad
-from .teach import TeachSpot, crop_quad, jpeg_under
+from .teach import TeachSpot, jpeg_under, view_quad
 
 
 @dataclass
@@ -108,7 +108,7 @@ class Eye:
                     self.gate.forget(zone["id"])
                     self.smoother.runs.pop(zone["id"], None)
                     self.smoother.stable.pop(zone["id"], None)
-            self._adopt_teach(zones, snapshot.get("teach"))
+            self._adopt_teach(zones, snapshot.get("teach"), snapshot.get("products"))
             self.refresh_detector_zones()
 
     def refresh_detector_zones(self) -> None:
@@ -498,7 +498,11 @@ class Eye:
         if not fire or blob is None:
             return
         # The part's box on the whole frame: the detector learns a part from the frame it was seen in.
-        self.on_teach(crop_quad(frame, zone["quad"]), zone["id"], self._blob_box(zone, blob), frame)
+        self.on_teach(self._teach_picture(frame, zone), zone["id"], self._blob_box(zone, blob), frame)
+
+    def _teach_picture(self, frame: np.ndarray, zone: dict) -> np.ndarray:
+        """The picture of the new part for the screen and the namer: the teach spot with some board around it."""
+        return view_quad(frame, zone["quad"], float(self.config.teach.view))
 
     def _blob_box(self, zone: dict, blob: Optional[list]) -> tuple:
         """A part's box on the whole frame, a little wider than the part. With no part, the middle of the spot."""
@@ -525,7 +529,7 @@ class Eye:
                 return "A new part is already waiting for its name."
             zone, frame = last["zone"], last["frame"]
             self.teach_spot.armed = False
-            self.on_teach(crop_quad(frame, zone["quad"]), zone["id"], self._blob_box(zone, last.get("blob")), frame)
+            self.on_teach(self._teach_picture(frame, zone), zone["id"], self._blob_box(zone, last.get("blob")), frame)
             if self.pending_teach is None:
                 return f"Could not tell the hub: {self.hub.last_error}"
             self.pending_teach["asked"] = True
@@ -542,11 +546,14 @@ class Eye:
         self.pending_teach = {"id": result.get("id"), "frame": frame.copy(), "box": box, "zone": zone_id}
         self.log(f"A new part is on the teach spot. Sent a {len(jpeg) // 1000} kB picture to the hub.")
 
-    def _adopt_teach(self, zones: list[dict], card: Optional[dict] = None) -> None:
+    def _adopt_teach(self, zones: list[dict], card: Optional[dict] = None, products: Optional[list] = None) -> None:
         """Once the taught part has a product, the frame it was seen in becomes that product's example for the detector.
 
         card is the hub's new part card, or None when it shows none. A card the hub took down (nobody named the part,
         or someone said it is not a part) is let go here too, so whatever is still on the spot stops counting as new.
+
+        products is the hub's list of parts. A part that was given a box of its own does not sit in the teach spot's
+        zone, so it is found by its picture: the hub keeps the card's picture as the product's image.
         """
         pending = self.pending_teach
         if not pending:
@@ -556,6 +563,13 @@ class Eye:
             self.save_prompt(zone["productId"], pending["frame"], [pending["box"]])
             self.pending_teach = None
             return
+        if pending.get("id"):
+            mark = f"/api/teach/{pending['id']}/"
+            made = next((p for p in products or [] if isinstance(p, dict) and p.get("id") and mark in str(p.get("imageUrl") or "")), None)
+            if made:
+                self.save_prompt(made["id"], pending["frame"], [pending["box"]])
+                self.pending_teach = None
+                return
         if pending.get("id") and (card or {}).get("id") != pending["id"]:
             # Two snapshots in a row without the card: one alone may have been read just before the card went up.
             pending["gone"] = pending.get("gone", 0) + 1

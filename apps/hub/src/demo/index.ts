@@ -4,6 +4,7 @@ import { clearChecks } from '../checks';
 import type { RoomCore } from '../core/room';
 import { NotFound } from '../orders';
 import { TEACH_ZONE, applySampleFor, applySampleHistory } from '../seed';
+import { dropMadeZone, madeZones } from '../teach';
 
 const TEN_MINUTES = 10 * 60 * 1000;
 
@@ -58,8 +59,10 @@ export function learnStock(room: RoomCore, product: Product, count: number, exac
 /** The same clean start for every judge. Zones, products and what the cameras count stay as they are. */
 export function reset(room: RoomCore): Snapshot {
   clearDemo(room);
-  // A part taught on the teach spot belongs to the last judge. It goes, and the spot is free again.
-  for (const taught of room.s.products.filter((p) => p.zoneId === TEACH_ZONE)) {
+  // A part taught on the teach spot belongs to the last judge. It goes, and the spot is free again. So does a part
+  // that was given a box of its own, and the box with it.
+  const made = madeZones(room);
+  for (const taught of room.s.products.filter((p) => p.zoneId === TEACH_ZONE || (p.zoneId != null && made.includes(p.zoneId)))) {
     room.s.products = room.s.products.filter((p) => p.id !== taught.id);
     room.s.counts = room.s.counts.filter((c) => c.productId !== taught.id);
     room.s.policies = room.s.policies.filter((p) => p.productId !== taught.id);
@@ -67,6 +70,7 @@ export function reset(room: RoomCore): Snapshot {
     delete room.x.leadDays[taught.id];
     delete room.x.board[taught.id];
   }
+  for (const zoneId of [...made]) dropMadeZone(room, zoneId);
   const spot = room.zone(TEACH_ZONE);
   if (spot) {
     spot.productId = null;
@@ -95,6 +99,7 @@ export function setBoard(room: RoomCore, body: BoardBody): Snapshot {
   const now = room.iso();
   const before = new Map(room.s.products.map((p) => [p.id, p]));
   room.s.zones = body.zones;
+  room.x.madeZones = [];
   room.x.board = {};
   room.s.products = body.products.map((p) => {
     const zone = body.zones.find((z) => z.productId === p.id);
@@ -153,6 +158,7 @@ export function moveZoneQuad(room: RoomCore, zoneId: string, quad: Zone['quad'])
 
 export function putZones(room: RoomCore, body: ZonesBody): void {
   room.s.zones = body.zones;
+  room.x.madeZones = madeZones(room).filter((id) => body.zones.some((z) => z.id === id));
   for (const p of room.s.products) {
     const zone = body.zones.find((z) => z.productId === p.id);
     p.zoneId = zone?.id ?? null;

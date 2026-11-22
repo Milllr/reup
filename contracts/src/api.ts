@@ -134,8 +134,13 @@ export const AskResult = z.object({
 /** POST /api/teach (eye). A new item is sitting on the teach spot. jpegBase64 is the crop, at most 400 kB. */
 export const TeachBody = z.object({ jpegBase64: z.string().min(1), zoneId: Id.nullable() });
 export const TeachResult = TeachState;
-/** POST /api/teach/:id/confirm (phone or ops). The person may have edited the suggestion. */
-export const TeachConfirmBody = z.object({ name: z.string().min(1), unit: z.string().min(1), sku: z.string().nullable(), searchPhrase: z.string().min(1), zoneId: Id });
+/**
+ * POST /api/teach/:id/confirm (phone or ops). The person may have edited the suggestion.
+ * quad: a box drawn for this part on the picture of zoneId's camera, corners clockwise from the top left. With it the
+ * hub makes a new zone with these corners and the part sits there, and zoneId's own zone is left as it is. Without it
+ * the part takes zoneId's zone.
+ */
+export const TeachConfirmBody = z.object({ name: z.string().min(1), unit: z.string().min(1), sku: z.string().nullable(), searchPhrase: z.string().min(1), zoneId: Id, quad: z.array(Point).length(4).optional() });
 export const TeachConfirmResult = Product;
 /** POST /api/teach/:id/cancel */
 

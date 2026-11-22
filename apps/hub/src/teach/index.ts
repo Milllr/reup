@@ -1,5 +1,5 @@
 // Teaching: a new part sits on the teach spot, the hub stores the crop, asks for a name, and a person confirms it.
-import { Catalog, type CatalogItem, type Product, type TeachBody, type TeachConfirmBody, type TeachState } from '@reup/contracts';
+import { Catalog, type CatalogItem, type Point, type Product, type TeachBody, type TeachConfirmBody, type TeachState, type Zone } from '@reup/contracts';
 import type { RoomCore } from '../core/room';
 import { daysBefore } from '../core/time';
 import { Conflict, NotFound } from '../orders';
@@ -79,16 +79,71 @@ export async function startTeach(room: RoomCore, body: TeachBody): Promise<Teach
 
 const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || 'part';
 
+const SIZE_WORDS = new Set(['x', 'in', 'mm', 'cm', 'ft', 'oz', 'lb', 'of', 'pack', 'box', 'bag']);
+
+/** The short name a box on the board carries: "#8 x 2 in Wood Screws, Robertson" is "Wood Screws". Sizes and what follows a comma are left out. */
+export function boxName(name: string): string {
+  const words = (name.split(',')[0] ?? '').split(/\s+/).filter((w) => /^[A-Za-z]/.test(w) && !SIZE_WORDS.has(w.toLowerCase()));
+  const short = words.join(' ').slice(0, 24).trim();
+  return short !== '' ? short : name.trim().slice(0, 24).trim() || 'New part';
+}
+
+/** True when a point is inside a four cornered box, whichever way round its corners run. */
+export function inQuad(quad: readonly Point[], x: number, y: number): boolean {
+  let sign = 0;
+  for (let i = 0; i < quad.length; i += 1) {
+    const [ax, ay] = quad[i] as Point;
+    const [bx, by] = quad[(i + 1) % quad.length] as Point;
+    const cross = (bx - ax) * (y - ay) - (by - ay) * (x - ax);
+    if (cross === 0) continue;
+    if (sign !== 0 && Math.sign(cross) !== sign) return false;
+    sign = Math.sign(cross);
+  }
+  return true;
+}
+
+/** The ids of the zones that were made as a box for one part. A zone like that goes when its part goes. */
+export const madeZones = (room: RoomCore): string[] => (room.x.madeZones ??= []);
+
+/** Takes a zone off the board, when it was made as a box for one part. A ledge of the station is never taken off. */
+export function dropMadeZone(room: RoomCore, zoneId: string | null): boolean {
+  if (zoneId == null || !madeZones(room).includes(zoneId)) return false;
+  room.x.madeZones = madeZones(room).filter((z) => z !== zoneId);
+  room.s.zones = room.s.zones.filter((z) => z.id !== zoneId);
+  delete room.x.eyeCounts[zoneId];
+  delete room.x.nodeCounts[zoneId];
+  delete room.x.disagree[zoneId];
+  delete room.x.recentChanges[zoneId];
+  return true;
+}
+
 export function confirmTeach(room: RoomCore, id: string, body: TeachConfirmBody): Product {
   const teach = room.s.teach;
   if (!teach || teach.id !== id) throw new NotFound(`No teach ${id} is waiting.`);
-  const zone = room.zone(body.zoneId);
-  if (!zone) throw new NotFound(`No zone ${body.zoneId}.`);
+  const seenOn = room.zone(body.zoneId);
+  if (!seenOn && !body.quad) throw new NotFound(`No zone ${body.zoneId}.`);
   if (teach.status === 'confirmed' || teach.status === 'cancelled') throw new Conflict('This part was already handled.');
 
   let productId = `p-${slug(body.name)}`;
   if (room.product(productId)) productId = `${productId}-${room.id('n').split('-')[1]}`;
   const now = room.iso();
+  // A box drawn for the part is a new zone on the same camera. The zone the part was seen on stays as it is, so the
+  // teach spot is free for the next part. One unit is counted from the start only when the box holds the place the
+  // part was seen in. A box drawn somewhere else is empty until the part is moved into it.
+  let zone = seenOn as Zone;
+  let onIt = 1;
+  if (body.quad) {
+    let zoneId = `z-${productId.slice(2)}`;
+    if (room.zone(zoneId)) zoneId = `${zoneId}-${room.id('n').split('-')[1]}`;
+    zone = { id: zoneId, name: boxName(body.name), kind: 'open', camera: seenOn?.camera ?? 'board', quad: body.quad, rows: null, cols: null, productId: null };
+    room.s.zones.push(zone);
+    madeZones(room).push(zone.id);
+    if (seenOn) {
+      const cx = seenOn.quad.reduce((sum, p) => sum + p[0], 0) / seenOn.quad.length;
+      const cy = seenOn.quad.reduce((sum, p) => sum + p[1], 0) / seenOn.quad.length;
+      onIt = inQuad(body.quad, cx, cy) ? 1 : 0;
+    } else onIt = 0;
+  }
   const product: Product = {
     id: productId, name: body.name, unit: body.unit, sku: body.sku, zoneId: zone.id,
     capacity: zone.kind === 'pockets' && zone.rows != null && zone.cols != null ? zone.rows * zone.cols : null,
@@ -99,7 +154,7 @@ export function confirmTeach(room: RoomCore, id: string, body: TeachConfirmBody)
   room.s.products.push(product);
   zone.productId = product.id;
   room.s.counts = room.s.counts.filter((c) => c.zoneId !== zone.id);
-  const count = { productId: product.id, zoneId: zone.id, count: 1, level: null, pockets: null, source: 'manual' as const, ts: now };
+  const count = { productId: product.id, zoneId: zone.id, count: onIt, level: null, pockets: null, source: 'manual' as const, ts: now };
   room.s.counts.push(count);
   delete room.x.eyeCounts[zone.id];
   delete room.x.nodeCounts[zone.id];

@@ -147,7 +147,9 @@ describe('items in the dashboard', () => {
     expect(snap.zones.find((z) => z.id === 'z-screws')?.productId).toBeNull();
     expect(r.room.order(order?.id ?? '')?.state).toBe('cancelled');
     expect(r.room.x.usage['p-screws']).toBeUndefined();
-    expect(r.room.s.activity.at(-1)?.text).toBe('Wood screws #8 x 1-1/4 in removed.');
+    // The item is just gone: no line says it was removed, and no older line still names it or its ledge.
+    expect(r.room.s.activity.some((a) => /wood screws/i.test(a.text))).toBe(false);
+    expect(Snapshot.parse(r.of('snapshot').at(-1)?.snapshot).activity.some((a) => /removed/i.test(a.text))).toBe(false);
     expect(Snapshot.parse(r.of('snapshot').at(-1)?.snapshot).products).toHaveLength(3);
     // The camera can keep reporting the freed ledge. Nothing comes back.
     await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 5)] }, DEVICE);

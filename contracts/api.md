@@ -39,7 +39,7 @@ Every error is `ApiError`: `{ ok: false, code, message }` with status 400 bad_re
 | POST | /ingest/cart | IngestCartBody | Ok | ingest-cart.json |
 | POST | /ingest/placed | IngestPlacedBody | Ok | ingest-placed.json |
 | POST | /api/teach | TeachBody | TeachState | teach.json |
-| POST | /api/teach/:id/confirm | TeachConfirmBody | Product | teach-confirm.json |
+| POST | /api/teach/:id/confirm | TeachConfirmBody | Product | teach-confirm.json, teach-confirm-box.json (a new box drawn for the part) |
 | POST | /api/teach/:id/cancel | | Ok | |
 | POST | /api/orders | ManualOrderBody | Order | order.json |
 | POST | /api/orders/:id/approve | ApproveBody | Order | order-placed.json |
