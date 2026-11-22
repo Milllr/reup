@@ -6,10 +6,10 @@ It copies the reup headers next to handtrack_node.cpp and makes six small change
 1. handtrack_node.cpp includes reup_hook.hpp.
 2. Every frame the hand model has looked at goes to reup::feed, with the hands it found: reaches, pockets, the snapshot.
 3. Every frame the camera gives goes to reup::offer: the picture for the eye on the laptop and for the board page.
-4. The window opens at a third of the camera's size when the camera runs at more than 1280 wide, so it sits beside
-   the browser on the same screen. The camera itself stays at full size.
-5. rpi_cam.cpp takes its smallest size from REUP_MIN_PIXELS when that is set. The workshop asks for 720p, which is
-   enough for hands. The eye counts parts in the same frames and was set up on 1080p.
+4. The window opens 480 wide (REUP_WINDOW_WIDTH changes that) when the camera is wider than 640, so it is an inset
+   over the browser on the same screen, not a cover. The camera itself stays at full size.
+5. rpi_cam.cpp takes its smallest size from REUP_MIN_PIXELS when that is set. On the station the size comes from the
+   sensor config instead (vision/set_camera.py): the program opens the camera read only and may not change it.
 6. CMakeLists.txt links libsocket: the camera stream uses sockets, and on QNX they are not in libc.
 """
 import shutil
@@ -22,7 +22,7 @@ EDITS = {
         ('#include "rpi_cam.hpp"', '#include "rpi_cam.hpp"\n#include "reup_hook.hpp"', "reup_hook.hpp"),
         ("    auto hands = pipe->detect(frame, 2);", "    auto hands = pipe->detect(frame, 2);\n    reup::feed(hands, frame);", "reup::feed"),
         ("    if (!g_run.load()) return;\n\n    // Resized here", "    if (!g_run.load()) return;\n    reup::offer(bgr);\n\n    // Resized here", "reup::offer"),
-        ("  if (gui.open(cw, ch) != 0) {", "  const int reup_w = cw > 1280 ? cw / 3 : cw, reup_h = cw > 1280 ? ch / 3 : ch;\n  if (gui.open(reup_w, reup_h) != 0) {", "reup_w"),
+        ("  if (gui.open(cw, ch) != 0) {", "  const char *reup_win = std::getenv(\"REUP_WINDOW_WIDTH\");\n  const int reup_w = reup_win && std::atoi(reup_win) > 0 ? std::atoi(reup_win) : (cw > 640 ? 480 : cw), reup_h = reup_w * ch / cw;\n  if (gui.open(reup_w, reup_h) != 0) {", "reup_w"),
     ],
     "CMakeLists.txt": [
         ('target_link_libraries(handtrack_node "${cpp_typesupport_target}")', 'target_link_libraries(handtrack_node "${cpp_typesupport_target}")\n# reup: the camera stream uses sockets, which on QNX are in libsocket.\ntarget_link_libraries(handtrack_node socket)', "handtrack_node socket"),
