@@ -119,7 +119,9 @@ export function sentence(s: Snapshot): string {
 
 export function shelfCredit(s: Snapshot): string | null {
   if (!s.node.online || s.node.level < 1) return null;
-  return s.node.level >= 2 ? 'Counted by the shelf node on QNX' : 'Hands seen by the shelf node on QNX';
+  // The node's count is the count of record only for pocket zones. On a board of ledges it counts nothing, whatever level it reports.
+  const counts = s.node.level >= 2 && s.zones.some((z) => z.kind === 'pockets' && z.productId != null);
+  return counts ? 'Counted by the shelf node on QNX' : 'Hands seen by the shelf node on QNX';
 }
 
 /** ledges: the boxes are being moved on this screen. note: one line about what the menu just did, shown where an alert goes. */

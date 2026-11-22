@@ -636,6 +636,9 @@ describe('who did what, as a tag', () => {
     expect(shelfCredit(node({ online: true, level: 1 }))).toBe('Hands seen by the shelf node on QNX');
     expect(shelfCredit(node({ online: false, level: 1 }))).toBeNull();
     expect(shelfCredit(node({ online: true, level: 0 }))).toBeNull();
+    // A board of ledges: the node counts nothing there, so it is never credited with the count.
+    const ledges: Snapshot = { ...node({ online: true, level: 3 }), zones: s.zones.map((z) => ({ ...z, kind: 'open' as const, rows: null, cols: null })) };
+    expect(shelfCredit(ledges)).toBe('Hands seen by the shelf node on QNX');
   });
 });
 
