@@ -70,7 +70,7 @@ On the laptop, port 8089, local network only. No contract package: they are smal
 | Method | Path | Returns |
 | --- | --- | --- |
 | GET | /stream/:camera.mjpg | multipart MJPEG |
-| GET | /outlines/:camera.json | `{ ts, items: [{ productId or null, points: [[x,y], ...] }] }`, normalized |
+| GET | /outlines/:camera.json | `{ ts, items: [{ productId or null, points: [[x,y], ...], zoneId? }] }`, normalized. `zoneId` is there only for a part that sits in another part's box: the box it is in. Such a part is in no count |
 | GET | /debug/:camera.jpg | the frame with zones drawn |
 | POST | /reference/:camera | captures the empty board; `{ ok: true }` |
 | POST | /anchor/:camera | this is where the camera sits now: later pictures are lined up with this one; `{ ok: true }` |

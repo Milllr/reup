@@ -101,8 +101,8 @@ export function countItem(room: RoomCore, id: string, count: number): Count {
 /**
  * Takes an item off the lists and frees its ledge. An order still being shopped for it is withdrawn. One that is
  * being placed right now has to finish first. Orders already placed stay in the record.
- * The item is simply gone: no line says it was removed, the lines that named it go with it, and a box that was
- * drawn for it alone comes off the board.
+ * The item is simply gone: no line says it was removed, the lines that named it go with it, and its box comes off
+ * the board. The one box that stays is the teach spot, which belongs to the station and not to the part on it.
  */
 export function removeItem(room: RoomCore, id: string): void {
   const product = itemOr404(room, id);
@@ -122,7 +122,10 @@ export function removeItem(room: RoomCore, id: string): void {
     delete room.x.nodeCounts[zone.id];
     delete room.x.disagree[zone.id];
     delete room.x.recentChanges[zone.id];
-    dropMadeZone(room, zone.id);
+    if (zone.id !== TEACH_ZONE) {
+      dropMadeZone(room, zone.id);
+      room.s.zones = room.s.zones.filter((z) => z.id !== zone.id);
+    }
   }
   room.s.products = room.s.products.filter((p) => p.id !== id);
   room.s.counts = room.s.counts.filter((c) => c.productId !== id);

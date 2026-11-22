@@ -14,7 +14,7 @@ from . import contracts as C
 from .config import FULL
 from .counting import ChangeGate, CountSmoother, SettleFilter, assign, blob_count, changed, gain, label_blobs, motion_energy, other_surface, pocket_levels, pockets_full
 from .frames import ReferenceStore, block_mean, sample, small_colour
-from .geometry import apply, border_samples, cell_corners, cell_samples, grid_samples, hull, simplify, unit_to_quad
+from .geometry import apply, border_samples, cell_corners, cell_samples, grid_samples, hull, overlap, simplify, unit_to_quad
 from .teach import TeachSpot, jpeg_under, view_quad
 
 
@@ -57,6 +57,9 @@ class Eye:
         self.smoother = CountSmoother(config.open.hold)
         self.outlines: dict[str, list[dict]] = {cam: [] for cam in config.cameras}
         self.detected: dict[str, list[dict]] = {}
+        # Parts seen sitting in another part's box: what is shown, and for how many looks in a row each has been there.
+        self.misplaced: dict[str, list[dict]] = {}
+        self.wrong_runs: dict[str, dict[tuple, int]] = {}
         # Zones the detector counts. The runtime turns detector_on when a detector is meant to run. From then on a zone
         # whose part has an example is the detector's, even while the detector is still loading: the difference blobs
         # must never count it in the meantime, or a full ledge reads as empty for the first seconds after a start.
@@ -128,6 +131,7 @@ class Eye:
             else:
                 self.yolo_zones = set()
                 self.detected = {}
+                self.misplaced, self.wrong_runs = {}, {}
 
     def pose_verified(self, camera_id: str) -> None:
         """The runtime looked after the last motion and the camera is where it should be."""
@@ -298,7 +302,7 @@ class Eye:
                     self.notes[camera_id] = "No empty board saved yet. Clear the board and POST /reference/" + camera_id
                 else:
                     self.notes.pop(camera_id, None)
-                self.outlines[camera_id] = list(self.detected.get(camera_id, []))
+                self.outlines[camera_id] = list(self.detected.get(camera_id, [])) + list(self.misplaced.get(camera_id, []))
                 return
             self.notes.pop(camera_id, None)
             g = gain(sample(small, layout.border), layout.ref_border) if len(layout.border) else 1.0
@@ -332,6 +336,7 @@ class Eye:
                             continue
                         items.append({"productId": zone["productId"], "points": self._blob_outline(layout.grids[zid], blob)})
             items.extend(self.detected.get(camera_id, []))
+            items.extend(self.misplaced.get(camera_id, []))
             self.outlines[camera_id] = items
 
     def _blobs(self, small: np.ndarray, layout: Layout, zid: str, g: float):
@@ -620,13 +625,19 @@ class Eye:
             product = {z["id"]: z["productId"] for z in zones}
             per_zone = {z["id"]: 0 for z in zones}
             shown = []
+            at_home, strangers = [], []
             for inst in instances:
                 zid = assign(inst["centre"], lookup)
-                if zid is None or product[zid] != inst["productId"]:
+                if zid is None:
+                    continue
+                if product[zid] != inst["productId"]:
+                    strangers.append((zid, inst))
                     continue
                 per_zone[zid] += 1
+                at_home.append(inst)
                 shown.append({"productId": inst["productId"], "points": [[round(x, 4), round(y, 4)] for x, y in simplify(inst["points"], 24)]})
             still = self.settled.get(camera_id, False)
+            self._note_strangers(camera_id, strangers, at_home, still)
             for zid, n in per_zone.items():
                 if not still:
                     # A hand in the picture hides parts. What is seen then is not a count, and the run starts again.
@@ -636,6 +647,39 @@ class Eye:
                 if stable is not None:
                     self.counts[zid] = (stable, None)
             self.detected[camera_id] = shown
+
+    def _note_strangers(self, camera_id: str, strangers: list, at_home: list, still: bool) -> None:
+        """Keeps the parts that sit in another part's box, for the board to point at. They are in no count.
+
+        The detector can take one thing for two parts at once, and can be wrong for a look or two. So a stranger is
+        shown only when the model is sure of it (open.wrong_conf), it is not the same thing as a part that is at home
+        in that box, and it has been there for open.wrong_hold looks in a row with nothing moving. 0 turns this off.
+        """
+        hold = int(self.config.open.wrong_hold)
+        if hold <= 0:
+            self.misplaced.pop(camera_id, None)
+            self.wrong_runs.pop(camera_id, None)
+            return
+        if not still:
+            # A hand in the picture: what was shown stays, and the runs wait.
+            return
+        sure = float(self.config.open.wrong_conf)
+        seen: dict[tuple, list] = {}
+        for zid, inst in strangers:
+            if float(inst.get("conf", 1.0)) < sure:
+                continue
+            if any(overlap(inst["points"], other["points"]) > 0.5 for other in at_home):
+                continue
+            seen.setdefault((zid, inst["productId"]), []).append(inst)
+        runs = self.wrong_runs.setdefault(camera_id, {})
+        for key in [k for k in runs if k not in seen]:
+            del runs[key]
+        flagged = []
+        for key, insts in seen.items():
+            runs[key] = runs.get(key, 0) + 1
+            if runs[key] >= hold:
+                flagged.extend({"productId": i["productId"], "zoneId": key[0], "points": [[round(x, 4), round(y, 4)] for x, y in simplify(i["points"], 24)]} for i in insts)
+        self.misplaced[camera_id] = flagged
 
     # ---------- posting ----------
 

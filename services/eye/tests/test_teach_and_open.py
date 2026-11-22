@@ -479,6 +479,56 @@ def test_detections_are_counted_by_zone_and_product_and_smoothed(tmp_path):
     assert e.counts["z-glue"] == (2, None)
 
 
+def test_a_part_in_another_parts_box_is_pointed_at_and_not_counted(tmp_path):
+    snap = snapshot()
+    snap["zones"] = [z for z in snap["zones"] if z["kind"] != "pockets"]
+    e, hub, _ = eye(tmp_path, '[teach]\ncamera = "aux"\n[open]\nwrong_hold = 3', with_reference=False)
+    e.set_zones(snap)
+    e.yolo_zones = {"z-glue", "z-discs"}
+    box = lambda cx, cy: [[cx - 0.03, cy - 0.05], [cx + 0.03, cy - 0.05], [cx + 0.03, cy + 0.05], [cx - 0.03, cy + 0.05]]  # noqa: E731
+    glue = [{"productId": "p-glue", "centre": [0.1 + i * 0.08, 0.7], "points": box(0.1 + i * 0.08, 0.7), "conf": 0.9} for i in range(2)]
+    stray = {"productId": "p-discs", "centre": [0.35, 0.8], "points": box(0.35, 0.8), "conf": 0.8}  # a disc on the glue ledge
+    t = still(e, frame(), 0.0, 1.0)
+    # It has to be there for three looks in a row before anything is said.
+    e.take_detections("board", glue + [stray])
+    e.take_detections("board", glue + [stray])
+    assert e.misplaced["board"] == []
+    e.take_detections("board", glue + [stray])
+    assert [(m["productId"], m["zoneId"]) for m in e.misplaced["board"]] == [("p-discs", "z-glue")]
+    # It is in no count: not glue's, and not the discs' own, which is empty.
+    assert e.counts["z-glue"] == (2, None) and e.counts["z-discs"] == (0, None)
+    still(e, frame(), t, 0.2)
+    assert [o.get("zoneId") for o in e.outlines["board"]] == [None, None, "z-glue"]
+    # While a hand is in the picture what was shown stays, and nothing new is added.
+    e.analyse("board", board(extra=[([[0.5, 0.45], [0.7, 0.45], [0.7, 0.65], [0.5, 0.65]], 250)]), t + 0.3)
+    e.take_detections("board", glue)
+    assert len(e.misplaced["board"]) == 1
+    # Taken out again: gone at the next still look.
+    t = still(e, frame(), t + 0.4, 1.0)
+    e.take_detections("board", glue)
+    assert e.misplaced["board"] == []
+
+    # Not said: one thing the model takes for two parts at once, a part it is not sure of, and one seen for a look or two.
+    twin = {"productId": "p-discs", "centre": [0.1, 0.7], "points": box(0.11, 0.71), "conf": 0.9}
+    unsure = {**stray, "conf": 0.35}
+    for _ in range(5):
+        e.take_detections("board", glue + [twin, unsure])
+    assert e.misplaced["board"] == []
+    e.take_detections("board", glue + [stray])
+    e.take_detections("board", glue)
+    e.take_detections("board", glue + [stray])
+    e.take_detections("board", glue + [stray])
+    assert e.misplaced["board"] == []
+    # With wrong_hold = 0 the eye never points.
+    off, _, _ = eye(tmp_path / "off", '[teach]\ncamera = "aux"\n[open]\nwrong_hold = 0', with_reference=False)
+    off.set_zones(snap)
+    off.yolo_zones = {"z-glue", "z-discs"}
+    still(off, frame(), 0.0, 1.0)
+    for _ in range(12):
+        off.take_detections("board", glue + [stray])
+    assert off.misplaced.get("board", []) == []
+
+
 def test_parts_the_detector_counts_need_no_empty_board(tmp_path):
     snap = snapshot()
     snap["zones"] = [z for z in snap["zones"] if z["kind"] != "pockets"]

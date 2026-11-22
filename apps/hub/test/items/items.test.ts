@@ -133,7 +133,7 @@ describe('items in the dashboard', () => {
     expect((await r.call('PUT', '/api/products/p-glue', { name: 'y' }, 'wrong')).status).toBe(401);
   });
 
-  it('removes an item: off every list, its ledge free, an order still being shopped withdrawn', async () => {
+  it('removes an item: off every list, its box off the board, an order still being shopped withdrawn', async () => {
     const r = await rig();
     await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 4)] }, DEVICE);
     const order = r.room.s.orders.find((o) => o.productId === 'p-screws');
@@ -144,20 +144,31 @@ describe('items in the dashboard', () => {
     expect(snap.products.map((p) => p.id)).not.toContain('p-screws');
     expect(snap.counts.some((c) => c.productId === 'p-screws')).toBe(false);
     expect(snap.policies.some((p) => p.productId === 'p-screws')).toBe(false);
-    expect(snap.zones.find((z) => z.id === 'z-screws')?.productId).toBeNull();
+    // Its box goes with it: the board shows no box for a part that is not there.
+    expect(snap.zones.some((z) => z.id === 'z-screws')).toBe(false);
+    expect(Snapshot.parse(r.of('snapshot').at(-1)?.snapshot).zones.some((z) => z.id === 'z-screws')).toBe(false);
     expect(r.room.order(order?.id ?? '')?.state).toBe('cancelled');
     expect(r.room.x.usage['p-screws']).toBeUndefined();
     // The item is just gone: no line says it was removed, and no older line still names it or its ledge.
     expect(r.room.s.activity.some((a) => /wood screws/i.test(a.text))).toBe(false);
     expect(Snapshot.parse(r.of('snapshot').at(-1)?.snapshot).activity.some((a) => /removed/i.test(a.text))).toBe(false);
     expect(Snapshot.parse(r.of('snapshot').at(-1)?.snapshot).products).toHaveLength(3);
-    // The camera can keep reporting the freed ledge. Nothing comes back.
-    await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 5)] }, DEVICE);
+    // The camera may report the old box once more before it hears. Nothing comes back.
+    await r.call('POST', '/ingest/counts', { counts: [{ productId: 'p-screws', zoneId: 'z-screws', count: 5, level: null, pockets: null, source: 'eye', ts: r.room.iso() }] }, DEVICE);
     expect(r.room.s.products).toHaveLength(3);
     expect(r.room.s.counts.some((c) => c.zoneId === 'z-screws')).toBe(false);
     expect((await r.call('POST', '/api/products/p-screws/remove', undefined, APPROVE)).status).toBe(404);
-    // The freed ledge can take a new item.
-    expect((await r.call('POST', '/api/products', { ...tape, zoneId: 'z-screws' }, APPROVE)).status).toBe(200);
+    // There is no box left there to put a new item on.
+    expect((await r.call('POST', '/api/products', { ...tape, zoneId: 'z-screws' }, APPROVE)).status).toBe(404);
+  });
+
+  it('removing the part on the teach spot frees the spot and keeps its box', async () => {
+    const r = await rig();
+    const added = await r.call('POST', '/api/products', { ...tape, zoneId: 'z-teach' }, APPROVE);
+    const made = Product.parse(await added.json());
+    expect(r.room.zone('z-teach')?.productId).toBe(made.id);
+    expect((await r.call('POST', `/api/products/${made.id}/remove`, undefined, APPROVE)).status).toBe(200);
+    expect(r.room.zone('z-teach')).toMatchObject({ id: 'z-teach', productId: null });
   });
 
   it('will not remove an item while its order is being placed', async () => {

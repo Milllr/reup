@@ -11,7 +11,23 @@ export const WATCHING = 'Watching the board. Every part is above its reorder poi
 export const NO_PARTS = 'No parts yet. Put one on the teach spot.';
 export const NO_FEED = 'Camera feed unavailable. Showing counts.';
 
-interface Outline { productId: string | null; points: [number, number][] }
+/** zoneId is there when the part sits in another part's box: the box it is in. */
+export interface Outline { productId: string | null; points: [number, number][]; zoneId?: string | null }
+
+/**
+ * One line for a part that sits in another part's box, or null when every part is at home.
+ * "1 from hex bolts is in the washers box. Not counted."
+ */
+export function wrongBox(s: Snapshot, outlines: readonly Outline[]): string | null {
+  const first = outlines.find((o) => o.zoneId && o.productId);
+  if (!first) return null;
+  const part = s.products.find((p) => p.id === first.productId);
+  const there = s.zones.find((z) => z.id === first.zoneId);
+  if (!part || !there) return null;
+  const home = s.zones.find((z) => z.id === part.zoneId && z.productId === part.id);
+  const n = outlines.filter((o) => o.zoneId === first.zoneId && o.productId === first.productId).length;
+  return `${n} from ${(home?.name ?? part.name).toLowerCase()} ${n === 1 ? 'is' : 'are'} in the ${there.name.toLowerCase()} box. Not counted.`;
+}
 
 /** How long a picture that would not load is left alone before it is tried again, while the eye answers. */
 export const FEED_RETRY_MS = 3000;
@@ -101,6 +117,11 @@ export function sentence(s: Snapshot): string {
   return together ? `${prev.text} ${last.text}` : last.text;
 }
 
+export function shelfCredit(s: Snapshot): string | null {
+  if (!s.node.online || s.node.level < 1) return null;
+  return s.node.level >= 2 ? 'Counted by the shelf node on QNX' : 'Hands seen by the shelf node on QNX';
+}
+
 /** ledges: the boxes are being moved on this screen. note: one line about what the menu just did, shown where an alert goes. */
 export function Shelf({ live, moment: forced, ledges, note, eyeFetch }: { live: LiveState; moment?: Moment; ledges?: LedgeEdit; note?: string | null; eyeFetch?: typeof fetch }) {
   const s = live.snapshot as Snapshot;
@@ -119,9 +140,10 @@ export function Shelf({ live, moment: forced, ledges, note, eyeFetch }: { live: 
     // A new opening: the old failure is not about this one.
     setFailedTurn((t) => (t != null && t !== eye.turn ? null : t));
   }, [eye.turn]);
-  const alert = alertText(live) ?? note ?? (!live.mock && !showFeed && s.products.length > 0 ? NO_FEED : null);
-  // The tag is there when the shelf node on QNX does the counting. The eye counting is the plain case and gets no tag.
-  const credit = s.node.online && s.node.level >= 2 ? 'Counted by the shelf node on QNX' : null;
+  const alert = alertText(live) ?? note ?? wrongBox(s, outlines) ?? (!live.mock && !showFeed && s.products.length > 0 ? NO_FEED : null);
+  // The tag says what the shelf node on QNX is doing for this board right now: counting it, or watching the hands
+  // that reach for it. The eye counting with no node is the plain case and gets no tag.
+  const credit = shelfCredit(s);
   const edit = useLedges(s, ledges, live.mock);
   const zones = edit.zones.filter((z) => z.camera === 'board');
 
@@ -134,7 +156,7 @@ export function Shelf({ live, moment: forced, ledges, note, eyeFetch }: { live: 
           {showFeed && board?.streamUrl ? <img key={eye.turn} src={feedUrl(board.streamUrl, eye.turn)} alt="The parts board, live" onError={() => setFailedTurn(eye.turn)} /> : null}
           {showFeed && outlines.length > 0 ? (
             <svg className="outlines" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
-              {outlines.map((o, i) => <polygon key={i} className="outline" points={o.points.map((p) => p.join(',')).join(' ')} />)}
+              {outlines.map((o, i) => <polygon key={i} className={o.zoneId ? 'outline wrong' : 'outline'} points={o.points.map((p) => p.join(',')).join(' ')} />)}
             </svg>
           ) : null}
           {zones.map((zone) => {

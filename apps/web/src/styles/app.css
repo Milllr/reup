@@ -25,6 +25,8 @@
 .feed > .corner:active { cursor: grabbing; }
 .feed > .corner:focus-visible { outline: 3px solid var(--cream); outline-offset: 2px; }
 .outline.ledge { stroke: var(--orange); stroke-width: 3; }
+/* A part that sits in another part's box. */
+.outline.wrong { stroke: var(--orange); stroke-width: 4; }
 .zone.editing.quad { border-color: transparent; }
 .ops { display: grid; grid-template-columns: 1064px 1fr; gap: 56px; padding: 200px 48px 60px; min-height: 100vh; height: auto; }
 .ops > div, .ops > form, .ops > p { position: relative; z-index: 2; }

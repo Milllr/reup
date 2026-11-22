@@ -291,7 +291,9 @@ class Runtime:
                         if index < len(levels):
                             cv2.putText(img, f"{index}:{levels[index]:.0f}", tuple(corners[0][0] + [2, 16]), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
             for item in self.eye.outlines.get(camera_id, []):
-                cv2.polylines(img, [px(item["points"])], True, (61, 239, 224), 1)
+                # A part in another part's box is drawn in orange, thicker.
+                wrong = bool(item.get("zoneId"))
+                cv2.polylines(img, [px(item["points"])], True, (5, 75, 250) if wrong else (61, 239, 224), 3 if wrong else 1)
             note = self.eye.hidden.get(camera_id) or self.eye.notes.get(camera_id) or ("still" if self.eye.settled.get(camera_id) else "moving")
         cv2.putText(img, note, (16, h - 16), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         return encode_jpeg(img, 80)
@@ -452,6 +454,7 @@ class Runtime:
                 self.log(f"YOLOE failed ({err}). Starting it again.")
                 with self.eye.lock:
                     self.eye.detected = {}
+                    self.eye.misplaced, self.eye.wrong_runs = {}, {}
             finally:
                 self.detector.close()
                 self.detector = None

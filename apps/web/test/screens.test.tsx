@@ -7,7 +7,7 @@ import { Menu, pageHref } from '../src/screens/menu';
 import { APPROVE, ApproveHere, howToSayYes, Order as OrderScreen } from '../src/screens/order';
 import { Controls, ZoneEditor } from '../src/screens/ops';
 import { ApproveBand, NO_KEY, TeachForm } from '../src/screens/phone';
-import { FEED_RETRY_MS, feedUrl, NO_FEED, NO_PARTS, Shelf, WATCHING } from '../src/screens/shelf';
+import { FEED_RETRY_MS, feedUrl, NO_FEED, NO_PARTS, Shelf, shelfCredit, WATCHING, wrongBox } from '../src/screens/shelf';
 import { EYE_AWAY, LEDGES_HINT, LEDGES_SAVE, LOOKING, nameTeachSpot } from '../src/screens/shelf/ledges';
 import { panes, Shop, shopSentence } from '../src/screens/shop';
 import { frameFor, Teach } from '../src/screens/teach';
@@ -122,15 +122,23 @@ describe('Shelf', () => {
     expect(container.querySelectorAll('.zone.reach')).toHaveLength(1);
   });
 
-  it('tags the count only when the shelf node on QNX does it, and the mono line is the time alone', () => {
+  it('the tag says what the shelf node on QNX is doing, there is none without it, and the mono line is the time alone', () => {
     const node = render(<Shelf live={live('shelf')} />);
     expect(screen.getByText('Counted by the shelf node on QNX')).toBeTruthy();
     expect(node.container.querySelector('.meta.abs')?.textContent).toBe('Sat 9:14 AM');
     node.unmount();
+    // The node is up and sees hands, but the eye does the counting: it is not credited with the count.
     const l = live('shelf');
     (l.snapshot as Snapshot).node.level = 1;
-    const eye = render(<Shelf live={l} />);
-    expect(eye.container.querySelector('.tag.center')).toBeNull();
+    const hands = render(<Shelf live={l} />);
+    expect(screen.getByText('Hands seen by the shelf node on QNX')).toBeTruthy();
+    expect(hands.container.textContent).not.toContain('Counted by');
+    hands.unmount();
+    // No node: the eye counting is the plain case and gets no tag.
+    const away = live('shelf');
+    (away.snapshot as Snapshot).node = { ...(away.snapshot as Snapshot).node, online: false, level: 1 };
+    const eye = render(<Shelf live={away} />);
+    expect(eye.container.querySelector('.tag.center:not(.alert)')).toBeNull();
     expect(eye.container.textContent).not.toContain('Counted by');
     expect(eye.container.textContent).not.toContain('camera live');
   });
@@ -617,6 +625,39 @@ describe('the menu', () => {
     const given: Record<string, string> = { mock: '1', hub: 'https://hub.example', k: 'secret' };
     expect(pageHref('/analytics', (name) => given[name] ?? null)).toBe('/analytics?mock=1&hub=https%3A%2F%2Fhub.example');
     expect(pageHref('/ops', () => null)).toBe('/ops');
+  });
+});
+
+describe('who did what, as a tag', () => {
+  it('the board names the shelf node on QNX for what it is doing, and says nothing when it is away', () => {
+    const s = mockSnapshot('shelf');
+    const node = (patch: Partial<Snapshot['node']>): Snapshot => ({ ...s, node: { ...s.node, ...patch } });
+    expect(shelfCredit(node({ online: true, level: 2 }))).toBe('Counted by the shelf node on QNX');
+    expect(shelfCredit(node({ online: true, level: 1 }))).toBe('Hands seen by the shelf node on QNX');
+    expect(shelfCredit(node({ online: false, level: 1 }))).toBeNull();
+    expect(shelfCredit(node({ online: true, level: 0 }))).toBeNull();
+  });
+});
+
+describe('a part in the wrong box', () => {
+  it('is said in one line with the number, the part and the box, and nothing is said when every part is at home', () => {
+    const s = mockSnapshot('shelf');
+    const pts: [number, number][] = [[0.1, 0.6], [0.15, 0.6], [0.15, 0.7], [0.1, 0.7]];
+    expect(wrongBox(s, [{ productId: 'p-glue', points: pts }])).toBeNull();
+    expect(wrongBox(s, [{ productId: 'p-discs', points: pts, zoneId: 'z-glue' }])).toBe('1 from sanding discs is in the wood glue box. Not counted.');
+    expect(wrongBox(s, [{ productId: 'p-discs', points: pts, zoneId: 'z-glue' }, { productId: 'p-discs', points: pts, zoneId: 'z-glue' }])).toBe('2 from sanding discs are in the wood glue box. Not counted.');
+    // A box or a part the hub no longer has is not talked about.
+    expect(wrongBox(s, [{ productId: 'p-gone', points: pts, zoneId: 'z-glue' }])).toBeNull();
+    expect(wrongBox(s, [{ productId: 'p-discs', points: pts, zoneId: 'z-gone' }])).toBeNull();
+  });
+
+  it('the board draws it in orange and says the line where an alert goes', async () => {
+    const pts = [[0.1, 0.6], [0.15, 0.6], [0.15, 0.7], [0.1, 0.7]];
+    const eyeFetch = vi.fn(async () => new Response(JSON.stringify({ items: [{ productId: 'p-glue', points: pts }, { productId: 'p-discs', points: pts, zoneId: 'z-glue' }] })));
+    const { container } = render(<Shelf live={live('shelf', { mock: false })} eyeFetch={eyeFetch as never} />);
+    await waitFor(() => expect(container.querySelectorAll('polygon.outline')).toHaveLength(2));
+    expect(container.querySelectorAll('polygon.outline.wrong')).toHaveLength(1);
+    expect(screen.getByText('1 from sanding discs is in the wood glue box. Not counted.').className).toContain('alert');
   });
 });
 
