@@ -135,6 +135,7 @@ Not checked: a reach that names its ledge (the node has no zones for this board 
 The Pi has no battery and no clock battery. Unplug the table and it goes down at once. When the power is back it boots QNX by itself in about 30 s, and nothing on it starts the shelf node or the hand model. The laptop does that:
 
 * Leave this running on the laptop: `powershell -NoProfile -ExecutionPolicy Bypass -File edge\qnx\pi_keep_alive.ps1`. It looks every 8 s. When the Pi answers and its node is not running it runs `pi_up.ps1`: the clock from the laptop, the desktop, the node, the hand model full screen. About 90 s from power to picture. Its log is `services\eye\data\pi_watchdog.log`.
+* The TV does not turn itself back on. Press its power button.
 * By hand, the same thing: `powershell -NoProfile -ExecutionPolicy Bypass -File edge\qnx\pi_up.ps1`.
 * The board keeps working while the Pi is away. The camera is on the laptop, the eye counts, the hub says "Shelf node offline" and orders as usual.
 * The Pi needs the direct cable to the laptop and nothing else: its calls to the hub go through the laptop (HUB_RELAY), and so does its clock.
