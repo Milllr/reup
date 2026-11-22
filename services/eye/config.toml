@@ -17,12 +17,12 @@ board_pad = 0.04
 
 # Camera choice: a camera with a name is only ever opened under that name (needs cv2-enumerate-cameras). With no name
 # the index is used. List them with: python -m reup_eye --list-cameras
-# url: the camera is plugged into the Pi, and the shelf node on QNX serves its picture. The eye reads it from there
-# first. When nothing answers at that address it falls back to a camera of this name on the laptop's own USB, so
-# moving the cable back to the laptop is all it takes. Clear url to use the laptop's USB only.
+# url: for a camera that is plugged into another machine and served as MJPEG over HTTP. Tried first when set, with
+# a camera of this name on the laptop's own USB as the fallback. Empty on the station: the camera is on the laptop,
+# and the Pi takes its pictures from the eye (edge/qnx/vision/src/reup_netcam.hpp), not the other way round.
 [cameras.board]
 name = "Elgato Facecam"
-url = "http://qnxpi.local:8089/stream/board.mjpg"
+url = ""
 index = 0
 width = 1920
 height = 1080
