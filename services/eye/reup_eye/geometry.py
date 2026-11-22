@@ -147,3 +147,20 @@ def hull(points) -> list[list[float]]:
             upper.pop()
         upper.append(p)
     return [list(p) for p in lower[:-1] + upper[:-1]]
+
+
+def bounds(points) -> tuple[float, float, float, float]:
+    """The box around an outline: x0, y0, x1, y1."""
+    xs, ys = [float(p[0]) for p in points], [float(p[1]) for p in points]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def overlap(a, b) -> float:
+    """How much of the smaller of two outlines' boxes lies inside the other, from 0 to 1."""
+    ax0, ay0, ax1, ay1 = bounds(a)
+    bx0, by0, bx1, by1 = bounds(b)
+    w, h = min(ax1, bx1) - max(ax0, bx0), min(ay1, by1) - max(ay0, by0)
+    if w <= 0 or h <= 0:
+        return 0.0
+    least = min((ax1 - ax0) * (ay1 - ay0), (bx1 - bx0) * (by1 - by0))
+    return float(w * h / least) if least > 0 else 0.0

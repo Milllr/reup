@@ -2,6 +2,7 @@ import { Product, TeachState, type CatalogItem } from '@reup/contracts';
 import { describe, expect, it, vi } from 'vitest';
 import catalogMock from '../../../../contracts/mocks/catalog.json';
 import { buildPrompt, GeminiNamer, parseAnswer, type Namer } from '../../src/teach/gemini';
+import { boxName, inQuad } from '../../src/teach';
 import { APPROVE, DEVICE, OPS, rig } from '../helpers';
 
 const items = catalogMock.items as CatalogItem[];
@@ -184,6 +185,75 @@ describe('naming a new part', () => {
     expect(r.room.count(product.id)?.count).toBe(0);
     expect(r.room.s.orders).toHaveLength(0);
     expect(r.room.s.activity.at(-1)?.text).toBe('1 box of wood screws #8 x 2 in taken. 0 left.');
+  });
+
+  it('a box drawn for the part becomes its own zone, and the teach spot stays free for the next part', async () => {
+    const r = await rig({}, { fetch: catalogFetch, namer: namer({ sku: null, name: '#8 x 2 in Wood Screws, Robertson', unit: 'box of 100', confidence: 'fairly_sure' }) });
+    await r.call('POST', '/api/teach', body, DEVICE);
+    await r.room.idle();
+    const id = r.room.s.teach?.id;
+    const zonesBefore = r.room.s.zones.length;
+    // The box is drawn away from the teach spot (0.2 to 0.8 across on the seed board), so nothing is in it yet.
+    const quad = [[0.02, 0.1], [0.12, 0.1], [0.12, 0.3], [0.02, 0.3]];
+    const res = await r.call('POST', `/api/teach/${id}/confirm`, { name: '#8 x 2 in Wood Screws, Robertson', unit: 'box of 100', sku: null, searchPhrase: '#8 x 2 wood screws', zoneId: 'z-teach', quad }, APPROVE);
+    const product = Product.parse(await res.json());
+    expect(product.zoneId).toBe('z-8-x-2-in-wood-screws-robertson');
+    const zone = r.room.zone(product.zoneId);
+    expect(zone).toMatchObject({ name: 'Wood Screws', kind: 'open', camera: r.room.zone('z-teach')?.camera, quad, rows: null, cols: null, productId: product.id });
+    expect(r.room.s.zones).toHaveLength(zonesBefore + 1);
+    expect(r.room.zone('z-teach')?.productId).toBeNull();
+    expect(r.room.count(product.id)).toMatchObject({ count: 0, zoneId: zone?.id });
+    expect(r.of('zones').at(-1)?.zones.some((z) => z.id === zone?.id)).toBe(true);
+    expect(r.room.s.orders).toHaveLength(0);
+    // The eye counts the new box like any ledge, and the first unit set down in it is not a reorder.
+    await r.call('POST', '/ingest/counts', { counts: [{ productId: product.id, zoneId: product.zoneId, count: 1, level: null, pockets: null, source: 'eye', ts: r.room.iso() }] }, DEVICE);
+    expect(r.room.count(product.id)?.count).toBe(1);
+    expect(r.room.s.activity.at(-1)?.text).toBe('1 box of wood screws added. 1 on the board.');
+    expect(r.room.s.orders).toHaveLength(0);
+
+    // The teach spot takes the next part, and a second box for a part of the same name gets its own id.
+    await r.call('POST', '/api/teach', body, DEVICE);
+    await r.room.idle();
+    const again = Product.parse(await (await r.call('POST', `/api/teach/${r.room.s.teach?.id}/confirm`, { name: '#8 x 2 in Wood Screws, Robertson', unit: 'box of 100', sku: null, searchPhrase: '#8 x 2 wood screws', zoneId: 'z-teach', quad: [[0.2, 0.15], [0.8, 0.15], [0.8, 0.85], [0.2, 0.85]] }, APPROVE)).json());
+    expect(again.zoneId).not.toBe(product.zoneId);
+    expect(again.zoneId).toMatch(/^z-8-x-2-in-wood-screws-robertson-/);
+    // This box holds the place the part was seen in, so one unit is counted from the start.
+    expect(r.room.count(again.id)?.count).toBe(1);
+
+    // Removing the part takes its own box off the board. Nothing says it was removed and nothing still names it.
+    expect((await r.call('POST', `/api/products/${product.id}/remove`, undefined, APPROVE)).status).toBe(200);
+    expect(r.room.zone(product.zoneId)).toBeUndefined();
+    expect(r.room.s.products.some((p) => p.id === product.id)).toBe(false);
+    expect(r.room.s.activity.some((a) => /removed/i.test(a.text))).toBe(false);
+    // A reset between judges takes the other taught part and its box too. The station's own zones stay.
+    await r.call('POST', '/api/demo/reset', undefined, OPS);
+    expect(r.room.s.zones).toHaveLength(zonesBefore);
+    expect(r.room.s.products.some((p) => p.id === again.id)).toBe(false);
+    expect(r.room.x.madeZones).toEqual([]);
+  });
+
+  it('a box with no zone to stand on still works, and a confirm with neither is refused', async () => {
+    const r = await rig({}, { fetch: catalogFetch });
+    await r.call('POST', '/api/teach', { ...body, zoneId: null }, DEVICE);
+    await r.room.idle();
+    const id = r.room.s.teach?.id;
+    const named = { name: 'Blue tape 1 in', unit: 'roll', sku: null, searchPhrase: 'blue tape' };
+    expect((await r.call('POST', `/api/teach/${id}/confirm`, { ...named, zoneId: 'z-nowhere' }, APPROVE)).status).toBe(404);
+    const res = await r.call('POST', `/api/teach/${id}/confirm`, { ...named, zoneId: 'z-nowhere', quad: [[0.1, 0.1], [0.2, 0.1], [0.2, 0.2], [0.1, 0.2]] }, APPROVE);
+    const product = Product.parse(await res.json());
+    expect(r.room.zone(product.zoneId)).toMatchObject({ name: 'Blue tape', camera: 'board', productId: product.id });
+    expect(r.room.count(product.id)?.count).toBe(0);
+  });
+
+  it('names a box in a few words and knows what is inside a box', () => {
+    expect(boxName('#8 x 2 in Wood Screws, Robertson')).toBe('Wood Screws');
+    expect(boxName('Flat washers 3/4 in')).toBe('Flat washers');
+    expect(boxName('MWAX synthetic lubricant')).toBe('MWAX synthetic lubricant');
+    expect(boxName('9V')).toBe('9V');
+    const box = [[0.2, 0.2], [0.6, 0.2], [0.6, 0.6], [0.2, 0.6]] as [number, number][];
+    expect(inQuad(box, 0.4, 0.4)).toBe(true);
+    expect(inQuad(box, 0.7, 0.4)).toBe(false);
+    expect(inQuad([...box].reverse(), 0.4, 0.4)).toBe(true);
   });
 
   it('fails plainly when naming throws or takes over 18 seconds, and a person can still confirm', async () => {

@@ -12,7 +12,8 @@
 .frame > .pane { background: #F4F5F1; color: #1E1A19; padding: 22px 24px; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; overflow: hidden; }
 .pane > .meta { opacity: 0.55; }
 .pane > .meta:last-child { opacity: 1; }
-.crop { background: #262320; object-fit: contain; }
+/* The picture of a new part is shown whole. Its frame takes the picture's shape, so there is no bar beside it either. */
+.frame > .fill.crop { background: #262320; object-fit: contain; }
 .index .figure { min-width: 74px; }
 .index.dense .figure { font-size: 84px; min-width: 58px; }
 .index.dense .name { font-size: 22px; }
@@ -24,6 +25,8 @@
 .feed > .corner:active { cursor: grabbing; }
 .feed > .corner:focus-visible { outline: 3px solid var(--cream); outline-offset: 2px; }
 .outline.ledge { stroke: var(--orange); stroke-width: 3; }
+/* A part that sits in another part's box. */
+.outline.wrong { stroke: var(--orange); stroke-width: 4; }
 .zone.editing.quad { border-color: transparent; }
 .ops { display: grid; grid-template-columns: 1064px 1fr; gap: 56px; padding: 200px 48px 60px; min-height: 100vh; height: auto; }
 .ops > div, .ops > form, .ops > p { position: relative; z-index: 2; }
@@ -106,3 +109,18 @@
 .close > i { grid-area: 1 / 1; display: block; width: 32px; height: 4px; background: var(--cream); transform: rotate(45deg); }
 .close > i + i { transform: rotate(-45deg); }
 .close:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+
+/* ---------- the new part plate: the picture beside its name, then the form, and the board's boxes to say where it sits ---------- */
+/* The sentence sits at the foot of the picture, below the word that runs across the top of the plate. */
+.teach > .row { display: flex; gap: 28px; align-items: flex-end; }
+.teach .frame { position: relative; flex: none; }
+.teach .figure { text-wrap: balance; }
+.pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.pairs .field input { width: 100%; }
+/* A box's name sits above the box, clear of its corners: a small box is all corners. */
+.feed.boxes .zone > .tag { left: -2px; top: -18px; transform: translateY(-100%); pointer-events: none; }
+/* The new part's box is the orange one. The station's own boxes are cream, with smaller corners, and move the same way. */
+.zone.editing.fresh { z-index: 4; }
+.outline.ledge.fresh { fill: rgba(250, 75, 5, 0.18); }
+.outline.ledge.other { stroke: var(--cream); stroke-width: 2; }
+.feed > .corner.other { width: 18px; height: 18px; margin: -9px; background: var(--cream); }

@@ -7,10 +7,11 @@ import { Menu, pageHref } from '../src/screens/menu';
 import { APPROVE, ApproveHere, howToSayYes, Order as OrderScreen } from '../src/screens/order';
 import { Controls, ZoneEditor } from '../src/screens/ops';
 import { ApproveBand, NO_KEY, TeachForm } from '../src/screens/phone';
-import { FEED_RETRY_MS, feedUrl, NO_FEED, NO_PARTS, Shelf, WATCHING } from '../src/screens/shelf';
+import { FEED_RETRY_MS, feedUrl, NO_FEED, NO_PARTS, Shelf, shelfCredit, WATCHING, wrongBox } from '../src/screens/shelf';
 import { EYE_AWAY, LEDGES_HINT, LEDGES_SAVE, LOOKING, nameTeachSpot } from '../src/screens/shelf/ledges';
 import { panes, Shop, shopSentence } from '../src/screens/shop';
-import { Teach } from '../src/screens/teach';
+import { frameFor, Teach } from '../src/screens/teach';
+import { centre, FRESH, inside, placeFor, START, WHERE } from '../src/screens/teach/boxes';
 import { Tv } from '../src/screens/tv';
 import { ASK_FALLBACK, ASK_WAIT, AskReup, Chart, scales, SEASONS, sourceLine, Why } from '../src/screens/why';
 import { forgetHistory, HISTORY_RETRY, HISTORY_WAIT, prefetchHistory, useHistory } from '../src/screens/why/history';
@@ -121,15 +122,23 @@ describe('Shelf', () => {
     expect(container.querySelectorAll('.zone.reach')).toHaveLength(1);
   });
 
-  it('tags the count only when the shelf node on QNX does it, and the mono line is the time alone', () => {
+  it('the tag says what the shelf node on QNX is doing, there is none without it, and the mono line is the time alone', () => {
     const node = render(<Shelf live={live('shelf')} />);
     expect(screen.getByText('Counted by the shelf node on QNX')).toBeTruthy();
     expect(node.container.querySelector('.meta.abs')?.textContent).toBe('Sat 9:14 AM');
     node.unmount();
+    // The node is up and sees hands, but the eye does the counting: it is not credited with the count.
     const l = live('shelf');
     (l.snapshot as Snapshot).node.level = 1;
-    const eye = render(<Shelf live={l} />);
-    expect(eye.container.querySelector('.tag.center')).toBeNull();
+    const hands = render(<Shelf live={l} />);
+    expect(screen.getByText('Hands seen by the shelf node on QNX')).toBeTruthy();
+    expect(hands.container.textContent).not.toContain('Counted by');
+    hands.unmount();
+    // No node: the eye counting is the plain case and gets no tag.
+    const away = live('shelf');
+    (away.snapshot as Snapshot).node = { ...(away.snapshot as Snapshot).node, online: false, level: 1 };
+    const eye = render(<Shelf live={away} />);
+    expect(eye.container.querySelector('.tag.center:not(.alert)')).toBeNull();
     expect(eye.container.textContent).not.toContain('Counted by');
     expect(eye.container.textContent).not.toContain('camera live');
   });
@@ -619,6 +628,42 @@ describe('the menu', () => {
   });
 });
 
+describe('who did what, as a tag', () => {
+  it('the board names the shelf node on QNX for what it is doing, and says nothing when it is away', () => {
+    const s = mockSnapshot('shelf');
+    const node = (patch: Partial<Snapshot['node']>): Snapshot => ({ ...s, node: { ...s.node, ...patch } });
+    expect(shelfCredit(node({ online: true, level: 2 }))).toBe('Counted by the shelf node on QNX');
+    expect(shelfCredit(node({ online: true, level: 1 }))).toBe('Hands seen by the shelf node on QNX');
+    expect(shelfCredit(node({ online: false, level: 1 }))).toBeNull();
+    expect(shelfCredit(node({ online: true, level: 0 }))).toBeNull();
+    // A board of ledges: the node counts nothing there, so it is never credited with the count.
+    const ledges: Snapshot = { ...node({ online: true, level: 3 }), zones: s.zones.map((z) => ({ ...z, kind: 'open' as const, rows: null, cols: null })) };
+    expect(shelfCredit(ledges)).toBe('Hands seen by the shelf node on QNX');
+  });
+});
+
+describe('a part in the wrong box', () => {
+  it('is said in one line with the number, the part and the box, and nothing is said when every part is at home', () => {
+    const s = mockSnapshot('shelf');
+    const pts: [number, number][] = [[0.1, 0.6], [0.15, 0.6], [0.15, 0.7], [0.1, 0.7]];
+    expect(wrongBox(s, [{ productId: 'p-glue', points: pts }])).toBeNull();
+    expect(wrongBox(s, [{ productId: 'p-discs', points: pts, zoneId: 'z-glue' }])).toBe('1 from sanding discs is in the wood glue box. Not counted.');
+    expect(wrongBox(s, [{ productId: 'p-discs', points: pts, zoneId: 'z-glue' }, { productId: 'p-discs', points: pts, zoneId: 'z-glue' }])).toBe('2 from sanding discs are in the wood glue box. Not counted.');
+    // A box or a part the hub no longer has is not talked about.
+    expect(wrongBox(s, [{ productId: 'p-gone', points: pts, zoneId: 'z-glue' }])).toBeNull();
+    expect(wrongBox(s, [{ productId: 'p-discs', points: pts, zoneId: 'z-gone' }])).toBeNull();
+  });
+
+  it('the board draws it in orange and says the line where an alert goes', async () => {
+    const pts = [[0.1, 0.6], [0.15, 0.6], [0.15, 0.7], [0.1, 0.7]];
+    const eyeFetch = vi.fn(async () => new Response(JSON.stringify({ items: [{ productId: 'p-glue', points: pts }, { productId: 'p-discs', points: pts, zoneId: 'z-glue' }] })));
+    const { container } = render(<Shelf live={live('shelf', { mock: false })} eyeFetch={eyeFetch as never} />);
+    await waitFor(() => expect(container.querySelectorAll('polygon.outline')).toHaveLength(2));
+    expect(container.querySelectorAll('polygon.outline.wrong')).toHaveLength(1);
+    expect(screen.getByText('1 from sanding discs is in the wood glue box. Not counted.').className).toContain('alert');
+  });
+});
+
 describe('saying yes and naming a part on the TV itself', () => {
   const teaching = mockSnapshot('teach');
 
@@ -631,6 +676,86 @@ describe('saying yes and naming a part on the TV itself', () => {
     render(<Teach live={live('teach')} bearer="key-1" />);
     expect(screen.getByLabelText('Name')).toBeTruthy();
     expect(screen.queryByText('Confirm on a phone or the operator page.')).toBeNull();
+  });
+
+  it('a screen with a key has the board with every box on it in place of a list of places, and no line about the teach spot', () => {
+    const { container } = render(<Teach live={live('teach')} bearer="key-1" />);
+    expect(screen.getByLabelText(WHERE).className).toContain('frame');
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(container.textContent).not.toContain('Put one unit on the teach spot');
+    // The new part's box starts on the spot it was seen on, so that spot's own box is not drawn under it.
+    expect(container.querySelectorAll('.feed .zone')).toHaveLength(4);
+    expect(container.querySelectorAll('.feed .zone.fresh')).toHaveLength(1);
+    expect(screen.queryByText('Wood screws', { selector: '.tag' })).toBeNull();
+    expect(screen.getByText('New part', { selector: '.tag' })).toBeTruthy();
+    expect(screen.getAllByRole('slider')).toHaveLength(16);
+    expect(screen.getByRole('slider', { name: 'Corner 1 of the new part' })).toBeTruthy();
+    // The sentence is on the plate once, with how sure reup is under it. The form does not say it again.
+    expect(screen.getByText('Looks like wood screws #8 x 2 in.')).toBeTruthy();
+    expect(screen.getByText('fairly sure')).toBeTruthy();
+    expect(screen.queryByText('Looks like Wood screws #8 x 2 in. Fairly sure.')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeTruthy();
+  });
+
+  it('dragging the new box away gives the part a box of its own, and dragging a ledge box saves that box first', async () => {
+    const send = vi.fn(async () => ok({}));
+    const t = mockSnapshot('teach');
+    const { container } = render(<Teach live={live('teach')} bearer="key-1" />);
+    const feed = container.querySelector('.feed') as HTMLElement;
+    feed.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 500, right: 1000, bottom: 500, x: 0, y: 0, toJSON: () => ({}) });
+    // The new box, taken by its middle and set down in the clear strip between the two rows.
+    const fresh = container.querySelector('.zone.fresh') as HTMLElement;
+    fireEvent.pointerDown(fresh, { clientX: 300, clientY: 130, pointerId: 1 });
+    fireEvent.pointerMove(feed, { clientX: 700, clientY: 330, pointerId: 1 });
+    fireEvent.pointerUp(feed, { pointerId: 1 });
+    // The spot it left has its own box again.
+    expect(container.querySelectorAll('.feed .zone')).toHaveLength(5);
+    expect(screen.getByText('Wood screws', { selector: '.tag' })).toBeTruthy();
+    // One corner of the wood glue box, pulled in.
+    fireEvent.pointerDown(screen.getByRole('slider', { name: 'Corner 2 of Wood glue' }), { clientX: 450, clientY: 275, pointerId: 2 });
+    fireEvent.pointerMove(feed, { clientX: 400, clientY: 275, pointerId: 2 });
+    fireEvent.pointerUp(feed, { pointerId: 2 });
+    const teach = t.teach as TeachState;
+    const where = placeFor(t, teach, { [FRESH]: [[0.44, 0.5], [0.96, 0.5], [0.96, 0.82], [0.44, 0.82]], 'z-glue': [[0.04, 0.55], [0.4, 0.55], [0.45, 0.92], [0.04, 0.92]] });
+    expect(where).toEqual({ moved: [{ id: 'z-glue', quad: [[0.04, 0.55], [0.4, 0.55], [0.45, 0.92], [0.04, 0.92]] }], zoneId: 'z-screws', quad: [[0.44, 0.5], [0.96, 0.5], [0.96, 0.82], [0.44, 0.82]] });
+    cleanup();
+    // The form saves the moved box, then confirms with the new one.
+    render(<TeachForm teach={teach} s={t} send={send as never} bearer="key-1" place={() => where} />);
+    expect(screen.queryByLabelText('Where it sits')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    expect(send).toHaveBeenNthCalledWith(1, 'POST', '/api/zones/z-glue/quad', { quad: where.moved[0]?.quad }, 'key-1');
+    expect(send).toHaveBeenNthCalledWith(2, 'POST', '/api/teach/t-1/confirm', { name: 'Wood screws #8 x 2 in', unit: 'box of 100', sku: 'OC-1008-200', searchPhrase: '#8 x 2 wood screws', zoneId: 'z-screws', quad: where.quad }, 'key-1');
+    cleanup();
+    // A box that will not save stops the confirm, and says why.
+    const refuse = vi.fn(async () => ({ ok: false, status: 404, data: null, message: 'No zone z-glue.' }));
+    render(<TeachForm teach={teach} s={t} send={refuse as never} bearer="key-1" place={() => where} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(screen.getByText('No zone z-glue.')).toBeTruthy());
+    expect(refuse).toHaveBeenCalledTimes(1);
+  });
+
+  it('a new box left on the teach spot is the teach spot, as before, with its corners when they were dragged', () => {
+    const t = mockSnapshot('teach');
+    const teach = t.teach as TeachState;
+    const spot = t.zones.find((z) => z.id === 'z-screws')?.quad as [number, number][];
+    // Untouched: the part takes the zone it was seen on, and nothing else is sent.
+    expect(placeFor(t, teach, {})).toEqual({ moved: [], zoneId: 'z-screws' });
+    // Fitted to the part but still over the middle of the spot: the spot takes those corners.
+    const fitted: [number, number][] = [[0.2, 0.15], [0.4, 0.15], [0.4, 0.4], [0.2, 0.4]];
+    expect(placeFor(t, teach, { [FRESH]: fitted })).toEqual({ moved: [{ id: 'z-screws', quad: fitted }], zoneId: 'z-screws' });
+    // With no teach spot on the hub the part always gets a box of its own.
+    expect(placeFor({ ...t, zones: [] }, { ...teach, zoneId: null }, {})).toEqual({ moved: [], zoneId: 'z-new', quad: START });
+    expect(inside(spot, ...centre(spot))).toBe(true);
+    expect(inside(spot, 0.9, 0.9)).toBe(false);
+    expect(inside([...spot].reverse(), ...centre(spot))).toBe(true);
+  });
+
+  it('the frame takes the shape of the picture, so all of it shows', () => {
+    expect(frameFor(1, 320, 320)).toEqual({ width: 320, height: 320 });
+    expect(frameFor(569 / 640, 320, 320)).toEqual({ width: 288, height: 320 });
+    expect(frameFor(2, 320, 320)).toEqual({ width: 320, height: 178 });
+    expect(frameFor(Number.NaN, 320, 320)).toEqual({ width: 289, height: 320 });
   });
 
   it('when naming failed the plate asks for a name in a text field, and has none while it is still naming', () => {

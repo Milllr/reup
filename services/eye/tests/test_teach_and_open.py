@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from reup_eye.teach import MAX_JPEG_BYTES, TeachSpot, crop_quad, jpeg_under, present
+from reup_eye.teach import MAX_JPEG_BYTES, TeachSpot, crop_quad, jpeg_under, present, view_quad
 
 from .helpers import H, W, board, eye, fill, snapshot, still
 
@@ -70,6 +70,52 @@ def test_the_crop_is_the_inside_of_the_quad():
     img[20:60, 50:150] = 200
     crop = crop_quad(img, [[0.25, 0.2], [0.75, 0.2], [0.75, 0.6], [0.25, 0.6]], 64, 64)
     assert crop.shape == (64, 64, 3) and crop.min() == 200
+
+
+def test_the_picture_of_a_new_part_keeps_the_spots_shape_and_shows_the_board_around_it():
+    img = np.full((1080, 1920, 3), 150, np.uint8)
+    spot = [[0.8, 0.6], [0.9, 0.6], [0.9, 0.8], [0.8, 0.8]]  # 192 by 216 pixels
+    # A screw standing at the left edge of the spot, half of it outside, and something just beside the spot.
+    img[660:860, 1530:1542] = 20
+    img[700:760, 1500:1510] = 250
+    view = view_quad(img, spot, 0.2, 640)
+    assert view.shape == (640, 569, 3)
+    # The spot is the middle of the picture, with a fifth of its size around it on every side.
+    cols = np.where((view[:, :, 0] < 60).any(axis=0))[0]
+    rows = np.where((view[:, :, 0] < 60).any(axis=1))[0]
+    assert 66 < cols.min() < 74 and 90 < cols.max() < 98  # the whole screw, on both sides of the spot's edge at 81
+    assert 110 < rows.min() < 124 and 532 < rows.max() < 548
+    assert (view[:, :40, 0] > 240).any()  # what is beside the spot is in the picture too
+    # With no margin it is the spot alone, and at the corner of the frame the picture is still whole.
+    assert view_quad(img, spot, 0.0, 640).shape == (640, 569, 3)
+    corner = view_quad(img, [[0.9, 0.85], [1.0, 0.85], [1.0, 1.0], [0.9, 1.0]], 0.2, 320)
+    assert corner.shape[0] == 270 and corner.shape[1] == 320 and corner.dtype == np.uint8
+
+
+def test_a_part_given_its_own_box_becomes_that_products_example(tmp_path):
+    e, hub, logs = eye(tmp_path, TEACH, with_reference=False)
+    t = still(e, frame(), 0.0, 2.5)
+    t = still(e, frame([ITEM]), t, 2.5)
+    assert e.pending_teach["id"] == "t-1"
+    assert e.config.teach.view == 0.15
+    # The hub gave the part a new box, away from the teach spot. Its picture is the card's.
+    snap = snapshot()
+    snap["zones"].append({"id": "z-new", "name": "Tape", "kind": "open", "camera": "board", "quad": [[0.05, 0.6], [0.2, 0.6], [0.2, 0.9], [0.05, 0.9]], "rows": None, "cols": None, "productId": "p-tape"})
+    snap["products"].append({"id": "p-tape", "name": "Blue tape", "zoneId": "z-new", "imageUrl": "/api/teach/t-1/crop.jpg"})
+    snap["teach"] = None
+    e.set_zones(snap)
+    assert e.pending_teach is None
+    assert (tmp_path / "prompts" / "p-tape.json").exists() and (tmp_path / "prompts" / "p-tape.npy").exists()
+    assert [p[0] for p in e.prompts()] == ["p-tape"]
+    assert "p-tape" in logs[-1]
+    # A product made from another card is not this part.
+    f, _hub, _ = eye(tmp_path / "other", TEACH, with_reference=False)
+    t = still(f, frame(), 0.0, 2.5)
+    still(f, frame([ITEM]), t, 2.5)
+    snap["products"][-1]["imageUrl"] = "/api/teach/t-9/crop.jpg"
+    snap["teach"] = {"id": "t-1"}
+    f.set_zones(snap)
+    assert f.pending_teach is not None and not (tmp_path / "other" / "prompts" / "p-tape.json").exists()
 
 
 def test_a_new_part_on_the_teach_spot_is_sent_once_and_becomes_its_products_example(tmp_path):
@@ -431,6 +477,56 @@ def test_detections_are_counted_by_zone_and_product_and_smoothed(tmp_path):
     e.analyse("board", board(extra=[([[0.5, 0.45], [0.7, 0.45], [0.7, 0.65], [0.5, 0.65]], 250)]), t + 0.1)
     e.take_detections("board", seen[:1])
     assert e.counts["z-glue"] == (2, None)
+
+
+def test_a_part_in_another_parts_box_is_pointed_at_and_not_counted(tmp_path):
+    snap = snapshot()
+    snap["zones"] = [z for z in snap["zones"] if z["kind"] != "pockets"]
+    e, hub, _ = eye(tmp_path, '[teach]\ncamera = "aux"\n[open]\nwrong_hold = 3', with_reference=False)
+    e.set_zones(snap)
+    e.yolo_zones = {"z-glue", "z-discs"}
+    box = lambda cx, cy: [[cx - 0.03, cy - 0.05], [cx + 0.03, cy - 0.05], [cx + 0.03, cy + 0.05], [cx - 0.03, cy + 0.05]]  # noqa: E731
+    glue = [{"productId": "p-glue", "centre": [0.1 + i * 0.08, 0.7], "points": box(0.1 + i * 0.08, 0.7), "conf": 0.9} for i in range(2)]
+    stray = {"productId": "p-discs", "centre": [0.35, 0.8], "points": box(0.35, 0.8), "conf": 0.8}  # a disc on the glue ledge
+    t = still(e, frame(), 0.0, 1.0)
+    # It has to be there for three looks in a row before anything is said.
+    e.take_detections("board", glue + [stray])
+    e.take_detections("board", glue + [stray])
+    assert e.misplaced["board"] == []
+    e.take_detections("board", glue + [stray])
+    assert [(m["productId"], m["zoneId"]) for m in e.misplaced["board"]] == [("p-discs", "z-glue")]
+    # It is in no count: not glue's, and not the discs' own, which is empty.
+    assert e.counts["z-glue"] == (2, None) and e.counts["z-discs"] == (0, None)
+    still(e, frame(), t, 0.2)
+    assert [o.get("zoneId") for o in e.outlines["board"]] == [None, None, "z-glue"]
+    # While a hand is in the picture what was shown stays, and nothing new is added.
+    e.analyse("board", board(extra=[([[0.5, 0.45], [0.7, 0.45], [0.7, 0.65], [0.5, 0.65]], 250)]), t + 0.3)
+    e.take_detections("board", glue)
+    assert len(e.misplaced["board"]) == 1
+    # Taken out again: gone at the next still look.
+    t = still(e, frame(), t + 0.4, 1.0)
+    e.take_detections("board", glue)
+    assert e.misplaced["board"] == []
+
+    # Not said: one thing the model takes for two parts at once, a part it is not sure of, and one seen for a look or two.
+    twin = {"productId": "p-discs", "centre": [0.1, 0.7], "points": box(0.11, 0.71), "conf": 0.9}
+    unsure = {**stray, "conf": 0.35}
+    for _ in range(5):
+        e.take_detections("board", glue + [twin, unsure])
+    assert e.misplaced["board"] == []
+    e.take_detections("board", glue + [stray])
+    e.take_detections("board", glue)
+    e.take_detections("board", glue + [stray])
+    e.take_detections("board", glue + [stray])
+    assert e.misplaced["board"] == []
+    # With wrong_hold = 0 the eye never points.
+    off, _, _ = eye(tmp_path / "off", '[teach]\ncamera = "aux"\n[open]\nwrong_hold = 0', with_reference=False)
+    off.set_zones(snap)
+    off.yolo_zones = {"z-glue", "z-discs"}
+    still(off, frame(), 0.0, 1.0)
+    for _ in range(12):
+        off.take_detections("board", glue + [stray])
+    assert off.misplaced.get("board", []) == []
 
 
 def test_parts_the_detector_counts_need_no_empty_board(tmp_path):

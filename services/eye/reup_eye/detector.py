@@ -53,7 +53,7 @@ class YoloeDetector:
         self.model = model
 
     def detect(self, frame: np.ndarray) -> list[dict]:
-        """Every instance found: productId, centre and outline, normalized to the frame."""
+        """Every instance found: productId, centre and outline, normalized to the frame, and how sure the model is."""
         if self.model is None:
             return []
         result = self.model.predict(frame, imgsz=self.imgsz, conf=self.conf, verbose=False)[0]
@@ -61,12 +61,13 @@ class YoloeDetector:
             return []
         boxes = result.boxes.xyxyn.cpu().numpy()
         classes = result.boxes.cls.cpu().numpy().astype(int)
+        scores = result.boxes.conf.cpu().numpy()
         outlines = result.masks.xyn if result.masks is not None else [None] * len(boxes)
         out = []
-        for box, cls, outline in zip(boxes, classes, outlines):
+        for box, cls, outline, score in zip(boxes, classes, outlines, scores):
             if not 0 <= cls < len(self.products):
                 continue
             x0, y0, x1, y1 = (float(v) for v in box)
             points = outline.tolist() if outline is not None and len(outline) >= 3 else [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
-            out.append({"productId": self.products[cls], "centre": [(x0 + x1) / 2, (y0 + y1) / 2], "points": points})
+            out.append({"productId": self.products[cls], "centre": [(x0 + x1) / 2, (y0 + y1) / 2], "points": points, "conf": float(score)})
         return out

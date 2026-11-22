@@ -14,7 +14,8 @@ export const BY_HAND = '';
 
 type Send = typeof call;
 /** One change sent to the hub with this screen's key. what is the line shown when the hub says yes. True when it did. */
-type Act = (what: string, method: 'POST' | 'PUT', path: string, body?: unknown) => Promise<boolean>;
+/** what is the line shown once the hub took the change. null shows none: a removed item is just gone from the list. */
+type Act = (what: string | null, method: 'POST' | 'PUT', path: string, body?: unknown) => Promise<boolean>;
 
 /** Where an item's count comes from, in words. */
 export function countedBy(s: Snapshot, product: Product): string {
@@ -119,7 +120,7 @@ function Row({ s, product, catalog, act, busy }: { s: Snapshot; product: Product
             <button className="btn quiet" type="button" disabled={busy} onBlur={() => setArmed(false)} onClick={() => {
               if (!armed) return setArmed(true);
               setArmed(false);
-              void act(`${product.name} removed.`, 'POST', `/api/products/${product.id}/remove`);
+              void act(null, 'POST', `/api/products/${product.id}/remove`);
             }}>{armed ? 'Press again to remove' : 'Remove'}</button>
           </div>
         ) : null}
@@ -199,7 +200,7 @@ export function Items({ live, k: given, send = call }: { live: LiveState; k?: st
     setBusy(true);
     const res = await send(method, path, body, k);
     setBusy(false);
-    setSaid(res.ok ? { text: what, bad: false } : { text: res.message ?? 'The hub did not take that.', bad: true });
+    setSaid(res.ok ? (what == null ? null : { text: what, bad: false }) : { text: res.message ?? 'The hub did not take that.', bad: true });
     return res.ok;
   };
 

@@ -55,6 +55,8 @@ export interface Internal {
   board: Record<string, { learn: boolean; usePerDay?: number }>;
   /** When the new part card gives up waiting for a name or a yes, so the screens are never held by it for good. Null when no card is up. */
   teachUntil: number | null;
+  /** Zones made as a box for one new part, by id. Such a zone goes when its part goes. Missing on a Room saved before there were any. */
+  madeZones?: string[];
   /** Every change of a count, oldest first, at most TRAIL_MAX. The Analytics page draws the day from it. A demo reset keeps it. */
   trail: { productId: string; ts: string; delta: number; countAfter: number }[];
   /** Every order placed, oldest first, at most PLACED_MAX. A demo reset keeps it too. */

@@ -72,3 +72,46 @@ def crop_quad(frame: np.ndarray, quad, width: int = 640, height: int = 640) -> n
     x = np.clip(np.rint(pts[:, 0] * (w - 1)).astype(int), 0, w - 1)
     y = np.clip(np.rint(pts[:, 1] * (h - 1)).astype(int), 0, h - 1)
     return frame[y, x].reshape(height, width, *frame.shape[2:])
+
+
+def view_size(frame_shape, quad, long_side: int = 640) -> tuple[int, int]:
+    """Width and height of the picture of a quad: the quad's own shape in the frame, with its long side long_side."""
+    h, w = frame_shape[:2]
+    pts = np.asarray(quad, dtype=float) * [w, h]
+    across = (np.linalg.norm(pts[1] - pts[0]) + np.linalg.norm(pts[2] - pts[3])) / 2
+    down = (np.linalg.norm(pts[3] - pts[0]) + np.linalg.norm(pts[2] - pts[1])) / 2
+    if not (across > 0 and down > 0):
+        return long_side, long_side
+    scale = long_side / max(across, down)
+    return max(8, int(round(across * scale))), max(8, int(round(down * scale)))
+
+
+def view_quad(frame: np.ndarray, quad, margin: float = 0.15, long_side: int = 640) -> np.ndarray:
+    """The picture of a new part that a person and the namer look at: the quad and a margin of board around it.
+
+    crop_quad stretched the spot to a square and stopped at its edges, so a part near an edge was cut and nothing
+    around it was seen. This picture keeps the spot's own shape, reaches margin times its size past every edge, and
+    is read between pixels so it is not blocky when the spot is small in the frame. Past the edge of the frame the
+    last row or column repeats.
+    """
+    from .geometry import apply, unit_to_quad
+
+    width, height = view_size(frame.shape, quad, long_side)
+    span = 1.0 + 2.0 * margin
+    us = (np.arange(width) + 0.5) / width * span - margin
+    vs = (np.arange(height) + 0.5) / height * span - margin
+    uu, vv = np.meshgrid(us, vs)
+    pts = apply(unit_to_quad(quad), np.c_[uu.ravel(), vv.ravel()])
+    h, w = frame.shape[:2]
+    fx = np.clip(pts[:, 0] * (w - 1), 0, w - 1)
+    fy = np.clip(pts[:, 1] * (h - 1), 0, h - 1)
+    x0, y0 = np.floor(fx).astype(int), np.floor(fy).astype(int)
+    x1, y1 = np.minimum(x0 + 1, w - 1), np.minimum(y0 + 1, h - 1)
+    ax, ay = fx - x0, fy - y0
+    if frame.ndim == 3:
+        ax, ay = ax[:, None], ay[:, None]
+    grid = frame.astype(np.float32)
+    top = grid[y0, x0] * (1 - ax) + grid[y0, x1] * ax
+    bottom = grid[y1, x0] * (1 - ax) + grid[y1, x1] * ax
+    out = top * (1 - ay) + bottom * ay
+    return np.clip(np.rint(out), 0, 255).astype(frame.dtype).reshape(height, width, *frame.shape[2:])

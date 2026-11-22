@@ -145,6 +145,7 @@
         "The hub fetches Offcut's /catalog.json (cached 5 minutes) and asks the Gemini API (model from GEMINI_MODEL, structured JSON output) to pick the best matching catalog item or none, with a confidence of sure, fairly_sure or not_sure. Search the Gemini docs for the current model name and request shape before writing the call",
         "The suggestion uses the catalog item's name, unit and sku; with no match it uses Gemini's own name and a null sku. State becomes needs_confirm",
         "POST /api/teach/:id/confirm creates the Product, attaches it to the zone, seeds a starting rate of 0.5 a day flagged sampleHistory, and broadcasts product, policy and teach null",
+        "POST /api/teach/:id/confirm with a quad makes a new open zone with those corners on the same camera, named in a few words from the part, and puts the part there: the zone it was seen on stays free. The count starts at 1 when the box holds the place the part was seen in, else at 0. Such a zone goes when its part is removed, and at a demo reset with its part",
         "GEMINI_MODEL may list several models with commas between. The first is asked, the next is asked too after 2.5 seconds without an answer or at once after a failure, each gets at most 7 seconds, and the first good answer names the part. If none does within 18 seconds the state is failed with a plain error and a typed name still confirms"
       ],
       "tests": ["the prompt lists every catalog item with its sku", "a returned sku that is not in the catalog is treated as no match", "confirm creates the product and a policy", "timeout leads to failed, and confirm still works"],
@@ -378,6 +379,7 @@
         "/m matches docs/ui/phone.html at 390 wide: plates stacked as bands, each with its own word fitted to the band: a pending order with Approve (needs `?k=<approve key>`, stored for the session), then the counts with the newest activity",
         "When a teach needs confirming, /m shows the crop, editable name, unit and SKU, a zone picker, and Confirm and Not a part",
         "On the TV the Teach plate from docs/UI.md replaces Shelf while teach is not null (paper, the word \"New part\", the crop in a frame with blinking handles), then an olive plate with the word \"Counting\" for 3 seconds after confirm",
+        "On a screen that can say yes the Teach plate has the board's picture in a frame tagged \"Where it sits\" with every box on it: the new part's box in orange on the teach spot, the station's boxes in cream, each dragged by its middle and fitted by its corners. Confirm saves the boxes that were moved, then the part takes the teach spot when its box is still on it, or a zone of its own where the box was put. The picture of the part shows whole, and the form ends above the bottom right tag",
         "Approve without a key shows \"This phone cannot approve. Scan the code on the station.\""
       ],
       "tests": ["approve posts by phone with the key", "teach form posts TeachConfirmBody", "the Teach plate shows and hides with teach state", "no key state"],

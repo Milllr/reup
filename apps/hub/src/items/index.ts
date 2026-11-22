@@ -5,7 +5,8 @@ import { closeCheck, openCheckFor } from '../checks';
 import type { RoomCore } from '../core/room';
 import { countByHand } from '../ingest';
 import { Conflict, NotFound, withdraw } from '../orders';
-import { applySampleFor } from '../seed';
+import { TEACH_ZONE, applySampleFor } from '../seed';
+import { dropMadeZone } from '../teach';
 
 const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || 'item';
 
@@ -100,6 +101,8 @@ export function countItem(room: RoomCore, id: string, count: number): Count {
 /**
  * Takes an item off the lists and frees its ledge. An order still being shopped for it is withdrawn. One that is
  * being placed right now has to finish first. Orders already placed stay in the record.
+ * The item is simply gone: no line says it was removed, the lines that named it go with it, and its box comes off
+ * the board. The one box that stays is the teach spot, which belongs to the station and not to the part on it.
  */
 export function removeItem(room: RoomCore, id: string): void {
   const product = itemOr404(room, id);
@@ -111,12 +114,18 @@ export function removeItem(room: RoomCore, id: string): void {
   const check = openCheckFor(room, id);
   if (check) closeCheck(room, check.id);
   const zone = room.zone(product.zoneId);
+  // What the screens called it: its own name, and its ledge's name when the ledge is named for it.
+  const names = [product.name, ...(zone && zone.id !== TEACH_ZONE ? [zone.name] : [])].map((n) => n.trim().toLowerCase()).filter((n) => n !== '');
   if (zone) {
     zone.productId = null;
     delete room.x.eyeCounts[zone.id];
     delete room.x.nodeCounts[zone.id];
     delete room.x.disagree[zone.id];
     delete room.x.recentChanges[zone.id];
+    if (zone.id !== TEACH_ZONE) {
+      dropMadeZone(room, zone.id);
+      room.s.zones = room.s.zones.filter((z) => z.id !== zone.id);
+    }
   }
   room.s.products = room.s.products.filter((p) => p.id !== id);
   room.s.counts = room.s.counts.filter((c) => c.productId !== id);
@@ -128,7 +137,7 @@ export function removeItem(room: RoomCore, id: string): void {
   room.x.trail = room.x.trail.filter((t) => t.productId !== id);
   room.x.recentPicks = room.x.recentPicks.filter((r) => r.pick.productId !== id);
   if (room.s.focusProductId === id) room.s.focusProductId = null;
-  room.activity('info', `${product.name} removed.`);
+  room.s.activity = room.s.activity.filter((a) => !names.some((n) => a.text.toLowerCase().includes(n)));
   room.refreshScreen();
   room.emit({ type: 'snapshot', snapshot: room.snapshot() });
 }
