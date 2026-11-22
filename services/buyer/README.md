@@ -49,3 +49,11 @@ At startup the buyer prints whether each secret is set. It never prints a value.
 | src/market, src/cart, src/place | The goal, the schema, the checks and the result mapping for each job |
 | src/jobs.ts | The job loop |
 | src/dev/local-agent.ts | The development stand in |
+
+## Keeping it running on the station laptop
+
+The buyer is started by a watchdog. It starts the buyer again when it stops, or when the hub has not seen it for 40 seconds. When the hub itself cannot be reached it waits: that is the network, not the buyer.
+
+* Start it once and leave it, from the clone where `infisical init` was done: `powershell -NoProfile -ExecutionPolicy Bypass -File C:\code\hw13\services\buyer\keep_alive.ps1`
+* Every restart and its reason is a line in `services\eye\data\buyer-watchdog.log`. The buyer's own words are in `buyer.log` and `buyer.err` in the same folder.
+* After a reboot it has to be started again. It is one process, not a service.
