@@ -42,6 +42,7 @@ const cases: Record<string, z.ZodType> = {
   'product-add': C.ProductAddBody,
   'product-edit': C.ProductEditBody,
   'product-count': C.ProductCountBody,
+  'zone-quad': C.ZoneQuadBody,
   board: C.BoardBody,
   ask: C.AskBody,
   'ask-result': C.AskResult,

@@ -1,5 +1,5 @@
 import type { AskResult, HistoryResult, Order, Snapshot, TeachState } from '@reup/contracts';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import history from '../../../contracts/mocks/history.json';
 import { yesKey, type Reply } from '../src/lib/hub';
@@ -8,6 +8,7 @@ import { APPROVE, ApproveHere, howToSayYes, Order as OrderScreen } from '../src/
 import { Controls, ZoneEditor } from '../src/screens/ops';
 import { ApproveBand, NO_KEY, TeachForm } from '../src/screens/phone';
 import { NO_FEED, NO_PARTS, Shelf, WATCHING } from '../src/screens/shelf';
+import { EYE_AWAY, LEDGES_HINT, LEDGES_SAVE, LOOKING, nameTeachSpot } from '../src/screens/shelf/ledges';
 import { panes, Shop, shopSentence } from '../src/screens/shop';
 import { Teach } from '../src/screens/teach';
 import { Tv } from '../src/screens/tv';
@@ -349,6 +350,109 @@ describe('the X on a finished order', () => {
   });
 });
 
+describe('moving the ledge boxes on the board', () => {
+  const rect = () => vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, right: 1000, bottom: 500, width: 1000, height: 500, x: 0, y: 0, toJSON: () => ({}) });
+  const state = (patch: Partial<LiveState> = {}): LiveState => ({ ...live('shelf'), mock: false, ...patch });
+
+  it('the menu offers it on a screen that can change things, every corner is a handle, and Save posts each moved box', async () => {
+    const s = mockSnapshot('shelf');
+    const zone = s.zones.filter((z) => z.camera === 'board')[0];
+    if (!zone) throw new Error('no zone');
+    const send = vi.fn(async () => ok(zone));
+    const done = vi.fn();
+    const spy = rect();
+    const { container, rerender } = render(<Shelf live={state()} />);
+    expect(container.querySelectorAll('.corner')).toHaveLength(0);
+    expect(container.querySelectorAll('.zone > .h').length).toBeGreaterThan(0);
+    rerender(<Shelf live={state()} ledges={{ k: 'key', done, send: send as never }} />);
+    expect(screen.getByText(LEDGES_HINT)).toBeTruthy();
+    expect(container.querySelectorAll('.corner')).toHaveLength(s.zones.filter((z) => z.camera === 'board').length * 4);
+    expect(container.querySelectorAll('.zone > .h')).toHaveLength(0);
+    // The third corner of the first box is dragged to the middle of the picture, then a little further.
+    const corner = screen.getByLabelText(`Corner 3 of ${zone.name}`);
+    const feed = container.querySelector('.feed') as HTMLElement;
+    const third = zone.quad[2] ?? [0, 0];
+    fireEvent.pointerDown(corner, { clientX: third[0] * 1000, clientY: third[1] * 500 });
+    fireEvent.pointerMove(feed, { clientX: 480, clientY: 240 });
+    fireEvent.pointerMove(feed, { clientX: 500, clientY: 250 });
+    fireEvent.pointerUp(feed);
+    fireEvent.pointerMove(feed, { clientX: 900, clientY: 450 });
+    expect(screen.getByLabelText(`Corner 3 of ${zone.name}`).style.left).toBe('50%');
+    fireEvent.click(screen.getByRole('button', { name: LEDGES_SAVE }));
+    await waitFor(() => expect(done).toHaveBeenCalledTimes(1));
+    // Only the box that moved is sent, with its four corners and the key.
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith('POST', `/api/zones/${zone.id}/quad`, { quad: [zone.quad[0], zone.quad[1], [0.5, 0.5], zone.quad[3]] }, 'key');
+    spy.mockRestore();
+  });
+
+  it('the middle moves the whole box, the hub saying no keeps the edit open with its reason, and Cancel or Escape saves nothing', async () => {
+    const s = mockSnapshot('shelf');
+    const zone = s.zones.filter((z) => z.camera === 'board')[0];
+    if (!zone) throw new Error('no zone');
+    const send = vi.fn(async (): Promise<Reply<unknown>> => ({ ok: false, status: 401, data: null, message: 'That key is not accepted.' }));
+    const done = vi.fn();
+    const spy = rect();
+    const { container } = render(<Shelf live={state()} ledges={{ k: '', done, send: send as never }} />);
+    const box = container.querySelector('.zone.editing') as HTMLElement;
+    const feed = container.querySelector('.feed') as HTMLElement;
+    fireEvent.pointerDown(box, { clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(feed, { clientX: 150, clientY: 100 });
+    fireEvent.pointerUp(feed);
+    const moved = zone.quad.map((p) => [Math.round((p[0] + 0.05) * 1000) / 1000, p[1]]);
+    fireEvent.click(screen.getByRole('button', { name: LEDGES_SAVE }));
+    expect((await screen.findByRole('alert')).textContent).toBe('That key is not accepted.');
+    expect(send).toHaveBeenCalledWith('POST', `/api/zones/${zone.id}/quad`, { quad: moved }, '');
+    expect(done).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(done).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+
+  it('on the board the menu opens the edit and Cancel leaves it, and a screen that cannot change things is not offered it', () => {
+    act(() => store.set(live('shelf')));
+    const { container } = render(<Tv />);
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    // The sample board has no eye to ask, so only the boxes are offered.
+    expect(screen.queryByRole('button', { name: 'Name what is on the teach spot' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Move the ledge boxes' }));
+    expect(screen.queryByRole('navigation')).toBeNull();
+    expect(container.querySelectorAll('.corner').length).toBeGreaterThan(0);
+    // While the boxes are being moved the menu does not offer it a second time.
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.queryByRole('button', { name: 'Move the ledge boxes' })).toBeNull();
+    // Escape shuts the menu first and the boxes stay. A second Escape leaves the edit.
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('navigation')).toBeNull();
+    expect(container.querySelectorAll('.corner').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(container.querySelectorAll('.corner')).toHaveLength(0);
+    expect(screen.getByText(WATCHING)).toBeTruthy();
+    act(() => store.set({ ...initial }));
+  });
+});
+
+describe('naming what is on the teach spot from the menu', () => {
+  const cameras = mockSnapshot('shelf').cameras.map((c) => (c.id === 'board' ? { ...c, streamUrl: 'http://127.0.0.1:8090/stream/board.mjpg?x=1' } : { ...c, streamUrl: null }));
+
+  it('asks the eye on its own address, and says what the eye said when it could not', async () => {
+    const fetcher = vi.fn(async () => new Response('{"ok":true}', { status: 200 }));
+    expect(await nameTeachSpot(cameras, fetcher as never)).toBe(LOOKING);
+    expect(fetcher).toHaveBeenCalledWith('http://127.0.0.1:8090/teach', { method: 'POST' });
+    const busy = vi.fn(async () => new Response('{"ok":false,"code":"conflict","message":"A new part is already waiting for its name."}', { status: 409 }));
+    expect(await nameTeachSpot(cameras, busy as never)).toBe('A new part is already waiting for its name.');
+    expect(await nameTeachSpot(cameras, (async () => { throw new Error('offline'); }) as never)).toBe(EYE_AWAY);
+    expect(await nameTeachSpot(cameras.map((c) => ({ ...c, streamUrl: null })), fetcher as never)).toBe(EYE_AWAY);
+  });
+
+  it('the Shelf shows that line where an alert goes', () => {
+    render(<Shelf live={live('shelf')} note={LOOKING} />);
+    expect(screen.getByText(LOOKING)).toBeTruthy();
+  });
+});
+
 describe('the menu', () => {
   it('lists the pages with where you are marked, and the board screens only on the board', () => {
     const { unmount } = render(<Menu page="/analytics" fixed />);
@@ -366,6 +470,15 @@ describe('the menu', () => {
     expect(screen.getByRole('button', { name: 'Why' }).getAttribute('aria-pressed')).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: 'Auto' }));
     expect(onLook).toHaveBeenCalledWith(null);
+    // What the board can do is listed last, and picking one shuts the menu.
+    const run = vi.fn();
+    cleanup();
+    render(<Menu page="/" onLook={onLook} actions={[{ label: 'Move the ledge boxes', run }]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.getByText('The board')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Move the ledge boxes' }));
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('navigation')).toBeNull();
   });
 
   it('a click anywhere else shuts it, and a link keeps the mock switch and a hub that lives elsewhere', () => {

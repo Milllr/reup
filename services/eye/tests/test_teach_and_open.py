@@ -220,10 +220,97 @@ def test_an_arm_over_a_part_that_waits_for_its_name_does_not_take_its_card_down(
     assert hub.cancelled == ["t-1"] and e.pending_teach is None and "taken off the teach spot" in logs[-1]
 
 
+def screw(img, left=473, top=238, wide=5, tall=64):
+    """A wood screw lying on the spot: 5 pixels wide, as the Facecam sees one. It sits across two of the eye's 4 pixel blocks."""
+    img = img.copy()
+    img[top : top + tall, left : left + wide] = 40
+    return img
+
+
+def test_a_thin_screw_on_the_teach_spot_is_a_part(tmp_path):
+    e, hub, logs = eye(tmp_path, TEACH, with_reference=False)
+    t = still(e, frame(), 0.0, 2.5)
+    t = still(e, screw(frame()), t, 2.5)
+    assert len(hub.teaches) == 1 and e.pending_teach["id"] == "t-1"
+    seen = e.health()["teach"]
+    assert not seen["reaching"] and 0.004 < seen["patch"] < 0.03
+    # Its box is the screw, a little wider.
+    x0, y0, x1, y1 = e.pending_teach["box"]
+    assert 0.72 < x0 < 0.745 and 0.745 < x1 < 0.77 and 0.63 < y0 < 0.67 and 0.83 < y1 < 0.87
+    # Read from the small picture alone, the way it was, the same screw is not there at all.
+    old, old_hub, _ = eye(tmp_path / "old", TEACH + "\nfine = 0\nshare = 0.004", with_reference=False)
+    t = still(old, frame(), 0.0, 2.5)
+    still(old, screw(frame()), t, 2.5)
+    assert old.teach_n == old.config.open.grid and old_hub.teaches == []
+
+
+def test_a_part_that_waits_for_its_name_stays_when_a_look_sees_less_of_it(tmp_path):
+    e, hub, logs = eye(tmp_path, TEACH, with_reference=False)
+    t = still(e, frame(), 0.0, 2.5)
+    t = still(e, screw(frame()), t, 2.5)
+    assert len(hub.teaches) == 1 and e.pending_teach["id"] == "t-1"
+    # For four seconds the camera sees a third of the screw: under the line for a new part, over the line for one that waits.
+    t = still(e, screw(frame(), tall=22), t, 4.0)
+    assert e.pending_teach is not None and not getattr(hub, "cancelled", [])
+    # A third of a screw put down on an empty spot is not announced.
+    f, f_hub, _ = eye(tmp_path / "fresh", TEACH, with_reference=False)
+    u = still(f, frame(), 0.0, 2.5)
+    still(f, screw(frame(), tall=22), u, 3.0)
+    assert f_hub.teaches == []
+    # Lifted off, the card comes down.
+    still(e, frame(), t, 2.5)
+    assert hub.cancelled == ["t-1"] and e.pending_teach is None
+
+
+# On the ledge next door: inside the margin the eye watches around the spot, never on the spot.
+NEXT_DOOR = [[0.45, 0.6], [0.585, 0.6], [0.585, 0.75], [0.45, 0.75]]
+
+
+def test_something_moved_beside_the_teach_spot_does_not_blind_it(tmp_path):
+    e, hub, logs = eye(tmp_path, TEACH, with_reference=False)
+    t = still(e, frame(), 0.0, 2.5)
+    # A battery is pushed along the next ledge and left there. It is not an arm, and the spot is not waited on.
+    t = still(e, frame([NEXT_DOOR]), t, 3.0)
+    seen = e.health()["teach"]
+    assert hub.teaches == [] and not seen["reaching"] and seen["armed"] and seen["patch"] == 0.0
+    # A screw is put down a moment later, and found. Before, the spot stayed blind until its empty picture was taken again, screw and all.
+    still(e, screw(frame([NEXT_DOOR])), t, 2.5)
+    assert len(hub.teaches) == 1
+    assert not any("empty picture was taken again" in line for line in logs)
+
+
+def test_a_person_can_ask_for_what_is_on_the_teach_spot_to_be_named(tmp_path):
+    e, hub, logs = eye(tmp_path, TEACH, with_reference=False)
+    assert "not looked" in e.teach_now()
+    # A part the colour of the board: the eye sees nothing new on the spot.
+    t = still(e, frame(), 0.0, 2.5)
+    assert hub.teaches == [] and e.teach_now() is None
+    assert len(hub.teaches) == 1 and hub.teaches[0][1] is None and e.pending_teach["id"] == "t-1"
+    # With no patch to go by, the box is the middle of the spot.
+    x0, y0, x1, y1 = e.pending_teach["box"]
+    assert 0.63 < x0 < 0.66 and 0.84 < x1 < 0.87 and 0.59 < y0 < 0.62 and 0.89 < y1 < 0.91
+    assert "already waiting" in e.teach_now() and len(hub.teaches) == 1
+    # It is not then found a second time by itself, and the card stays up though the eye sees an empty spot.
+    t = still(e, frame(), t, 4.0)
+    assert len(hub.teaches) == 1 and e.pending_teach is not None and not getattr(hub, "cancelled", [])
+    # The hub takes the card down when someone dismisses it, and the eye lets go of it.
+    e.set_zones(snapshot())
+    e.set_zones(snapshot())
+    assert e.pending_teach is None
+    # With a part in view the box is the part.
+    f, f_hub, _ = eye(tmp_path / "second", TEACH + "\nhold_s = 60", with_reference=False)
+    t = still(f, frame(), 0.0, 2.5)
+    still(f, frame([ITEM]), t, 1.0)
+    assert f_hub.teaches == [] and f.teach_now() is None
+    x0, y0, x1, y1 = f.pending_teach["box"]
+    assert 0.67 < x0 < 0.7 and 0.8 < x1 < 0.83 and 0.61 < y0 < 0.65 and 0.8 < y1 < 0.84
+
+
 def test_with_no_margin_the_spot_is_read_alone(tmp_path):
     e, hub, _ = eye(tmp_path, TEACH + "\nreach = 0", with_reference=False)
     t = still(e, frame(), 0.0, 2.5)
-    assert e.teach_points.shape[0] == e.config.open.grid**2
+    # One cell for every 2 pixels of the 192 pixel spot, and nothing around it.
+    assert e.teach_n == 96 and e.teach_points.shape[0] == e.teach_n**2
     still(e, frame([ITEM]), t, 2.5)
     assert len(hub.teaches) == 1 and not e.health()["teach"]["reaching"]
 

@@ -19,6 +19,12 @@
 .zone.editing { cursor: move; touch-action: none; }
 .zone.editing > .h { cursor: nwse-resize; width: 22px; height: 22px; margin: -11px; touch-action: none; }
 .zone.editing.selected { border-color: var(--orange); --handle: var(--orange); }
+/* Moving the ledge boxes on the board: every corner is a handle, the true shape is drawn in orange. */
+.feed > .corner { position: absolute; z-index: 7; width: 26px; height: 26px; margin: -13px; background: var(--orange); box-shadow: 0 0 0 2px var(--ink); cursor: grab; touch-action: none; }
+.feed > .corner:active { cursor: grabbing; }
+.feed > .corner:focus-visible { outline: 3px solid var(--cream); outline-offset: 2px; }
+.outline.ledge { stroke: var(--orange); stroke-width: 3; }
+.zone.editing.quad { border-color: transparent; }
 .ops { display: grid; grid-template-columns: 1064px 1fr; gap: 56px; padding: 200px 48px 60px; min-height: 100vh; height: auto; }
 .ops > div, .ops > form, .ops > p { position: relative; z-index: 2; }
 .ops table { border-collapse: collapse; width: 100%; }

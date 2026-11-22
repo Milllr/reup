@@ -1,11 +1,11 @@
 // Every hub route: check the token, check the body against the contract, call the Room, answer in the contract's shape.
-import { ApproveBody, AskBody, BoardBody, CheckAnswerBody, IngestCartBody, IngestCountsBody, IngestNodeBody, IngestPicksBody, IngestPlacedBody, IngestQuotesBody, IngestReachesBody, IngestReorderBody, IngestRunsBody, ManualOrderBody, ProductAddBody, ProductCountBody, ProductEditBody, ReplayBody, ScreenBody, Season, SupplyWebhookBody, TeachBody, TeachConfirmBody, ZonesBody, type ApiError } from '@reup/contracts';
+import { ApproveBody, AskBody, BoardBody, CheckAnswerBody, IngestCartBody, IngestCountsBody, IngestNodeBody, IngestPicksBody, IngestPlacedBody, IngestQuotesBody, IngestReachesBody, IngestReorderBody, IngestRunsBody, ManualOrderBody, ProductAddBody, ProductCountBody, ZoneQuadBody, ProductEditBody, ReplayBody, ScreenBody, Season, SupplyWebhookBody, TeachBody, TeachConfirmBody, ZonesBody, type ApiError } from '@reup/contracts';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import type { z } from 'zod';
 import { ask } from './ask';
 import type { RoomCore } from './core/room';
-import { putZones, reset, setBoard, setReplay, setScreen, setSeason } from './demo';
+import { moveZoneQuad, putZones, reset, setBoard, setReplay, setScreen, setSeason } from './demo';
 import { analyticsResult } from './analytics';
 import { historyResult } from './history';
 import { supplyWebhook } from './hooks';
@@ -223,6 +223,12 @@ export function createApp(room: RoomCore, options: AppOptions = {}): Hono {
     const count = countItem(room, c.req.param('id'), (await body(c, ProductCountBody)).count);
     await done();
     return c.json(count);
+  });
+  app.post('/api/zones/:id/quad', async (c) => {
+    allow(c, APPROVE_KEY, OPS_TOKEN);
+    const zone = moveZoneQuad(room, c.req.param('id'), (await body(c, ZoneQuadBody)).quad);
+    await done();
+    return c.json(zone);
   });
   app.post('/api/products/:id/remove', async (c) => {
     allow(c, APPROVE_KEY, OPS_TOKEN);

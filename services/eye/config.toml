@@ -103,8 +103,13 @@ hold_s = 1.0
 clear_s = 2.0
 # A part is one connected patch over this share of the spot that shows another surface than the empty spot. The eye
 # learns the empty spot by itself, so nothing has to be saved first. On the built board one box of bolts on the spot is a
-# patch of 2.8 percent and one battery 3.0, and the empty spot reads under 0.1.
-share = 0.01
+# patch of 2.8 percent and one battery 3.0, and the empty spot reads under 0.1. One wood screw is about 1 percent, so
+# the line sits well under it. A part that waits for its name stays while a quarter of this is still there.
+share = 0.004
+# The spot is read from the full picture, averaged fine by fine pixels, in one cell for every fine pixels across it.
+# The rest of the eye works on a picture averaged 4 by 4, where a screw 5 pixels wide is all but gone. 0 reads the spot
+# from that small picture, the way it was.
+fine = 2
 # Another surface, not the wood in other light: the share of a colour moved by more than hue, or the point is under
 # darker times or over brighter times as bright as it was. A shadow or a lamp does neither.
 hue = 0.06

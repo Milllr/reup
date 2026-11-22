@@ -33,11 +33,15 @@ export function pageHref(page: Page, get: (name: string) => string | null = para
   return query ? `${page}?${query}` : page;
 }
 
+/** Something the board can do from its menu: move the ledges, name what is on the teach spot. */
+export interface Action { label: string; run: () => void }
+
 /**
  * On the board, onLook is given and the menu also lists the board's screens: picking one shows it on this screen only.
+ * actions are listed last, under their own heading.
  * Inside the stage the menu is placed in stage units. On a page that scrolls it is fixed to the window.
  */
-export function Menu({ page, look = null, onLook, fixed = false }: { page: Page; look?: Look | null; onLook?: (look: Look | null) => void; fixed?: boolean }) {
+export function Menu({ page, look = null, onLook, actions = [], fixed = false }: { page: Page; look?: Look | null; onLook?: (look: Look | null) => void; actions?: Action[]; fixed?: boolean }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const bars = useRef<HTMLButtonElement>(null);
@@ -77,6 +81,14 @@ export function Menu({ page, look = null, onLook, fixed = false }: { page: Page;
               <span className="meta">This screen shows</span>
               {LOOKS.map((l) => (
                 <button key={l.label} type="button" aria-pressed={l.look === look} onClick={() => { onLook(l.look); shut(); }}>{l.label}</button>
+              ))}
+            </>
+          ) : null}
+          {actions.length > 0 ? (
+            <>
+              <span className="meta">The board</span>
+              {actions.map((a) => (
+                <button key={a.label} type="button" onClick={() => { shut(); a.run(); }}>{a.label}</button>
               ))}
             </>
           ) : null}

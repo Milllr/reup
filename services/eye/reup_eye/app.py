@@ -71,6 +71,9 @@ class Eye:
         self.teach_before: Optional[np.ndarray] = None  # the empty spot as it was before something was left on it
         self.teach_still_since: Optional[float] = None
         self.teach_present_since: Optional[float] = None
+        self.teach_n = self.config.open.grid  # cells across the teach spot, set from its size in the picture
+        self.teach_cut: Optional[tuple] = None  # the teach spot in the full picture: x0, y0, x1, y1 and its points inside that cut
+        self.teach_last: dict = {}  # the last frame the teach spot was read from, for naming what is on it on request
         self.teach_seen = {"differs": 0.0, "patch": 0.0, "reaching": False}  # for the health page: how much of the spot differs, its largest patch, and an arm over it
         self.pending_teach: Optional[dict] = None
         self.on_teach: Callable[..., None] = self._post_teach
@@ -355,21 +358,22 @@ class Eye:
         that runs out past that margin is an arm reaching over it, for the ledge next door or to put a part down:
         while it is there nothing is announced and nothing is taken down.
         """
-        n = self.config.open.grid
-        pad = self._teach_pad()
-        key = json.dumps([zone["quad"], pad])
+        key = json.dumps([zone["quad"], self.config.teach.reach, list(frame.shape[:2])])
         if key != self.teach_key:
             self.teach_key, self.teach_base, self.teach_before, self.teach_still_since, self.teach_present_since = key, None, None, None, None
+            self.teach_n = self._teach_cells(zone["quad"], frame)
+            n, pad = self.teach_n, self._teach_pad()
             try:
                 # The same cells as a grid over the spot alone, and pad more of them on every side.
                 steps = (np.arange(n + 2 * pad) + 0.5 - pad) / n
                 uu, vv = np.meshgrid(steps, steps)
                 self.teach_points = apply(unit_to_quad(zone["quad"]), np.c_[uu.ravel(), vv.ravel()])
+                self._teach_window(frame)
             except np.linalg.LinAlgError:
                 self.teach_points = None
         if self.teach_points is None:
             return
-        now_look = sample(small, self.teach_points)
+        now_look = self._teach_look(frame, small)
         if self.teach_base is None:
             self.teach_still_since = None if moving else (self.teach_still_since if self.teach_still_since is not None else now)
             if self.teach_still_since is not None and now - self.teach_still_since >= 1.0:
@@ -377,7 +381,7 @@ class Eye:
             self._teach_step(frame, zone, None, moving, now)
             return
         # A part, not a shadow: points whose colour changed, or that are far darker or brighter than light alone makes them.
-        parts, reaching = self._teach_blobs(now_look, self.teach_base, note=True)
+        parts, reaching = self._teach_blobs(now_look, self.teach_base, note=True, waiting=self.pending_teach is not None)
         differs = bool(parts) or reaching
         if differs and not moving and self.teach_before is not None and self._teach_blobs(now_look, self.teach_before) == ([], False):
             # What had been left on the spot was taken away: the spot looks the way it did before. That is not a part.
@@ -395,30 +399,83 @@ class Eye:
                 self.teach_present_since = None
                 parts, reaching = [], False
                 self.log(f"The teach spot looked different for {self.config.teach.rebase_s:.0f} seconds with no new part put down. Its empty picture was taken again.")
+        self.teach_last = {"frame": frame, "zone": zone, "blob": parts[0] if parts else None}
         self._teach_step(frame, zone, parts[0] if parts and not reaching else None, moving, now, reaching)
+
+    def _teach_cells(self, quad: list, frame: np.ndarray) -> int:
+        """How many cells across the teach spot is read in: one for every teach.fine pixels of the picture.
+
+        The ledges are read in open.grid cells, which on the teach spot is one every 3 pixels: a thin screw fell
+        between them. Never fewer than open.grid, never more than 128.
+        """
+        fine = int(self.config.teach.fine)
+        if fine < 1:
+            return self.config.open.grid
+        h, w = frame.shape[:2]
+        corners = np.asarray(quad, dtype=float) * (w, h)
+        longest = max(float(np.linalg.norm(corners[i] - corners[(i + 1) % 4])) for i in range(4))
+        return int(min(128, max(self.config.open.grid, round(longest / fine))))
+
+    def _teach_window(self, frame: np.ndarray) -> None:
+        """Where the teach spot's points fall in the full picture: the box to cut out, and the points inside that cut."""
+        fine = int(self.config.teach.fine)
+        self.teach_cut = None
+        if fine < 1 or self.teach_points is None:
+            return
+        h, w = frame.shape[:2]
+        px, py = self.teach_points[:, 0] * (w - 1), self.teach_points[:, 1] * (h - 1)
+        x0, y0 = max(0, int(np.floor(px.min())) - fine), max(0, int(np.floor(py.min())) - fine)
+        x1, y1 = min(w, int(np.ceil(px.max())) + fine + 1), min(h, int(np.ceil(py.max())) + fine + 1)
+        wc, hc = (x1 - x0) // fine, (y1 - y0) // fine
+        if wc < 2 or hc < 2:
+            return
+        # Block k of the averaged cut covers pixels x0 + k * fine and on: its middle is where a point lands.
+        ix = (px - x0 - (fine - 1) / 2) / fine / (wc - 1)
+        iy = (py - y0 - (fine - 1) / 2) / fine / (hc - 1)
+        self.teach_cut = (x0, y0, x1, y1, np.c_[ix, iy])
+
+    def _teach_look(self, frame: np.ndarray, small: np.ndarray) -> np.ndarray:
+        """The teach spot as the eye sees it now, one colour for each point.
+
+        It is read from the full picture, averaged teach.fine by teach.fine. The small picture the rest of the eye
+        works on is averaged 4 by 4, and a wood screw 5 pixels wide all but vanishes in it: it was put on the spot
+        and never seen.
+        """
+        if self.teach_cut is None:
+            return sample(small, self.teach_points)
+        x0, y0, x1, y1, points = self.teach_cut
+        return sample(small_colour(frame[y0:y1, x0:x1], int(self.config.teach.fine)), points)
 
     def _teach_pad(self) -> int:
         """How many cells past each edge of the teach spot the eye also looks."""
-        return max(0, int(round(self.config.teach.reach * self.config.open.grid)))
+        return max(0, int(round(self.config.teach.reach * self.teach_n)))
 
-    def _teach_blobs(self, look: np.ndarray, empty: np.ndarray, note: bool = False) -> tuple[list, bool]:
+    def _teach_blobs(self, look: np.ndarray, empty: np.ndarray, note: bool = False, waiting: bool = False) -> tuple[list, bool]:
         """What differs from the empty spot, as (parts, reaching).
 
         parts: connected patches of another surface that stay inside the margin, each over teach.share of the spot,
         largest first, as cells of the spot's own grid. reaching: a patch runs out past the margin around the spot.
+
+        waiting: a part on the spot is waiting for its name. Then a quarter of teach.share is enough for it to still
+        be there. One screw reads between 0.5 and 1.2 percent of the spot from one look to the next: with one line
+        for both, its card came down by itself whenever a look fell under it.
         """
-        n, pad = self.config.open.grid, self._teach_pad()
+        n, pad = self.teach_n, self._teach_pad()
         side = n + 2 * pad
         mask = other_surface(look, empty, self.config.teach.hue, self.config.teach.darker, self.config.teach.brighter).reshape(side, side)
-        least = max(2, int(self.config.teach.share * n * n))
+        least = max(2, int(self.config.teach.share * n * n * (0.25 if waiting else 1.0)))
         parts, reaching = [], False
         for blob in label_blobs(mask, least):
+            inside = [(r - pad, c - pad) for r, c in blob if pad <= r < pad + n and pad <= c < pad + n]
+            if len(inside) < least:
+                # It never comes onto the spot: a battery moved on the ledge next door, a lanyard shifted. Not a part
+                # and not an arm over the spot. Treating it as an arm kept the spot blind until its empty picture was
+                # taken again, and a screw put down in the meantime was taken with it.
+                continue
             if pad > 0 and any(r in (0, side - 1) or c in (0, side - 1) for r, c in blob):
                 reaching = True
                 continue
-            inside = [(r - pad, c - pad) for r, c in blob if pad <= r < pad + n and pad <= c < pad + n]
-            if len(inside) >= least:
-                parts.append(inside)
+            parts.append(inside)
         parts.sort(key=len, reverse=True)
         if note:
             spot = mask[pad : pad + n, pad : pad + n]
@@ -431,21 +488,50 @@ class Eye:
         is_present = blob is not None or reaching
         fire = self.teach_spot.update(is_present, moving or reaching, now)
         pending = self.pending_teach
-        if pending is not None and not is_present and self.teach_spot.armed:
+        if pending is not None and not is_present and self.teach_spot.armed and not pending.get("asked"):
             # The part was lifted off again before anyone named it: the card comes down, and the next part starts fresh.
+            # A card a person asked for stays up: the eye may not see that part at all, so an empty looking spot says nothing.
             self.pending_teach = None
             if pending.get("id"):
                 self.hub.cancel_teach(pending["id"])
             self.log("The new part was taken off the teach spot before it was named.")
         if not fire or blob is None:
             return
-        n = self.config.open.grid
-        rows, cols = [r for r, _c in blob], [c for _r, c in blob]
-        inside = (max(0.0, min(cols) / n - 0.03), max(0.0, min(rows) / n - 0.03), min(1.0, (max(cols) + 1) / n + 0.03), min(1.0, (max(rows) + 1) / n + 0.03))
         # The part's box on the whole frame: the detector learns a part from the frame it was seen in.
+        self.on_teach(crop_quad(frame, zone["quad"]), zone["id"], self._blob_box(zone, blob), frame)
+
+    def _blob_box(self, zone: dict, blob: Optional[list]) -> tuple:
+        """A part's box on the whole frame, a little wider than the part. With no part, the middle of the spot."""
+        n = self.teach_n
+        if blob:
+            rows, cols = [r for r, _c in blob], [c for _r, c in blob]
+            inside = (max(0.0, min(cols) / n - 0.03), max(0.0, min(rows) / n - 0.03), min(1.0, (max(cols) + 1) / n + 0.03), min(1.0, (max(rows) + 1) / n + 0.03))
+        else:
+            inside = (0.15, 0.15, 0.85, 0.95)
         corners = apply(unit_to_quad(zone["quad"]), np.array([[inside[0], inside[1]], [inside[2], inside[1]], [inside[2], inside[3]], [inside[0], inside[3]]]))
-        box = (float(corners[:, 0].min()), float(corners[:, 1].min()), float(corners[:, 0].max()), float(corners[:, 1].max()))
-        self.on_teach(crop_quad(frame, zone["quad"]), zone["id"], box, frame)
+        return (float(corners[:, 0].min()), float(corners[:, 1].min()), float(corners[:, 0].max()), float(corners[:, 1].max()))
+
+    def teach_now(self) -> Optional[str]:
+        """Names whatever is on the teach spot right now, asked for by a person. Returns None, or why it could not.
+
+        For a part the eye does not see as new: one the colour of the wood, or one that was on the spot when the eye
+        started. The picture is the spot as it is, and the part's box is its patch when there is one.
+        """
+        with self.lock:
+            last = dict(self.teach_last)
+            if not last:
+                return "The eye has not looked at the teach spot yet. Is a part already being counted there?"
+            if self.pending_teach is not None:
+                return "A new part is already waiting for its name."
+            zone, frame = last["zone"], last["frame"]
+            self.teach_spot.armed = False
+            self.on_teach(crop_quad(frame, zone["quad"]), zone["id"], self._blob_box(zone, last.get("blob")), frame)
+            if self.pending_teach is None:
+                return f"Could not tell the hub: {self.hub.last_error}"
+            self.pending_teach["asked"] = True
+            # What is on the spot is this part now, not something new to find again.
+            self.teach_base, self.teach_before, self.teach_present_since = None, None, None
+            return None
 
     def _post_teach(self, crop: np.ndarray, zone_id: Optional[str], box, frame: np.ndarray) -> None:
         jpeg = jpeg_under(crop, self.encode)

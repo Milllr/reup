@@ -1,7 +1,7 @@
-import { ApiError, HistoryResult, ROUTES, Snapshot } from '@reup/contracts';
+import { ApiError, HistoryResult, ROUTES, Snapshot, Zone } from '@reup/contracts';
 import { describe, expect, it } from 'vitest';
 import { historyResult } from '../src/history';
-import { count, DEVICE, rig } from './helpers';
+import { APPROVE, count, DEVICE, rig } from './helpers';
 
 describe('the Room', () => {
   it('starts from the seed with a valid Snapshot and the demo numbers', async () => {
@@ -63,6 +63,24 @@ describe('the Room', () => {
     expect((await r.call('PUT', '/api/zones', { zones: [] })).status).toBe(401);
     expect((await r.call('POST', '/ingest/counts', { counts: [] })).status).toBe(401);
     expect((await r.call('POST', `/api/orders/${order.id}/cancel`)).status).toBe(401);
+  });
+
+  it('moves the corners of one zone with the approve key, tells every screen, and changes nothing else about the zone', async () => {
+    const r = await rig();
+    const before = structuredClone(r.room.s.zones.find((z) => z.id === 'z-screws'));
+    if (!before) throw new Error('no zone');
+    const quad = [[0.1, 0.1], [0.4, 0.12], [0.41, 0.4], [0.09, 0.38]];
+    expect((await r.call('POST', '/api/zones/z-screws/quad', { quad })).status).toBe(401);
+    const res = await r.call('POST', '/api/zones/z-screws/quad', { quad }, APPROVE);
+    expect(res.status).toBe(200);
+    expect(Zone.parse(await res.json())).toEqual({ ...before, quad });
+    expect(r.room.s.zones.find((z) => z.id === 'z-screws')).toEqual({ ...before, quad });
+    expect(r.room.s.products.find((p) => p.zoneId === 'z-screws')).toBeDefined();
+    expect(r.sent.some((m) => m.msg.type === 'zones' && m.to === 'all')).toBe(true);
+    // A corner off the picture, three corners, or a zone that is not there: refused.
+    expect((await r.call('POST', '/api/zones/z-screws/quad', { quad: [[0, 0], [1.2, 0], [1, 1], [0, 1]] }, APPROVE)).status).toBe(400);
+    expect((await r.call('POST', '/api/zones/z-screws/quad', { quad: quad.slice(0, 3) }, APPROVE)).status).toBe(400);
+    expect((await r.call('POST', '/api/zones/z-nope/quad', { quad }, APPROVE)).status).toBe(404);
   });
 
   it('sends job messages to buyers only, and everything else to everyone', async () => {

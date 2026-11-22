@@ -49,6 +49,7 @@ Every error is `ApiError`: `{ ok: false, code, message }` with status 400 bad_re
 | POST | /api/products | ProductAddBody | Product | product-add.json |
 | PUT | /api/products/:id | ProductEditBody | Product | product-edit.json |
 | POST | /api/products/:id/count | ProductCountBody | Count | product-count.json |
+| POST | /api/zones/:id/quad | ZoneQuadBody | Zone | zone-quad.json |
 | POST | /api/products/:id/remove | | Ok | |
 | PUT | /api/zones | ZonesBody | Ok | |
 | PUT | /api/board | BoardBody | Snapshot | board.json |
@@ -74,6 +75,7 @@ On the laptop, port 8089, local network only. No contract package: they are smal
 | POST | /reference/:camera | captures the empty board; `{ ok: true }` |
 | POST | /anchor/:camera | this is where the camera sits now: later pictures are lined up with this one; `{ ok: true }` |
 | POST | /full/:camera | with the board full, learns the size of one unit in every open zone; `{ ok: true, zones: { zoneId: { units, cells } }, skipped: { zoneId: reason } }`. `?zoneId=n` when a zone holds n and not its part's capacity. 409 before the empty board is saved |
+| POST | /teach | names whatever is on the teach spot now, for a part the eye did not find by itself: sends the spot's picture to the hub as a new part; `{ ok: true }`, or 409 with the reason |
 | POST | /prompt/:zoneId | saves the current frame as the example of that zone's part, for the detector. `?box=x0,y0,x1,y1` is one part in the frame, each from 0 to 1; `{ ok: true }` |
 
 ## Offcut Supply's machine routes

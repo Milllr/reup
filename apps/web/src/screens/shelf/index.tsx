@@ -5,6 +5,7 @@ import { cx, Frame, Plate, Tag, Word } from '../../components';
 import { clock, partRows, shelfMoment, zoneBox, type Moment, type PartRow } from '../../lib/view';
 import type { LiveState } from '../../store/reduce';
 import { alertText, PartLine, TopBar } from '../common';
+import { LEDGES_HINT, LEDGES_SAVE, type LedgeEdit, useLedges } from './ledges';
 
 export const WATCHING = 'Watching the board. Every part is above its reorder point.';
 export const NO_PARTS = 'No parts yet. Put one on the teach spot.';
@@ -71,7 +72,8 @@ export function sentence(s: Snapshot): string {
   return together ? `${prev.text} ${last.text}` : last.text;
 }
 
-export function Shelf({ live, moment: forced }: { live: LiveState; moment?: Moment }) {
+/** ledges: the boxes are being moved on this screen. note: one line about what the menu just did, shown where an alert goes. */
+export function Shelf({ live, moment: forced, ledges, note }: { live: LiveState; moment?: Moment; ledges?: LedgeEdit; note?: string | null }) {
   const s = live.snapshot as Snapshot;
   const rows = partRows(s).slice(0, 6);
   const moment = forced ?? shelfMoment(s);
@@ -79,17 +81,18 @@ export function Shelf({ live, moment: forced }: { live: LiveState; moment?: Mome
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const showFeed = !live.mock && board != null && board.online && board.streamUrl != null && failedUrl !== board.streamUrl;
   const outlines = useOutlines(board?.streamUrl ?? null, showFeed);
-  const alert = alertText(live) ?? (!live.mock && !showFeed && s.products.length > 0 ? NO_FEED : null);
+  const alert = alertText(live) ?? note ?? (!live.mock && !showFeed && s.products.length > 0 ? NO_FEED : null);
   // The tag is there when the shelf node on QNX does the counting. The eye counting is the plain case and gets no tag.
   const credit = s.node.online && s.node.level >= 2 ? 'Counted by the shelf node on QNX' : null;
-  const zones = s.zones.filter((z) => z.camera === 'board');
+  const edit = useLedges(s, ledges, live.mock);
+  const zones = edit.zones.filter((z) => z.camera === 'board');
 
   return (
     <Plate tone={moment.plate} label="Shelf">
       <TopBar credit={credit} alert={alert} meta={clock(s.now)} />
 
       <Frame settle label="Live parts board" style={{ left: 96, top: 118, width: 1150, height: 662 }} waiting={s.products.length === 0}>
-        <div className="fill mat feed">
+        <div className="fill mat feed" ref={edit.box} onPointerMove={edit.on ? edit.move : undefined} onPointerUp={edit.on ? edit.up : undefined} onPointerLeave={edit.on ? edit.up : undefined}>
           {showFeed && board?.streamUrl ? <img src={board.streamUrl} alt="The parts board, live" onError={() => setFailedUrl(board.streamUrl)} /> : null}
           {showFeed && outlines.length > 0 ? (
             <svg className="outlines" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
@@ -101,19 +104,37 @@ export function Shelf({ live, moment: forced }: { live: LiveState; moment?: Mome
             const reaching = live.reaching[zone.id] === true || live.reaching['*'] === true;
             const checking = s.checks?.some((c) => c.zoneId === zone.id) === true;
             return (
-              <div key={zone.id} className={cx('zone', (row?.low || checking) && 'low', reaching && 'reach')} style={zoneBox(zone.quad)}>
-                <i className="h tl" /><i className="h tr" /><i className="h bl" /><i className="h br" />
+              <div key={zone.id} className={cx('zone', (row?.low || checking) && 'low', reaching && 'reach', edit.on && 'editing quad')} style={zoneBox(zone.quad)} onPointerDown={edit.on ? (e) => edit.down(e, zone.id, null) : undefined}>
+                {edit.on ? null : <><i className="h tl" /><i className="h tr" /><i className="h bl" /><i className="h br" /></>}
                 <Tag tone={row?.low || checking ? 'alert' : 'cream'}>{zoneTag(zone, row, checking)}</Tag>
                 {showFeed ? null : <ZoneDrawing zone={zone} count={s.counts.find((c) => c.zoneId === zone.id)} />}
               </div>
             );
           })}
+          {edit.on ? (
+            <svg className="outlines" viewBox="0 0 1 1" preserveAspectRatio="none" style={{ pointerEvents: 'none' }} aria-hidden="true">
+              {zones.map((z) => <polygon key={z.id} className="outline ledge" points={z.quad.map((p) => p.join(',')).join(' ')} />)}
+            </svg>
+          ) : null}
+          {edit.on ? zones.flatMap((z) => z.quad.map((p, i) => (
+            <i key={`${z.id}-${i}`} className="corner" role="slider" tabIndex={0} aria-label={`Corner ${i + 1} of ${z.name}`} aria-valuenow={Math.round(p[0] * 100)}
+              style={{ left: `${p[0] * 100}%`, top: `${p[1] * 100}%` }} onPointerDown={(e) => edit.down(e, z.id, i)} />
+          ))) : null}
         </div>
       </Frame>
 
       <section className={cx('abs stack index', rows.length > 4 && 'dense')} style={{ left: 1326, top: 122, width: 560, gap: rows.length > 4 ? 16 : 26 }} aria-label="Parts">
         {rows.map((row) => <PartLine key={row.product.id} row={row} />)}
-        <p className="copy" style={{ marginTop: 14 }}>{sentence(s)}</p>
+        {edit.on && ledges ? (
+          <>
+            <p className="copy" style={{ marginTop: 14 }}>{LEDGES_HINT}</p>
+            <div className="wrap" style={{ gap: 16 }}>
+              <button type="button" className="btn" disabled={edit.busy} onClick={() => void edit.save()}>{LEDGES_SAVE}</button>
+              <button type="button" className="btn quiet" onClick={ledges.done}>Cancel</button>
+            </div>
+            {edit.note ? <p className="copy small" role="alert">{edit.note}</p> : null}
+          </>
+        ) : <p className="copy" style={{ marginTop: 14 }}>{sentence(s)}</p>}
       </section>
 
       <Word text={moment.word} quiet={moment.quiet || (!live.connected && !live.mock)} />

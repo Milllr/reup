@@ -1,7 +1,8 @@
 // Operator tools: season, reset, the screen override, replay switches and the zone editor's save.
-import type { BoardBody, Product, ReplayBody, ScreenBody, Season, Snapshot, ZonesBody } from '@reup/contracts';
+import type { BoardBody, Product, ReplayBody, ScreenBody, Season, Snapshot, Zone, ZonesBody } from '@reup/contracts';
 import { clearChecks } from '../checks';
 import type { RoomCore } from '../core/room';
+import { NotFound } from '../orders';
 import { TEACH_ZONE, applySampleFor, applySampleHistory } from '../seed';
 
 const TEN_MINUTES = 10 * 60 * 1000;
@@ -139,6 +140,15 @@ export function setScreen(room: RoomCore, body: ScreenBody): void {
 
 export function setReplay(room: RoomCore, body: ReplayBody): void {
   room.x.replay[body.kind] = body.on;
+}
+
+/** One zone's corners moved on the picture: a ledge box dragged on the board. The zone keeps its part, its kind and its count. */
+export function moveZoneQuad(room: RoomCore, zoneId: string, quad: Zone['quad']): Zone {
+  const zone = room.s.zones.find((z) => z.id === zoneId);
+  if (!zone) throw new NotFound(`No zone ${zoneId}.`);
+  zone.quad = quad;
+  room.emit({ type: 'zones', zones: room.s.zones });
+  return zone;
 }
 
 export function putZones(room: RoomCore, body: ZonesBody): void {

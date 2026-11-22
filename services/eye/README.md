@@ -64,6 +64,7 @@ The first time the eye runs with a still picture it saves the edges of that pict
 | POST | /reference/board | Save the empty board |
 | POST | /anchor/board | This is where the camera sits now. Later pictures are lined up with this one |
 | POST | /full/board | With the board full, save the size of one unit for every open zone. `?z-id=n` when a zone holds n and not its part's capacity |
+| POST | /teach | Name whatever is on the teach spot now. For a part the eye did not find by itself. The board's menu has it as "Name what is on the teach spot" |
 | POST | /prompt/:zoneId?box=x0,y0,x1,y1 | Save the frame as the example of that zone's part, with the box around one of it. With no box the whole zone is the example, so put exactly one there first |
 | GET | /health | What the eye thinks, as JSON |
 | POST | /sim/take?zone=z-screws&n=2, /sim/put, /sim/set, /sim/teach?on=1, /sim/dim?to=0.67 | The drawn board only |

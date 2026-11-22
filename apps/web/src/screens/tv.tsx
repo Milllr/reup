@@ -4,12 +4,13 @@
  */
 import { useEffect, useState } from 'react';
 import { Frame, Plate, Stage, Word, Wordmark } from '../components';
-import { call, token } from '../lib/hub';
+import { call, token, yesKey } from '../lib/hub';
 import { useLive } from '../store/live';
 import { useUntil } from './common';
-import { type Look, Menu } from './menu';
+import { type Action, type Look, Menu } from './menu';
 import { Order } from './order';
 import { Shelf } from './shelf';
+import { nameTeachSpot } from './shelf/ledges';
 import { Shop } from './shop';
 import { Teach } from './teach';
 import { Why } from './why';
@@ -29,6 +30,15 @@ export function Tv() {
   }, [hubScreen]);
   const look = held?.look ?? null;
   const pick = (next: Look | null) => setHeld(next && s ? { look: next, over: s.screen } : null);
+  // The ledge boxes are being moved on this screen.
+  const [ledging, setLedging] = useState(false);
+  // One line about what the menu just did, for a few seconds.
+  const [note, setNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!note) return;
+    const t = setTimeout(() => setNote(null), 6000);
+    return () => clearTimeout(t);
+  }, [note]);
 
   // With ?ops=<token>, keys 1 to 4 force a screen and 0 hands control back to the hub.
   useEffect(() => {
@@ -60,11 +70,18 @@ export function Tv() {
     );
   }
   const shown = look ?? s.screen;
-  let screen = <Shelf live={live} />;
-  if (s.teach) screen = <Teach live={live} />;
+  const k = yesKey(s);
+  // What a screen that may change things can do to the board itself. The eye is asked directly, so not on the sample board.
+  const actions: Action[] = k == null || ledging ? [] : [
+    { label: 'Move the ledge boxes', run: () => setLedging(true) },
+    ...(live.mock || s.teach ? [] : [{ label: 'Name what is on the teach spot', run: () => { pick('shelf'); void nameTeachSpot(s.cameras).then(setNote); } }]),
+  ];
+  let screen = <Shelf live={live} note={note} />;
+  if (ledging && k != null) screen = <Shelf live={live} ledges={{ k, done: () => setLedging(false) }} />;
+  else if (s.teach) screen = <Teach live={live} />;
   else if (counting && !look) screen = <Shelf live={live} moment={{ plate: 'olive', word: 'Counting' }} />;
   else if (shown === 'shop') screen = <Shop live={live} />;
   else if (shown === 'order') screen = <Order live={live} onClose={() => pick('shelf')} />;
   else if (shown === 'why') screen = <Why live={live} />;
-  return <Stage>{screen}<Menu page="/" look={look} onLook={pick} /></Stage>;
+  return <Stage>{screen}<Menu page="/" look={look} onLook={pick} actions={actions} /></Stage>;
 }

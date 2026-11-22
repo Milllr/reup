@@ -74,6 +74,10 @@ def make_server(runtime, port: int) -> ThreadingHTTPServer:
                 if result is None:
                     return self._json(409, {"ok": False, "code": "conflict", "message": "Save the empty board for that camera first."})
                 return self._json(200, {"ok": True, **result})
+            if url.path == "/teach":
+                # A person asks for whatever is on the teach spot to be named now.
+                note = runtime.eye.teach_now()
+                return self._json(200, {"ok": True}) if note is None else self._json(409, {"ok": False, "code": "conflict", "message": note})
             if m := re.fullmatch(r"/prompt/([\w-]+)", url.path):
                 boxes = []
                 # box=x0,y0,x1,y1 is one part in the frame. Several, split by a semicolon, are several of the same part.

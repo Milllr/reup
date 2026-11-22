@@ -63,7 +63,8 @@
       "acceptance": [
         "The teach spot is the hub's z-teach zone, a clear patch of the board seen by the board camera (a quad in config when the hub has no such zone). When something is placed on it and holds still for 1 second, the eye crops it and posts POST /api/teach with a JPEG under 400 kB",
         "The same item is not posted twice: a new teach needs the spot to be empty for 2 seconds first",
-        "After a teach is confirmed, the eye saves the frame the part was seen in, and the part's box on it, as that product's example for F4"
+        "After a teach is confirmed, the eye saves the frame the part was seen in, and the part's box on it, as that product's example for F4",
+        "The spot is read from the full picture, one cell for every 2 pixels, so one wood screw 5 pixels wide is a part. Something that changes beside the spot and never comes onto it (a battery moved on the next ledge) is not an arm and does not stop a part from being found. POST /teach on the eye sends whatever is on the spot now, for a part the eye did not find by itself, and that card stays up until someone names or dismisses it"
       ],
       "tests": ["presence detection against the empty teach spot reference", "debounce: one teach per placement", "JPEG is re-encoded at lower quality until under 400 kB"],
       "screens": [], "depends": ["F2"]
@@ -326,7 +327,8 @@
         "A product at or under its reorder point with no placed order cuts the plate to wine with the word \"Reorder\", an orange zone with an alert tag and an orange figure; once its order is placed the plate is olive, the word is \"On the way\" and its row reads \"8 boxes on the way · arrives Tuesday\"",
         "A count change cuts the figure to the new value and the taken squares go hollow; a reach turns that zone lime until it ends",
         "The sentence under the index is the newest activity, or \"Watching the board. Every part is above its reorder point.\"; the top tag reads \"Counted by the shelf node on QNX\" at node level 2 or higher and there is no tag otherwise; the mono line top right is the time alone",
-        "With no products: \"No parts yet. Put one on the teach spot.\""
+        "With no products: \"No parts yet. Put one on the teach spot.\"",
+        "On a screen that can change things the board's menu has \"Move the ledge boxes\": every corner of every box becomes an orange handle to drag and the middle moves the whole box, with the hint and \"Save the boxes\" and \"Cancel\" in place of the sentence. Save posts POST /api/zones/:id/quad for each box that moved; Cancel or Escape saves nothing. The menu also has \"Name what is on the teach spot\", which asks the eye and shows its answer where an alert goes"
       ],
       "tests": ["renders the snapshot mock", "wine plate and the word Reorder at the reorder point", "olive plate and On the way once the order is placed", "feed fallback when the image errors", "empty state", "zone position from a quad"],
       "screens": ["docs/ui/shelf.html"], "depends": ["F23"]

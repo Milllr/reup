@@ -2,7 +2,7 @@
 // Auth: ingest routes need "Authorization: Bearer DEVICE_TOKEN". Ops routes need OPS_TOKEN.
 // Approve needs APPROVE_KEY (the phone link carries it) or DEVICE_TOKEN (the node's button).
 import { z } from 'zod';
-import { Camera, Count, Id, IsoTime, Money, NodeStatus, Order, PickEvent, Product, Quote, Reach, Run, Season, Snapshot, TeachState, Zone } from './schema';
+import { Camera, Count, Id, IsoTime, Money, NodeStatus, Order, PickEvent, Point, Product, Quote, Reach, Run, Season, Snapshot, TeachState, Zone } from './schema';
 import { Job } from './events';
 
 export const Ok = z.object({ ok: z.literal(true) });
@@ -185,6 +185,9 @@ export const ProductEditBody = z.object({
 /** POST /api/products/:id/count (approve key or ops token). The count a person read off the shelf. Answers with the Count of record. */
 export const ProductCountBody = z.object({ count: z.number().int().nonnegative().max(9999) });
 
+/** POST /api/zones/:id/quad (approve key or ops). Moves one zone's four corners on its camera's picture. Nothing else about the zone changes. */
+export const ZoneQuadBody = z.object({ quad: z.array(Point).length(4) });
+
 // ---------- operator ----------
 
 /** PUT /api/zones (ops). Replaces every zone. */
@@ -252,6 +255,7 @@ export const ROUTES = [
   ['POST', '/api/products', 'ProductAddBody -> Product (approve key or ops token)'],
   ['PUT', '/api/products/:id', 'ProductEditBody -> Product (approve key or ops token)'],
   ['POST', '/api/products/:id/count', 'ProductCountBody -> Count (approve key or ops token)'],
+  ['POST', '/api/zones/:id/quad', 'ZoneQuadBody -> Zone (approve key or ops token)'],
   ['POST', '/api/products/:id/remove', 'Ok (approve key or ops token)'],
   ['PUT', '/api/zones', 'ZonesBody -> Ok (ops token)'],
   ['PUT', '/api/board', 'BoardBody -> Snapshot (ops token)'],
@@ -288,6 +292,7 @@ export type CheckAnswerBody = z.infer<typeof CheckAnswerBody>;
 export type ProductAddBody = z.infer<typeof ProductAddBody>;
 export type ProductEditBody = z.infer<typeof ProductEditBody>;
 export type ProductCountBody = z.infer<typeof ProductCountBody>;
+export type ZoneQuadBody = z.infer<typeof ZoneQuadBody>;
 export type ZonesBody = z.infer<typeof ZonesBody>;
 export type BoardProduct = z.infer<typeof BoardProduct>;
 export type BoardBody = z.infer<typeof BoardBody>;
