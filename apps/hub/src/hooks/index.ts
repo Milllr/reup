@@ -2,12 +2,15 @@
 import type { SupplyWebhookBody } from '@reup/contracts';
 import type { RoomCore } from '../core/room';
 import { weekdayIn } from '../core/time';
-import { markPlaced, NotFound, saveOrder } from '../orders';
+import { gaveUpPlacing, markPlaced, NotFound, saveOrder } from '../orders';
 
 export function supplyWebhook(room: RoomCore, body: SupplyWebhookBody): void {
   const order = [...room.s.orders].reverse().find((o) => o.poNumber === body.poNumber);
   if (!order) throw new NotFound(`No order with PO number ${body.poNumber}.`);
   const supplier = room.s.suppliers.find((s) => s.id === order.supplierId)?.name ?? 'The store';
+  // An order that had its yes and then failed (the buyer went quiet, or said it could not place it) is placed after
+  // all when the store says it has it. The store is the one that knows.
+  if (gaveUpPlacing(order) && (body.event === 'order.confirmed' || body.event === 'order.shipped')) markPlaced(room, order, body.confirmation, body.eta);
   if (order.state === 'failed' || order.state === 'cancelled' || order.state === 'received') return;
 
   if (body.event === 'order.confirmed') {

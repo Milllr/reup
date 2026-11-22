@@ -1,13 +1,14 @@
-/** Order: the part in a frame, what it costs, when it arrives, and the wooden button. The plate and the word follow the order's state. */
+/** Order: the part in a frame, what it costs, when it arrives, and one line that says how to say yes. The plate and the word follow the order's state. */
 import { unitsText } from '@reup/brain';
 import type { Order as OrderT, Snapshot } from '@reup/contracts';
+import { useEffect, useState } from 'react';
 import { Frame, PartBox, Plate, Tag, Word } from '../../components';
-import { hubUrl } from '../../lib/hub';
-import { clock, focusOrder, money, orderMoment, runsFor, supplierName, weekday } from '../../lib/view';
+import { call, hubUrl, token } from '../../lib/hub';
+import { clock, focusOrder, money, orderMoment, runsFor, supplierName, totalLabel, weekday } from '../../lib/view';
 import type { LiveState } from '../../store/reduce';
 import { alertText, BottomBar, Steps, TopBar } from '../common';
 
-const who = (o: OrderT) => (o.approvedBy === 'button' ? 'with the button' : o.approvedBy === 'phone' ? 'from a phone' : null);
+const who = (o: OrderT) => (o.approvedBy === 'button' ? 'with the wooden button' : o.approvedBy === 'keyboard' ? 'from the keyboard' : o.approvedBy === 'phone' ? 'from a phone' : null);
 
 /** The mono line that says where the order stands. */
 export function orderTag(o: OrderT, s: Snapshot): string {
@@ -36,6 +37,46 @@ export function orderTag(o: OrderT, s: Snapshot): string {
   return supplierName(s, o.supplierId);
 }
 
+/**
+ * How a person says yes, as one line and one smaller line. It names only what can say yes right now: the wooden
+ * button when the shelf node is connected, Enter when this screen holds a key, a phone otherwise.
+ */
+export function howToSayYes(nodeOnline: boolean, hasKey: boolean): { line: string; also: string } {
+  if (nodeOnline) return { line: 'Press the wooden button to place the order.', also: hasKey ? 'Or press Enter, or say yes from a phone. Nothing is bought until then.' : 'Or say yes from a phone. Nothing is bought until then.' };
+  if (hasKey) return { line: 'Press Enter to place the order.', also: 'Or say yes from a phone. Nothing is bought until then.' };
+  return { line: 'Say yes from a phone to place the order.', also: 'Nothing is bought until then.' };
+}
+
+/**
+ * Enter on this screen's keyboard says yes. Only a screen that holds a key listens, which is the station's own laptop
+ * or a TV opened with ?k=. There is nothing to click: the line on the plate says what to press. It shows only when
+ * the hub says no.
+ */
+export function ApproveHere({ order, k = token('k') ?? token('ops'), send = call }: { order: OrderT; k?: string | null; send?: typeof call }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const approve = async () => {
+    if (!k || busy) return;
+    setBusy(true);
+    const res = await send('POST', `/api/orders/${order.id}/approve`, { by: 'keyboard' }, k);
+    setBusy(false);
+    setError(res.ok ? null : (res.message ?? 'Could not place the order.'));
+  };
+  useEffect(() => {
+    if (!k) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      // Enter inside a form or on a button already means something there.
+      if (e.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(e.target.tagName)) return;
+      void approve();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+  if (!k || !error) return null;
+  return <Tag tone="alert" style={{ whiteSpace: 'normal', borderRadius: 14, lineHeight: 1.3 }}>{error}</Tag>;
+}
+
 export function Order({ live }: { live: LiveState }) {
   const s = live.snapshot as Snapshot;
   const order = focusOrder(s);
@@ -60,6 +101,7 @@ export function Order({ live }: { live: LiveState }) {
 
   if (moment.plate === 'paper') {
     const waiting = order.state === 'awaiting_approval';
+    const yes = howToSayYes(s.node.online, (token('k') ?? token('ops')) != null);
     return (
       <Plate tone="paper" label="Order">
         <Word text={moment.word} at="top" quiet={quiet} />
@@ -68,14 +110,15 @@ export function Order({ live }: { live: LiveState }) {
         <div className="abs stack" style={{ left: 96, top: 420, width: 560, gap: 34 }}>
           <div className="stack" style={{ gap: 12 }}>
             <span className="figure">{order.total != null ? money(order.total) : units}</span>
-            <span className="meta">{order.total != null ? `Total with tax${order.unitPrice != null ? ` · ${money(order.unitPrice)} each` : ''} · ${units}` : `From ${supplier}`}</span>
+            <span className="meta">{order.total != null ? `${totalLabel(order)}${order.unitPrice != null ? ` · ${money(order.unitPrice)} each` : ''} · ${units}` : `From ${supplier}`}</span>
           </div>
           {arrives ? <div className="stack" style={{ gap: 12 }}><span className="figure mid">{arrives}</span><span className="meta">{`Arrives · from ${supplier}`}</span></div> : null}
           <p className="copy small" style={{ maxWidth: '21em' }}>{[order.reason, order.marketNote].filter(Boolean).join(' ')}</p>
         </div>
         <div className="abs stack" style={{ left: 1280, top: 420, width: 580, gap: 22 }}>
-          <p className="figure mid">{waiting ? 'Press the button to approve.' : order.state === 'cancelled' ? 'Nothing was bought.' : 'Getting the cart ready.'}</p>
-          {waiting ? <p className="copy small" style={{ maxWidth: '19em' }}>Or approve from a phone. Nothing is bought until then.</p> : null}
+          <p className="figure mid">{waiting ? yes.line : order.state === 'cancelled' ? 'Nothing was bought.' : 'Getting the cart ready.'}</p>
+          {waiting ? <p className="copy small" style={{ maxWidth: '19em' }}>{yes.also}</p> : null}
+          {waiting ? <ApproveHere key={order.id} order={order} /> : null}
         </div>
         <BottomBar credit={orderTag(order, s)} alert={alert} />
       </Plate>

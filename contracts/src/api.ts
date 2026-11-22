@@ -92,7 +92,7 @@ export const TeachConfirmResult = Product;
 // ---------- orders ----------
 
 /** POST /api/orders/:id/approve */
-export const ApproveBody = z.object({ by: z.enum(['button', 'phone']) });
+export const ApproveBody = z.object({ by: z.enum(['button', 'phone', 'keyboard']) });
 export const OrderResult = Order;
 /** POST /api/orders/:id/cancel (ops) */
 /** POST /api/orders (ops). Start an order by hand for a product. */
@@ -102,6 +102,23 @@ export const ManualOrderBody = z.object({ productId: Id, units: z.number().int()
 
 /** PUT /api/zones (ops). Replaces every zone. */
 export const ZonesBody = z.object({ zones: z.array(Zone) });
+/** One part on the board. The zone that holds it names it with productId. */
+export const BoardProduct = z.object({
+  id: Id,
+  name: z.string(),
+  unit: z.string(),
+  sku: z.string().nullable(),
+  searchPhrase: z.string(),
+  /** How many the zone holds when full. Null or left out for a ledge: the hub learns it from what is stocked. */
+  capacity: z.number().int().positive().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+});
+/**
+ * PUT /api/board (ops). Sets up the station: replaces every zone and every part, cancels open orders and clears the demo.
+ * A part with no capacity holds what is stocked: its capacity follows the most the board has held since the last reset,
+ * and its sample use is sized so that taking two crosses its reorder point.
+ */
+export const BoardBody = z.object({ zones: z.array(Zone), products: z.array(BoardProduct) });
 /** POST /api/demo/season (ops) */
 export const SeasonBody = Season;
 /** POST /api/demo/reset (ops). Cancels open orders, clears runs and activity, restores seeded history and policies. Zones and products stay. */
@@ -137,11 +154,12 @@ export const ROUTES = [
   ['POST', '/ingest/placed', 'IngestPlacedBody -> Ok (device token)'],
   ['POST', '/api/teach', 'TeachBody -> TeachResult (device token)'],
   ['POST', '/api/teach/:id/confirm', 'TeachConfirmBody -> TeachConfirmResult (approve key or ops token)'],
-  ['POST', '/api/teach/:id/cancel', 'Ok (approve key or ops token)'],
+  ['POST', '/api/teach/:id/cancel', 'Ok (approve key, ops token or device token)'],
   ['POST', '/api/orders', 'ManualOrderBody -> OrderResult (ops token)'],
   ['POST', '/api/orders/:id/approve', 'ApproveBody -> OrderResult (approve key or device token)'],
   ['POST', '/api/orders/:id/cancel', 'OrderResult (ops token)'],
   ['PUT', '/api/zones', 'ZonesBody -> Ok (ops token)'],
+  ['PUT', '/api/board', 'BoardBody -> Snapshot (ops token)'],
   ['POST', '/api/demo/season', 'SeasonBody -> Ok (ops token)'],
   ['POST', '/api/demo/reset', 'Snapshot (ops token)'],
   ['POST', '/api/demo/screen', 'ScreenBody -> Ok (ops token)'],
@@ -168,6 +186,8 @@ export type TeachConfirmBody = z.infer<typeof TeachConfirmBody>;
 export type ApproveBody = z.infer<typeof ApproveBody>;
 export type ManualOrderBody = z.infer<typeof ManualOrderBody>;
 export type ZonesBody = z.infer<typeof ZonesBody>;
+export type BoardProduct = z.infer<typeof BoardProduct>;
+export type BoardBody = z.infer<typeof BoardBody>;
 export type ScreenBody = z.infer<typeof ScreenBody>;
 export type ReplayBody = z.infer<typeof ReplayBody>;
 export type SupplyWebhookBody = z.infer<typeof SupplyWebhookBody>;

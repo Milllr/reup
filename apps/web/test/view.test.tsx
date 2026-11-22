@@ -2,7 +2,7 @@ import type { Order, Zone } from '@reup/contracts';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { bandWordSize, labelLines, Units, Word, wordSize } from '../src/components';
-import { clock, duration, orderMoment, partRows, shelfMoment, shortTime, zoneBox } from '../src/lib/view';
+import { clock, duration, orderMoment, partRows, shelfMoment, shortTime, zoneBox, totalLabel } from '../src/lib/view';
 import { addZone, moveCorner, moveZone, patchZone } from '../src/screens/ops/zones';
 import { mockSnapshot } from '../src/store/mock';
 
@@ -110,6 +110,12 @@ describe('zones', () => {
     expect(moveCorner([zone], 'z-1', 2, 0.62, 0.55)[0]?.quad[2]).toEqual([0.62, 0.55]);
     expect(moveCorner([zone], 'z-1', 0, -0.3, 1.7)[0]?.quad[0]).toEqual([0, 1]);
     expect(moveCorner([zone], 'other', 0, 0.9, 0.9)[0]).toBe(zone);
+  });
+
+  it('the total says when it carries shipping', () => {
+    expect(totalLabel({ total: 67.71, unitPrice: 7.49, units: 8 })).toBe('Total with tax');
+    expect(totalLabel({ total: 19.65, unitPrice: 4.29, units: 2 })).toBe('Total with tax and shipping');
+    expect(totalLabel({ total: null, unitPrice: null, units: 2 })).toBe('Total with tax');
   });
 
   it('moving a zone keeps its shape and stops at the edge', () => {

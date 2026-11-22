@@ -1,4 +1,4 @@
-"""The eye's local routes on port 8089: the live stream, outlines, a debug picture and the empty board capture.
+"""The eye's local routes on port 8089: the live stream, outlines, a debug picture, and the empty and full board captures.
 
 Standard library only. Every answer allows any origin, because the TV page comes from the hub, not from here.
 """
@@ -65,8 +65,26 @@ def make_server(runtime, port: int) -> ThreadingHTTPServer:
                 if runtime.eye.capture_reference(m.group(1)):
                     return self._json(200, {"ok": True})
                 return self._json(409, {"ok": False, "code": "conflict", "message": "No frame from that camera yet."})
+            if m := re.fullmatch(r"/anchor/(\w+)", url.path):
+                if runtime.set_home(m.group(1)):
+                    return self._json(200, {"ok": True})
+                return self._json(409, {"ok": False, "code": "conflict", "message": "No frame from that camera yet, or camera alignment is off."})
+            if m := re.fullmatch(r"/full/(\w+)", url.path):
+                result = runtime.eye.capture_full(m.group(1), {k: int(v) for k, v in query.items() if v.isdigit() and int(v) > 0})
+                if result is None:
+                    return self._json(409, {"ok": False, "code": "conflict", "message": "Save the empty board for that camera first."})
+                return self._json(200, {"ok": True, **result})
             if m := re.fullmatch(r"/prompt/([\w-]+)", url.path):
-                note = runtime.capture_prompt(m.group(1))
+                boxes = []
+                # box=x0,y0,x1,y1 is one part in the frame. Several, split by a semicolon, are several of the same part.
+                for text in filter(None, query.get("box", "").split(";")):
+                    try:
+                        box = tuple(float(v) for v in text.split(","))
+                        assert len(box) == 4
+                    except (ValueError, AssertionError):
+                        return self._json(400, {"ok": False, "code": "bad_request", "message": "box is x0,y0,x1,y1, each from 0 to 1."})
+                    boxes.append(box)
+                note = runtime.capture_prompt(m.group(1), boxes)
                 return self._json(200, {"ok": True}) if note is None else self._json(409, {"ok": False, "code": "conflict", "message": note})
             if url.path.startswith("/sim/") and runtime.sim is not None:
                 return self._json(200, {"ok": True, **runtime.sim.command(url.path[5:], query)})
@@ -95,9 +113,18 @@ def make_server(runtime, port: int) -> ThreadingHTTPServer:
                 pass
             self.close_connection = True
 
-    server = ThreadingHTTPServer(("0.0.0.0", port), Handler)
-    server.daemon_threads = True
-    return server
+    class Server(ThreadingHTTPServer):
+        daemon_threads = True
+
+        def handle_error(self, request, client_address):
+            # A browser that closes the stream or a tab is not an error worth a traceback.
+            import sys  # noqa: PLC0415
+
+            if isinstance(sys.exc_info()[1], (ConnectionError, TimeoutError)):
+                return
+            super().handle_error(request, client_address)
+
+    return Server(("0.0.0.0", port), Handler)
 
 
 def wait_until(predicate, timeout: float, step: float = 0.05) -> bool:

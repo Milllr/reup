@@ -1,7 +1,8 @@
 // The demo's starting state: suppliers, the four parts on the board, and 30 days of sample use.
 // The sample is chosen so wood screws (capacity 12) use about 0.56 a day and reorder at 4.
 // The demo starts with 6 on the board, so taking two boxes crosses the line.
-import { Supplier, type Snapshot } from '@reup/contracts';
+import { ratePerDay, reorderPoint } from '@reup/brain';
+import { Supplier, type Product, type Snapshot } from '@reup/contracts';
 import buyerSuppliers from '../../../services/buyer/suppliers.json';
 import type { Config } from './config';
 import type { RoomCore } from './core/room';
@@ -72,18 +73,83 @@ export function seedSnapshot(config: Config, now: string): Snapshot {
   };
 }
 
-/** Writes the sample over the 30 days before today for every seeded product. Real use on those days is replaced. */
-export function applySampleHistory(room: RoomCore): void {
-  const days = daysBefore(room.today(), 30);
-  for (const [productId, sample] of Object.entries(SAMPLE)) {
-    if (!room.product(productId)) continue;
-    const byDay: RoomCore['x']['usage'][string] = {};
-    const today = room.x.usage[productId]?.[room.today()];
-    days.forEach((day, i) => {
-      byDay[day] = { used: sample.use[i] ?? 0, restocked: sample.restock[i] ?? 0, sample: true };
-    });
-    if (today) byDay[room.today()] = today;
-    room.x.usage[productId] = byDay;
-    room.x.leadDays[productId] = sample.leadDays;
+interface Sample {
+  use: number[];
+  restock: Record<number, number>;
+  leadDays: number;
+}
+
+/** A part set up on the board has no history of its own. Its sample puts the reorder point this many under a full ledge, so taking that many crosses it. */
+export const TAKE_TO_REORDER = 2;
+const BOARD_LEAD_DAYS = 2;
+
+/** 30 days of use in whole units, oldest first, whose rate puts the reorder point at target. Empty when no rate does. */
+export function sampleUse(target: number, leadDays = BOARD_LEAD_DAYS): number[] {
+  const fits: number[][] = [];
+  for (let step = 1; step <= 700; step++) {
+    const rate = step / 50;
+    // The same number every so many days: floor of the running total, so the units are whole and evenly spread.
+    const use = Array.from({ length: 30 }, (_, i) => Math.floor((i + 1) * rate) - Math.floor(i * rate));
+    if (reorderPoint(ratePerDay(use), leadDays) === target) fits.push(use);
   }
+  // The middle of the rates that fit, so a small change in the rate does not move the line.
+  return fits[Math.floor(fits.length / 2)] ?? [];
+}
+
+/** Sample history for a part whose ledge holds stock units when full. Null under 2: one unit is too few to have a line under it. */
+export function sampleForStock(stock: number): Sample | null {
+  if (!(stock >= 2)) return null;
+  const target = Math.max(1, stock - TAKE_TO_REORDER);
+  const use = sampleUse(target);
+  if (use.length === 0) return null;
+  // Walk back from a full ledge. A day that would have started with more than the ledge holds is a day a delivery came,
+  // and the ledge was just under its reorder point before it.
+  const low = Math.max(0, target - 1);
+  const restock: Record<number, number> = {};
+  let end = stock;
+  for (let i = use.length - 1; i >= 0; i--) {
+    const before = end + (use[i] ?? 0);
+    if (before > stock) {
+      restock[i] = before - low;
+      end = low;
+    } else {
+      end = before;
+    }
+  }
+  return { use, restock, leadDays: BOARD_LEAD_DAYS };
+}
+
+/** The sample for a part: the seeded one, or one sized to what its ledge holds for a part set up with PUT /api/board. */
+function sampleOf(room: RoomCore, product: Product): Sample | null {
+  const seeded = SAMPLE[product.id];
+  if (seeded) return seeded;
+  if (!room.x.board[product.id]) return null;
+  return sampleForStock(product.capacity ?? room.count(product.id)?.count ?? 0);
+}
+
+/** Writes the sample over the 30 days before today for one part. Real use on those days is replaced. Today's stays. */
+export function applySampleFor(room: RoomCore, product: Product): void {
+  const sample = sampleOf(room, product);
+  if (!sample) {
+    // A board part with too little on its ledge to have a line: no use yet, so it is never reordered.
+    if (room.x.board[product.id]) {
+      const today = room.x.usage[product.id]?.[room.today()];
+      room.x.usage[product.id] = today ? { [room.today()]: today } : {};
+    }
+    return;
+  }
+  const days = daysBefore(room.today(), 30);
+  const byDay: RoomCore['x']['usage'][string] = {};
+  const today = room.x.usage[product.id]?.[room.today()];
+  days.forEach((day, i) => {
+    byDay[day] = { used: sample.use[i] ?? 0, restocked: sample.restock[i] ?? 0, sample: true };
+  });
+  if (today) byDay[room.today()] = today;
+  room.x.usage[product.id] = byDay;
+  room.x.leadDays[product.id] = sample.leadDays;
+}
+
+/** Writes the sample for every part that has one: the seeded parts and the parts set up on the board. */
+export function applySampleHistory(room: RoomCore): void {
+  for (const product of room.s.products) applySampleFor(room, product);
 }

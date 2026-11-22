@@ -4,6 +4,7 @@ import { TEACH_ZONE } from '../seed';
 import type { Count, IngestCountsBody, IngestNodeBody, IngestNodeResult, IngestPicksBody, IngestPicksResult, IngestReachesBody, PickEvent, Zone } from '@reup/contracts';
 import type { RoomCore } from '../core/room';
 import { dayIn } from '../core/time';
+import { learnStock } from '../demo';
 import { deliveryExpected, afterCountChange } from '../orders';
 
 /** For a pocket zone the node's count wins while the node is online at level 2 or more. Otherwise the eye's. */
@@ -75,6 +76,8 @@ function applyRecord(room: RoomCore, zone: Zone, record: Count, sent: PickEvent 
     recordPick(room, pick);
     room.x.recentChanges[zone.id] = { countAfter: next.count, at: room.nowMs(), pickId: pick.id };
   }
+  // A ledge part holds what is stocked: more on the ledge than it held before is its new capacity.
+  if (learnStock(room, product, next.count)) room.emit({ type: 'product', product });
   room.recomputePolicy(product.id);
   if (delta !== 0) afterCountChange(room, product.id, prev?.count ?? next.count, next.count);
 }

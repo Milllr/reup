@@ -1,5 +1,6 @@
 // The whole loop on one laptop: the hub (with the built web app), Offcut Supply and the buyer.
 // Usage: node tools/dev.mjs            local stand in for TinyFish, nothing leaves the laptop
+//        infisical run -- node tools/dev.mjs                the same, and the hub names new parts with Gemini
 //        infisical run -- node tools/dev.mjs --tinyfish     the real buyer, on the live web
 // Flags: --no-build skips the web build, --no-buyer leaves the buyer off, --ship-ms=5000 sets the store's shipping delay.
 import { spawn, spawnSync } from 'node:child_process';
@@ -67,7 +68,9 @@ once('hub', 'npx wrangler d1 migrations apply reup-hub --local', join(root, 'app
 once('store', 'npx wrangler d1 migrations apply offcut-supply --local', join(root, 'apps', 'supply'));
 
 // Each wrangler gets its own inspector port. Two on the default port is an 'address already in use' error.
-keep('hub', `npx wrangler dev --port ${hubPort} --inspector-port ${hubPort + 6229} --var SUPPLY_URL:${storeUrl}`, join(root, 'apps', 'hub'));
+// Under infisical run the hub gets the Gemini key, so a new part is named on a laptop too. Without it a typed name works.
+const gemini = /^[\w-]+$/.test(process.env.GEMINI_API_KEY ?? '') ? ` --var GEMINI_API_KEY:${process.env.GEMINI_API_KEY}` : '';
+keep('hub', `npx wrangler dev --port ${hubPort} --inspector-port ${hubPort + 6229} --var SUPPLY_URL:${storeUrl}${gemini}`, join(root, 'apps', 'hub'));
 keep('store', `npx wrangler dev --port ${storePort} --inspector-port ${storePort + 6229} --var HUB_URL:${hubUrl} --var SHIP_DELAY_MS:${flag('ship-ms', '20000')}`, join(root, 'apps', 'supply'));
 await Promise.all([up(`${hubUrl}/api/health`, 'hub'), up(`${storeUrl}/catalog.json`, 'store')]);
 

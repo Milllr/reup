@@ -2,7 +2,7 @@ import { Catalog, SupplyWebhookBody } from '@reup/contracts';
 import { describe, expect, it } from 'vitest';
 import { FOOTER } from '../src/lib/layout';
 import { deliveryDay, etaIso, totals } from '../src/lib/money';
-import { rank, SEED } from '../src/lib/shop';
+import { rank, SEED, Shop } from '../src/lib/shop';
 import { rig, signedIn } from './helpers';
 
 const items = SEED.items.map((i) => ({ ...i }));
@@ -22,8 +22,30 @@ describe('catalog, search and product pages', () => {
   it('serves the whole catalog as the Catalog contract, with links to this store', async () => {
     const b = rig().browser();
     const cat = Catalog.parse(JSON.parse((await b.get('/catalog.json')).text));
-    expect(cat.items).toHaveLength(16);
+    expect(cat.items).toHaveLength(20);
     expect(cat.items[0]?.url).toBe('http://offcut.test/p/OC-1008-114');
+  });
+
+  it('sells the four parts on the station as built, and finds them by the words reup searches with', () => {
+    expect(rank(items, 'OC-7009')[0]?.name).toBe('9V Alkaline Batteries, Industrial');
+    expect(rank(items, 'Energizer Industrial 9V alkaline battery')[0]?.sku).toBe('OC-7009');
+    expect(rank(items, 'MWAX synthetic lubricant for mSnow')[0]?.sku).toBe('OC-7100');
+    expect(rank(items, '3/4 inch flat washer zinc')[0]?.sku).toBe('OC-1434');
+    expect(rank(items, '3/4 x 3 inch hex bolt zinc')[0]?.sku).toBe('OC-1475');
+  });
+
+  it('a store that is already running picks up an item added to the catalog later, and keeps what the admin changed', async () => {
+    const r = rig();
+    await r.shop.init();
+    const sql = (r.shop as unknown as { sql: { run(q: string, ...a: unknown[]): Promise<void> } }).sql;
+    await sql.run("DELETE FROM items WHERE sku IN ('OC-7009', 'OC-7100')");
+    await sql.run("UPDATE items SET in_stock = 0 WHERE sku = 'OC-1008-114'");
+    const again = new Shop(sql as never, r.shop.config);
+    await again.init();
+    const all = await again.items();
+    expect(all).toHaveLength(20);
+    expect(all.slice(-2).map((i) => i.sku)).toEqual(['OC-7009', 'OC-7100']);
+    expect((await again.item('OC-1008-114'))?.inStock).toBe(false);
   });
 
   it('shows pack options as radio buttons with a quantity and Add to cart', async () => {

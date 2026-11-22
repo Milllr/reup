@@ -1,10 +1,10 @@
 // Every hub route: check the token, check the body against the contract, call the Room, answer in the contract's shape.
-import { ApproveBody, IngestCartBody, IngestCountsBody, IngestNodeBody, IngestPicksBody, IngestPlacedBody, IngestQuotesBody, IngestReachesBody, IngestReorderBody, IngestRunsBody, ManualOrderBody, ReplayBody, ScreenBody, Season, SupplyWebhookBody, TeachBody, TeachConfirmBody, ZonesBody, type ApiError } from '@reup/contracts';
+import { ApproveBody, BoardBody, IngestCartBody, IngestCountsBody, IngestNodeBody, IngestPicksBody, IngestPlacedBody, IngestQuotesBody, IngestReachesBody, IngestReorderBody, IngestRunsBody, ManualOrderBody, ReplayBody, ScreenBody, Season, SupplyWebhookBody, TeachBody, TeachConfirmBody, ZonesBody, type ApiError } from '@reup/contracts';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import type { z } from 'zod';
 import type { RoomCore } from './core/room';
-import { putZones, reset, setReplay, setScreen, setSeason } from './demo';
+import { putZones, reset, setBoard, setReplay, setScreen, setSeason } from './demo';
 import { historyResult } from './history';
 import { supplyWebhook } from './hooks';
 import { ingestCounts, ingestNode, ingestPicks, ingestReaches } from './ingest';
@@ -151,7 +151,8 @@ export function createApp(room: RoomCore, options: AppOptions = {}): Hono {
     return c.json(product);
   });
   app.post('/api/teach/:id/cancel', async (c) => {
-    allow(c, APPROVE_KEY, OPS_TOKEN);
+    // The eye cancels too: it is the one that sees the part taken off the teach spot again.
+    allow(c, APPROVE_KEY, OPS_TOKEN, DEVICE_TOKEN);
     await cancelTeach(room, c.req.param('id'));
     await done();
     return c.json(OK);
@@ -185,6 +186,12 @@ export function createApp(room: RoomCore, options: AppOptions = {}): Hono {
     putZones(room, await body(c, ZonesBody));
     await done();
     return c.json(OK);
+  });
+  app.put('/api/board', async (c) => {
+    allow(c, OPS_TOKEN);
+    const snapshot = setBoard(room, await body(c, BoardBody));
+    await done();
+    return c.json(snapshot);
   });
   app.post('/api/demo/season', async (c) => {
     allow(c, OPS_TOKEN);

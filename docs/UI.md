@@ -109,7 +109,7 @@ The TV shows one stage at `/` and moves between screens by itself from `snapshot
 | --- | --- | --- | --- | --- |
 | Shelf | `/` when screen is `shelf` | docs/ui/shelf.html (add `?low` for the wine state) | olive or wine | The live feed in the frame with a zone selection per part, the index of counts, one sentence |
 | Shop | `/` when screen is `shop` | docs/ui/shop.html | wine | One frame per run with the live browser, its result above it, the part being bought |
-| Order | `/` when screen is `order` | docs/ui/order.html | by order state | The part in a frame, the total, the arrival day, "Press the button to approve." |
+| Order | `/` when screen is `order` | docs/ui/order.html | by order state | The part in a frame, the total, the arrival day, one line that says how to say yes |
 | Why | `/` when screen is `why` | docs/ui/why.html | paper | The chart in a frame, the reorder sentence, the season control |
 | Teach | replaces Shelf while `teach` is not null | described below | paper, then olive | The crop in a frame, the suggested name and store match |
 | Phone | `/m` | docs/ui/phone.html | bands | Approve, name a new part, counts |
@@ -119,7 +119,7 @@ Shelf. Wordmark top left, the tag "Counted by the shelf node on QNX" top centre 
 
 Shop. The tag reads "Shopped by TinyFish on the live web". One sentence at 34 top left, the part being bought top right. Three frames, 544 by 400, at 450 from the top. Each has a tag on its top edge ("Price check · Retailer A", "Your supplier · Offcut Supply") and its result above it as a mid figure with a meta line. A frame is `.waiting` until its run ends. A failed run gets an alert tag ("Blocked · Retailer B") and the figure "No price". A replayed run's tag ends with "· replay".
 
-Order. See the mockup and the list of states at the bottom of its file. The frame is 460 by 600. Across it sits the drawn box from the mockup (one inline SVG component, PartBox), turned 9 degrees, with the product's name and unit on its label, so it works for any part. If Product.imageUrl is set and has no background, that picture replaces the box. Left: the total as a figure, the arrival day as a mid figure, the reason and the market note as small copy. Right: "Press the button to approve." as a mid figure. Bottom right tag: "Waiting for a yes · PO RU-1042 · spend cap $150 an order".
+Order. See the mockup and the list of states at the bottom of its file. The frame is 460 by 600. Across it sits the drawn box from the mockup (one inline SVG component, PartBox), turned 9 degrees, with the product's name and unit on its label, so it works for any part. If Product.imageUrl is set and has no background, that picture replaces the box. Left: the total as a figure, the arrival day as a mid figure, the reason and the market note as small copy. Right: one mid figure that names what can say yes right now, and nothing to click. "Press the wooden button to place the order." when the shelf node is connected, "Press Enter to place the order." on a screen that holds a key, "Say yes from a phone to place the order." otherwise. Bottom right tag: "Waiting for a yes · PO RU-1042 · spend cap $150 an order".
 
 Why. The frame is 1100 by 580 and holds the chart: boxes used per day as bars, stock as a stepped line, the next 7 days as a band, the reorder point as an orange line that moves within 300ms, today as a dotted line. Right: the reorder point as a figure, the policy reason, and the season control (Normal, Busy week, Exam week) as a `.seg`. The tag "Sample history" shows bottom right when any day is seeded.
 
@@ -127,7 +127,7 @@ Teach. Paper plate, word "New part". A 460 by 600 frame holds the crop, `.waitin
 
 Phone. Plates stack as bands (`.plate.band`), each with its own word fitted to the band: the order waiting for a yes (paper), a new part to confirm (paper), then the counts (olive, or wine when a part is low). Buttons are full width.
 
-Ops. Paper plate, the word "Operator", two columns of type on the plate. Zone editor: the board in a moss frame, each zone a `.zone` whose handles drag, a rows by cols stepper for pocket zones, and a "Capture empty board" button. Health as meta lines: each camera (online, fps), the node (level, last seen, queued events, vision restarts), the buyer (connected), the TinyFish balance if known. The run log is a table in mono with no rules. Buttons: Reset demo, Replay last good run (per kind), Cancel order.
+Ops. Paper plate, the word "Operator", two columns of type on the plate. Zone editor: the board in a moss frame, each zone a `.zone` whose handles drag, a rows by cols stepper for pocket zones, and three buttons, "Capture empty board", "Capture full board" and "Set camera position". Health as meta lines: each camera (online, fps), the node (level, last seen, queued events, vision restarts), the buyer (connected), the TinyFish balance if known. The run log is a table in mono with no rules. Buttons: Reset demo, Replay last good run (per kind), Cancel order.
 
 States every screen handles: loading (the frame is `.waiting` and empty, the word is `.quiet`), empty (olive, word "Empty", one sentence: "No parts yet. Put one on the teach spot."), offline (alert tag: "Hub unreachable. Showing the last counts from 9:14."), error (alert tag with the plain reason).
 

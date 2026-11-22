@@ -30,3 +30,5 @@ services/eye/data/
 edge/qnx/data/
 services/buyer/recordings/
 .dev.vars
+# YOLOE weights, downloaded on first run
+*.pt

@@ -7,6 +7,8 @@ import urllib.error
 import urllib.request
 from typing import Optional
 
+USER_AGENT = "reup-eye/1"
+
 
 class Hub:
     def __init__(self, url: str, token: str, timeout: float = 3.0, opener=urllib.request.urlopen):
@@ -18,7 +20,8 @@ class Hub:
 
     def _call(self, method: str, path: str, body: Optional[dict] = None) -> Optional[dict]:
         data = json.dumps(body).encode("utf-8") if body is not None else None
-        headers = {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
+        # Cloudflare turns away Python's own User-Agent (403, error 1010) before the hub ever sees the call.
+        headers = {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json", "User-Agent": USER_AGENT}
         request = urllib.request.Request(self.url + path, data=data, method=method, headers=headers)
         try:
             with self.opener(request, timeout=self.timeout) as response:
@@ -41,3 +44,7 @@ class Hub:
 
     def teach(self, jpeg: bytes, zone_id: Optional[str]) -> Optional[dict]:
         return self._call("POST", "/api/teach", {"jpegBase64": base64.b64encode(jpeg).decode("ascii"), "zoneId": zone_id})
+
+    def cancel_teach(self, teach_id: str) -> bool:
+        """Takes the new part card down. False when the hub no longer has it, which is just as good."""
+        return self._call("POST", f"/api/teach/{teach_id}/cancel") is not None

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from reup_eye.config import load, resolve_index
+from reup_eye.config import camera_ways, load
 from reup_eye.frames import FpsMeter, FrameSource, ReferenceStore, sample, small_colour
 
 
@@ -26,6 +26,20 @@ def test_a_part_as_bright_as_the_board_but_another_colour_is_still_seen():
     cur = ref.copy()
     cur[1] = box
     assert pockets_full(pocket_levels(cur, ref), 18) == [False, True]
+
+
+def test_block_mean_averages_noise_away_and_keeps_a_hand():
+    from reup_eye.frames import block_mean
+
+    rng = np.random.default_rng(7)
+    still = np.full((88, 160, 3), 60.0)
+    noisy = still + rng.normal(0, 6, still.shape)
+    assert (np.abs(noisy - still).max(axis=-1) > 10).mean() > 0.1  # a dim room: one pixel in ten is off by a hand's worth
+    assert (np.abs(block_mean(noisy, 4) - block_mean(still, 4)).max(axis=-1) > 10).mean() == 0
+    hand = still.copy()
+    hand[20:60, 40:80] = 170
+    assert (np.abs(block_mean(hand, 4) - block_mean(still, 4)).max(axis=-1) > 10).mean() > 0.05
+    assert block_mean(still, 4).shape == (22, 40, 3) and block_mean(still, 1) is still
 
 
 def test_sampling_reads_between_pixels():
@@ -109,13 +123,59 @@ def test_the_shipped_config_file_loads():
 
     c = load(Path(__file__).resolve().parents[1] / "config.toml")
     assert c.cameras["board"].name == "Elgato Facecam" and c.cameras["aux"].name == "C920" and c.teach.zone == "z-teach"
+    # The station as built: one camera, and the teach spot is a patch of the board.
+    assert c.cameras["board"].enabled and not c.cameras["aux"].enabled and c.teach.camera == "board"
 
 
-def test_a_camera_is_chosen_by_name_and_falls_back_to_its_index():
-    names = ["Integrated Webcam", "Elgato Facecam", "HD Pro Webcam C920"]
-    assert resolve_index("facecam", 0, names) == (1, None)
-    assert resolve_index("C920", 0, names) == (2, None)
-    index, note = resolve_index("Brio", 3, names)
-    assert index == 3 and "No camera is named 'Brio'" in note
-    assert resolve_index("", 5, None) == (5, None)
-    assert resolve_index("C920", 1, None)[0] == 1
+def test_the_second_camera_is_off_unless_the_config_turns_it_on():
+    assert not load(text="").cameras["aux"].enabled
+    assert load(text='[cameras.aux]\nenabled = true\nname = "C920"').cameras["aux"].enabled
+    assert load(text="[cameras.side]\nindex = 4").cameras["side"].enabled
+
+
+def test_a_camera_is_chosen_by_name_in_each_backends_own_numbering():
+    # The laptop at the table: the two Windows backends list the same cameras, and DirectShow adds two virtual ones.
+    mf = {0: "Camo", 1: "Integrated Webcam", 2: "Elgato Facecam MK.2 (USB2)", 3: "Windows Virtual Camera"}
+    ds = {0: "Camo", 1: "OBS Virtual Camera", 2: "Integrated Webcam", 3: "Elgato Facecam MK.2 (USB2)"}
+    assert camera_ways("Elgato Facecam", 0, [("mf", mf), ("ds", ds)]) == ([("mf", 2), ("ds", 3)], None)
+    assert camera_ways("facecam", 0, [("mf", {0: "Camo"}), ("ds", ds)]) == ([("ds", 3)], None)
+    # No name: the index, on every backend.
+    assert camera_ways("", 5, [("mf", mf), ("ds", None)]) == ([("mf", 5), ("ds", 5)], None)
+
+
+def test_a_named_camera_that_is_missing_never_falls_back_to_another_camera():
+    builtin = {0: "Integrated Webcam", 1: "Integrated IR Webcam"}
+    ways, note = camera_ways("Elgato Facecam", 0, [("mf", builtin), ("ds", builtin)])
+    assert ways == [] and "No camera is named 'Elgato Facecam'" in note and "Integrated Webcam, Integrated IR Webcam" in note
+    # The names cannot be read at all: still nothing is opened, and the note says what to do.
+    ways, note = camera_ways("C920", 1, [("mf", None), ("ds", None)])
+    assert ways == [] and "cv2-enumerate-cameras" in note and "index 1" in note
+
+
+def test_a_camera_plugged_in_late_is_found_by_asking_again_before_every_try():
+    clock = {"t": 0.0}
+    plugged: list[tuple[str, int]] = []
+    opened = []
+
+    def opener(way):
+        opened.append(way)
+        return FakeCapture([np.zeros((4, 4, 3), np.uint8)] * 3)
+
+    src = FrameSource("board", lambda: list(plugged), opener, clock=lambda: clock["t"])
+    assert not src.step() and opened == []
+    plugged.append(("mf", 2))
+    clock["t"] = 0.5
+    assert not src.step() and opened == []  # not yet time to try again
+    clock["t"] = 1.1
+    assert src.step() and opened == [("mf", 2)] and src.opened_index == ("mf", 2)
+
+
+def test_a_camera_that_is_turned_off_gets_no_source():
+    from pathlib import Path
+
+    from reup_eye.runtime import Runtime
+
+    here = Path(__file__).resolve().parents[1]
+    runtime = Runtime(load(here / "config.toml"), "http://localhost:1", "t", here / "data" / "test-none", post=False, log=lambda _m: None)
+    assert list(runtime.sources) == ["board"] and runtime.cameras == ["board"]
+    assert [c["id"] for c in runtime.camera_health()] == ["board"]

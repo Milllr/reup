@@ -1,8 +1,10 @@
 # Everything the eye needs to run on the laptop with the cameras.
 # Install on the machine that runs the eye: python -m pip install -r services/eye/requirements.txt
 -r requirements-dev.txt
-opencv-python>=4.10
+# 4.x is what the eye is tested on at the table (4.14 on Windows 11).
+opencv-python>=4.10,<5
 # Open zone counting with YOLOE-26. Large (it pulls in PyTorch). The eye runs without it and counts open zones as difference blobs.
 ultralytics>=8.4.0
-# Windows only, optional: lets config.toml choose a camera by its name.
-pygrabber>=0.2; sys_platform == "win32"
+# Lists the cameras by name for each capture backend, without opening them. A camera named in config.toml needs it:
+# the eye opens a named camera only under that name, so it can never pick a built in webcam by mistake.
+cv2-enumerate-cameras>=1.1; sys_platform == "win32"

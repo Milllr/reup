@@ -301,6 +301,90 @@
       "inStock": false,
       "leadDays": 1,
       "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-6001"
+    },
+    {
+      "sku": "OC-1434",
+      "name": "3/4 in Flat Washers, Zinc",
+      "category": "Bolts and nuts",
+      "unit": "each",
+      "packs": [
+        {
+          "label": "Each",
+          "size": 1,
+          "price": 0.89
+        },
+        {
+          "label": "Bag of 10",
+          "size": 10,
+          "price": 7.9
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-1434"
+    },
+    {
+      "sku": "OC-1475",
+      "name": "3/4 x 3 in Hex Bolts, Zinc",
+      "category": "Bolts and nuts",
+      "unit": "each",
+      "packs": [
+        {
+          "label": "Each",
+          "size": 1,
+          "price": 3.49
+        },
+        {
+          "label": "Box of 10",
+          "size": 10,
+          "price": 31.5
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-1475"
+    },
+    {
+      "sku": "OC-7009",
+      "name": "9V Alkaline Batteries, Industrial",
+      "category": "Shop supplies",
+      "unit": "each",
+      "packs": [
+        {
+          "label": "Each",
+          "size": 1,
+          "price": 4.29
+        },
+        {
+          "label": "Box of 12",
+          "size": 12,
+          "price": 46.8
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-7009"
+    },
+    {
+      "sku": "OC-7100",
+      "name": "MWAX Synthetic Lubricant",
+      "category": "Shop supplies",
+      "unit": "pack",
+      "packs": [
+        {
+          "label": "Pack",
+          "size": 1,
+          "price": 14.99
+        },
+        {
+          "label": "Case of 6 packs",
+          "size": 6,
+          "price": 82.0
+        }
+      ],
+      "inStock": true,
+      "leadDays": 2,
+      "url": "https://offcut.wheredidallmyinventorygo.wtf/p/OC-7100"
     }
   ]
 }

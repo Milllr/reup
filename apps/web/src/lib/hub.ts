@@ -14,15 +14,26 @@ export function liveUrl(role: 'screen' | 'ops'): string {
 /** A path on the hub, for images such as a teach crop. */
 export const hubUrl = (path: string) => (/^https?:/.test(path) ? path : `${HUB}${path}`);
 
-/** A token given once in the address (?ops= or ?k=) is kept for the session and used after that. */
+/** The approve key of a hub started for development on this machine. A deployed hub has its own and does not take this one. */
+export const LOCAL_KEY = 'dev-approve-key';
+
+/** True when the page was opened from the machine the hub runs on. */
+export const onThisMachine = (host = typeof location === 'undefined' ? '' : location.hostname) => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(host);
+
+/**
+ * A token given once in the address (?ops= or ?k=) is kept for the session and used after that.
+ * With none given, a page opened on the hub's own machine holds the local approve key, so the station's laptop
+ * can say yes and name a part without anyone typing a key into the address.
+ */
 export function token(kind: 'ops' | 'k'): string | null {
   const key = `reup.${kind}`;
+  const local = kind === 'k' && onThisMachine() ? LOCAL_KEY : null;
   try {
     const given = param(kind);
     if (given) sessionStorage.setItem(key, given);
-    return sessionStorage.getItem(key);
+    return sessionStorage.getItem(key) ?? local;
   } catch {
-    return param(kind);
+    return param(kind) ?? local;
   }
 }
 

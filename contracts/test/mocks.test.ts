@@ -36,6 +36,7 @@ const cases: Record<string, z.ZodType> = {
   'supply-webhook': C.SupplyWebhookBody,
   'teach-confirm': C.TeachConfirmBody,
   'api-error': C.ApiError,
+  board: C.BoardBody,
 };
 
 describe('contract mocks', () => {

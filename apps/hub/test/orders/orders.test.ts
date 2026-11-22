@@ -335,4 +335,107 @@ describe('restocking', () => {
     await r.call('POST', '/ingest/reorder', { id: 'ro-late', productId: 'p-screws', countAfter: 4, ts: called }, DEVICE);
     expect(r.room.s.orders).toHaveLength(0);
   });
+
+  describe('an order the buyer never finishes', () => {
+    const cartRun = (r: Awaited<ReturnType<typeof rig>>, id: string, steps = 0) => ({ id: 'r-1', tinyfishRunId: 'tf', kind: 'cart', supplierId: 's-offcut', productId: 'p-screws', orderId: id, status: 'running', streamingUrl: null, steps: Array.from({ length: steps }, () => ({ ts: r.room.iso(), purpose: 'Looking for the part.' })), replay: false, error: null, startedAt: r.room.iso(), finishedAt: null });
+
+    it('fails after 45 seconds when no buyer is connected, and the Shelf comes back', async () => {
+      const r = await rig();
+      await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 4)] }, DEVICE);
+      const id = r.room.s.orders[0]?.id ?? '';
+      r.advance(2600);
+      expect(r.room.s.screen).toBe('shop');
+      expect(r.room.nextDeadline()).toBe(r.clock.now - 2600 + 45_001);
+      r.advance(42_000);
+      expect(r.room.order(id)?.state).toBe('pricing');
+      r.advance(500);
+      expect(r.room.order(id)).toMatchObject({ state: 'failed', error: 'The buyer is offline. Nothing was bought.' });
+      expect(r.of('order').at(-1)?.order.state).toBe('failed');
+      expect(r.room.s.activity.at(-1)).toMatchObject({ tone: 'error', text: 'The buyer is offline. Nothing was bought.' });
+      expect(r.room.x.jobs.filter((j) => 'orderId' in j && j.orderId === id)).toEqual([]);
+      // The failed order keeps the Order screen for 20 seconds, then the Shelf is back.
+      expect(r.room.s.screen).toBe('order');
+      r.advance(20_100);
+      expect(r.room.s.screen).toBe('shelf');
+      // The count is still low, and no second order opens by itself.
+      r.advance(600_000);
+      expect(r.room.s.orders).toHaveLength(1);
+    });
+
+    it('waits as long as the buyer keeps reporting, and fails after 6 minutes of silence', async () => {
+      const r = await rig();
+      r.room.setBuyerOnline(true);
+      await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 4)] }, DEVICE);
+      const id = r.room.s.orders[0]?.id ?? '';
+      // A price check for the same part is a word from the buyer too, while the order is still pricing.
+      r.advance(300_000);
+      await r.call('POST', '/ingest/runs', { run: { ...cartRun(r, id), id: 'r-0', kind: 'market', supplierId: 's-market-a', orderId: null } }, DEVICE);
+      r.advance(300_000);
+      expect(r.room.order(id)?.state).toBe('pricing');
+      for (let step = 1; step <= 4; step++) {
+        r.advance(50_000);
+        await r.call('POST', '/ingest/runs', { run: cartRun(r, id, step) }, DEVICE);
+        r.advance(300_000);
+      }
+      expect(r.room.order(id)?.state).toBe('carting');
+      r.advance(59_000);
+      expect(r.room.order(id)?.state).toBe('carting');
+      r.advance(1500);
+      expect(r.room.order(id)).toMatchObject({ state: 'failed', error: 'The buyer stopped answering. Nothing was bought.' });
+    });
+
+    it('a buyer that drops off while it still reports is given the time, and one that comes back in time loses nothing', async () => {
+      const r = await rig();
+      r.room.setBuyerOnline(true);
+      await r.call('POST', '/ingest/counts', { counts: [count(r, 'z-screws', 4)] }, DEVICE);
+      const id = r.room.s.orders[0]?.id ?? '';
+      r.advance(100_000);
+      r.room.setBuyerOnline(false);
+      r.advance(40_000);
+      await r.call('POST', '/ingest/runs', { run: cartRun(r, id, 1) }, DEVICE); // its socket is down, its run goes on
+      r.advance(40_000);
+      expect(r.room.order(id)?.state).toBe('carting');
+      r.room.setBuyerOnline(true);
+      r.advance(300_000);
+      expect(r.room.order(id)?.state).toBe('carting');
+    });
+
+    it('an order waiting for a yes waits for good', async () => {
+      const r = await rig();
+      const id = await toAwaiting(r);
+      r.advance(3_600_000);
+      expect(r.room.order(id)?.state).toBe('awaiting_approval');
+      expect(r.room.s.screen).toBe('order');
+    });
+
+    it('after the yes the words say to check the store, and the store or a late report still marks it placed', async () => {
+      const r = await rig();
+      const id = await toAwaiting(r);
+      await r.call('POST', `/api/orders/${id}/approve`, { by: 'button' }, APPROVE);
+      r.advance(44_000);
+      expect(r.room.order(id)?.state).toBe('approved');
+      r.advance(1500);
+      expect(r.room.order(id)).toMatchObject({ state: 'failed', error: 'The buyer is offline while the order was being placed. Check the store before ordering again.' });
+      const late = await r.call('POST', '/ingest/placed', { jobId: 'j', orderId: id, ok: true, confirmation: 'OC-58213', eta: null, error: null }, DEVICE);
+      expect(late.status).toBe(200);
+      expect(r.room.order(id)).toMatchObject({ state: 'placed', confirmation: 'OC-58213', error: null });
+
+      // The same through the store's webhook. An order that failed before its yes stays failed.
+      const p = await rig();
+      const id2 = await toAwaiting(p);
+      await p.call('POST', `/api/orders/${id2}/approve`, { by: 'phone' }, APPROVE);
+      p.advance(46_000);
+      expect(p.room.order(id2)?.state).toBe('failed');
+      const hook = (q: Awaited<ReturnType<typeof rig>>) => q.call('POST', '/hooks/supply', { event: 'order.confirmed', confirmation: 'OC-7', poNumber: 'RU-1042', eta: '2026-11-24T17:00:00-05:00' }, undefined, { 'X-Offcut-Secret': 'dev-supply-secret' });
+      expect((await hook(p)).status).toBe(200);
+      expect(p.room.order(id2)).toMatchObject({ state: 'placed', confirmation: 'OC-7', error: null });
+
+      const q = await rig();
+      await q.call('POST', '/ingest/counts', { counts: [count(q, 'z-screws', 4)] }, DEVICE);
+      q.advance(46_000);
+      expect(q.room.s.orders[0]?.state).toBe('failed');
+      await hook(q);
+      expect(q.room.s.orders[0]?.state).toBe('failed');
+    });
+  });
 });

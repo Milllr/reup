@@ -1,0 +1,173 @@
+{
+  "zones": [
+    {
+      "id": "z-washers",
+      "name": "Washers",
+      "kind": "open",
+      "camera": "board",
+      "quad": [
+        [
+          0.173,
+          0.132
+        ],
+        [
+          0.512,
+          0.132
+        ],
+        [
+          0.512,
+          0.333
+        ],
+        [
+          0.173,
+          0.333
+        ]
+      ],
+      "rows": null,
+      "cols": null,
+      "productId": "p-washers"
+    },
+    {
+      "id": "z-bolts",
+      "name": "Hex bolts",
+      "kind": "open",
+      "camera": "board",
+      "quad": [
+        [
+          0.577,
+          0.132
+        ],
+        [
+          0.926,
+          0.132
+        ],
+        [
+          0.926,
+          0.333
+        ],
+        [
+          0.577,
+          0.333
+        ]
+      ],
+      "rows": null,
+      "cols": null,
+      "productId": "p-bolts"
+    },
+    {
+      "id": "z-wax",
+      "name": "MWAX",
+      "kind": "open",
+      "camera": "board",
+      "quad": [
+        [
+          0.194,
+          0.583
+        ],
+        [
+          0.522,
+          0.583
+        ],
+        [
+          0.522,
+          0.842
+        ],
+        [
+          0.194,
+          0.842
+        ]
+      ],
+      "rows": null,
+      "cols": null,
+      "productId": "p-wax"
+    },
+    {
+      "id": "z-9v",
+      "name": "9V batteries",
+      "kind": "open",
+      "camera": "board",
+      "quad": [
+        [
+          0.582,
+          0.611
+        ],
+        [
+          0.781,
+          0.611
+        ],
+        [
+          0.781,
+          0.828
+        ],
+        [
+          0.582,
+          0.828
+        ]
+      ],
+      "rows": null,
+      "cols": null,
+      "productId": "p-9v"
+    },
+    {
+      "id": "z-teach",
+      "name": "Teach spot",
+      "kind": "open",
+      "camera": "board",
+      "quad": [
+        [
+          0.805,
+          0.611
+        ],
+        [
+          0.906,
+          0.611
+        ],
+        [
+          0.906,
+          0.828
+        ],
+        [
+          0.805,
+          0.828
+        ]
+      ],
+      "rows": null,
+      "cols": null,
+      "productId": null
+    }
+  ],
+  "products": [
+    {
+      "id": "p-washers",
+      "name": "Flat washers 3/4 in",
+      "unit": "each",
+      "sku": "OC-1434",
+      "searchPhrase": "3/4 inch flat washer zinc",
+      "capacity": null
+    },
+    {
+      "id": "p-bolts",
+      "name": "Hex bolts 3/4 x 3 in",
+      "unit": "each",
+      "sku": "OC-1475",
+      "searchPhrase": "3/4 x 3 inch hex bolt zinc",
+      "capacity": null
+    },
+    {
+      "id": "p-wax",
+      "name": "MWAX synthetic lubricant",
+      "unit": "pack",
+      "sku": "OC-7100",
+      "searchPhrase": "MWAX synthetic lubricant for mSnow",
+      "capacity": null
+    },
+    {
+      "id": "p-9v",
+      "name": "9V batteries",
+      "unit": "each",
+      "sku": "OC-7009",
+      "searchPhrase": "Energizer Industrial 9V alkaline battery",
+      "capacity": null
+    }
+  ]
+}

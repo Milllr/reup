@@ -87,6 +87,7 @@ export function openOrder(room: RoomCore, productId: string, trigger: Order['tri
   room.emitJob({ id: room.id('j'), kind: 'cart', orderId: order.id, productId, supplierId: supplier.id, sku: product.sku, searchPhrase: product.searchPhrase, units: qty, replay: room.x.replay.cart });
 
   if (trigger === 'hub') room.holdShelf(order.id);
+  room.heardFrom(order.id);
   saveOrder(room, order);
   const retailers = `${markets.length} ${markets.length === 1 ? 'retailer' : 'retailers'}`;
   room.activity('working', checkMarket ? `Checking ${retailers} and filling a cart at ${supplier.name}.` : `Filling a cart at ${supplier.name}.`);
@@ -196,6 +197,9 @@ export function ingestRuns(room: RoomCore, body: IngestRunsBody): void {
   room.deps.history.run(run);
   room.emit({ type: 'run', run });
   const order = run.orderId ? room.order(run.orderId) : undefined;
+  // Any word from the buyer keeps its orders waiting: a run for the order itself, or a price check for its part.
+  if (order) room.heardFrom(order.id);
+  else if (run.productId) for (const o of room.s.orders) if (o.productId === run.productId && o.state === 'pricing') room.heardFrom(o.id);
   if (!order || run.status !== 'running') return;
   if (run.kind === 'cart' && order.state === 'pricing') {
     order.state = 'carting';
@@ -268,7 +272,7 @@ function spentToday(room: RoomCore): number {
   return room.x.spend.total + inFlight;
 }
 
-export function approve(room: RoomCore, orderId: string, by: 'button' | 'phone'): Order {
+export function approve(room: RoomCore, orderId: string, by: NonNullable<Order['approvedBy']>): Order {
   const order = room.order(orderId);
   if (!order) throw new NotFound(`No order ${orderId}.`);
   if (order.state !== 'awaiting_approval') throw new Conflict(`Order ${order.poNumber} is ${order.state.replace('_', ' ')}. Only an order waiting for approval can be approved.`);
@@ -277,12 +281,16 @@ export function approve(room: RoomCore, orderId: string, by: 'button' | 'phone')
   if (spentToday(room) + total > room.config.DAY_CAP_CAD) return fail(room, order, `This order would pass the spend cap of $${room.config.DAY_CAP_CAD} a day. ${NOTHING_BOUGHT}`);
   order.state = 'approved';
   order.approvedBy = by;
+  room.heardFrom(order.id);
   room.emitJob({ id: room.id('j'), kind: 'place', orderId: order.id, supplierId: order.supplierId, poNumber: order.poNumber, replay: room.x.replay.place });
   saveOrder(room, order);
   const supplier = room.s.suppliers.find((s) => s.id === order.supplierId);
   room.activity('working', `Placing the order at ${supplier?.name ?? 'the supplier'}.`);
   return order;
 }
+
+/** True for an order that had its yes and then failed: the store may have it all the same. */
+export const gaveUpPlacing = (order: Order) => order.state === 'failed' && order.approvedBy != null;
 
 /** The order is in at the store. Used by the buyer's result and by the store's webhook, whichever lands first. */
 export function markPlaced(room: RoomCore, order: Order, confirmation: string, eta: string | null): Order {
@@ -291,6 +299,7 @@ export function markPlaced(room: RoomCore, order: Order, confirmation: string, e
   if (eta) order.eta = eta;
   if (!first) return saveOrder(room, order);
   order.state = 'placed';
+  order.error = null;
   order.unitsReceived = 0;
   room.x.deliveries[order.id] = { low: room.count(order.productId)?.count ?? 0 };
   if (room.x.spend.day !== room.today()) room.x.spend = { day: room.today(), total: 0 };
@@ -307,6 +316,8 @@ export function ingestPlaced(room: RoomCore, body: IngestPlacedBody): Order {
   if (!order) throw new NotFound(`No order ${body.orderId}.`);
   room.finishJob(body.jobId);
   if (order.state === 'placed' || order.state === 'shipped' || order.state === 'received') return order;
+  // The hub gave up waiting and the buyer placed it after all: the order is in at the store, so it is placed.
+  if (gaveUpPlacing(order) && body.ok && body.confirmation) return markPlaced(room, order, body.confirmation, body.eta);
   if (order.state !== 'approved' && order.state !== 'placing') throw new Conflict(`Order ${order.id} is ${order.state}, not being placed.`);
   if (!body.ok || !body.confirmation) return fail(room, order, `Could not place the order${body.error ? `: ${body.error.replace(/\.$/, '')}` : ''}. ${NOTHING_BOUGHT}`);
   return markPlaced(room, order, body.confirmation, body.eta);

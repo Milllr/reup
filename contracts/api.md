@@ -10,7 +10,7 @@ Base URL: `HUB_URL`. JSON in and out. Times are ISO 8601 with an offset. Money i
 | --- | --- | --- | --- |
 | DEVICE_TOKEN | `Authorization: Bearer` | eye, node, buyer | `/ingest/*`, `/api/jobs`, `/api/teach`, approve by button |
 | OPS_TOKEN | `Authorization: Bearer` | operator page | `/api/zones`, `/api/demo/*`, manual order, cancel |
-| APPROVE_KEY | `Authorization: Bearer` | phones (from the QR link `?k=`) | approve by phone, teach confirm and cancel |
+| APPROVE_KEY | `Authorization: Bearer` | phones (from the QR link `?k=`), and a TV or laptop opened with `?k=` | approve by phone or by keyboard, teach confirm and cancel |
 | SUPPLY_WEBHOOK_SECRET | `X-Offcut-Secret` | Offcut Supply | `/hooks/supply` |
 
 Reading state needs no token: `/live` for screens, `/api/state`, history, and a teach crop at `/api/teach/:id/crop.jpg`. The buyer's socket is the exception: `/live?role=buyer&token=DEVICE_TOKEN`, because only the buyer is sent jobs.
@@ -43,6 +43,7 @@ Every error is `ApiError`: `{ ok: false, code, message }` with status 400 bad_re
 | POST | /api/orders/:id/approve | ApproveBody | Order | order-placed.json |
 | POST | /api/orders/:id/cancel | | Order | |
 | PUT | /api/zones | ZonesBody | Ok | |
+| PUT | /api/board | BoardBody | Snapshot | board.json |
 | POST | /api/demo/season | Season | Ok | |
 | POST | /api/demo/reset | | Snapshot | |
 | POST | /api/demo/screen | ScreenBody | Ok | |
@@ -63,6 +64,9 @@ On the laptop, port 8089, local network only. No contract package: they are smal
 | GET | /outlines/:camera.json | `{ ts, items: [{ productId or null, points: [[x,y], ...] }] }`, normalized |
 | GET | /debug/:camera.jpg | the frame with zones drawn |
 | POST | /reference/:camera | captures the empty board; `{ ok: true }` |
+| POST | /anchor/:camera | this is where the camera sits now: later pictures are lined up with this one; `{ ok: true }` |
+| POST | /full/:camera | with the board full, learns the size of one unit in every open zone; `{ ok: true, zones: { zoneId: { units, cells } }, skipped: { zoneId: reason } }`. `?zoneId=n` when a zone holds n and not its part's capacity. 409 before the empty board is saved |
+| POST | /prompt/:zoneId | saves the current frame as the example of that zone's part, for the detector. `?box=x0,y0,x1,y1` is one part in the frame, each from 0 to 1; `{ ok: true }` |
 
 ## Offcut Supply's machine routes
 

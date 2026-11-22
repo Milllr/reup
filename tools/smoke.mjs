@@ -32,7 +32,10 @@ async function until(name, test, seconds) {
   check(name, false, `still screen ${last?.screen}, order ${o ? `${o.state}${o.failure ? `: ${o.failure}` : ''}` : 'none'} after ${seconds} s`);
   return last;
 }
-const count = (n) => ({ productId: 'p-screws', zoneId: 'z-screws', count: n, level: null, pockets: Array.from({ length: 12 }, (_, i) => i < n), source: 'eye', ts: new Date().toISOString() });
+// Which part the judge takes, and the numbers the loop should show. The designed board has wood screws in 12 pockets.
+// The board as built has ledges that hold what is stocked: the smoke stocks 6, takes 2, and 2 are ordered to fill it.
+let part, zone, plan;
+const count = (n) => ({ productId: part.id, zoneId: zone.id, count: n, level: null, pockets: zone.kind === 'pockets' ? Array.from({ length: zone.rows * zone.cols }, (_, i) => i < n) : null, source: 'eye', ts: new Date().toISOString() });
 
 const health = await fetch(`${hub}/api/health`).then((r) => r.ok, () => false);
 if (!health) {
@@ -46,22 +49,36 @@ const screen = new WebSocket(`${hub.replace(/^http/, 'ws')}/live?role=screen`);
 screen.on('message', (m) => heard.push(JSON.parse(String(m))));
 await new Promise((res, rej) => { screen.on('open', res); screen.on('error', rej); });
 
+let s = await state();
+part = s.products.find((p) => p.id === 'p-screws') ?? s.products.find((p) => p.id === 'p-9v') ?? s.products.find((p) => p.zoneId && p.zoneId !== 'z-teach');
+zone = s.zones.find((z) => z.id === part?.zoneId);
+if (!part || !zone) {
+  console.error('This hub has no part on the board. Set one up first: node tools/board.mjs');
+  process.exit(1);
+}
+const designed = part.id === 'p-screws';
+plan = designed ? { units: 8, total: 67.71, some: 7, someIn: 3, full: 12 } : { units: 2, total: null, some: 5, someIn: 1, full: 6 };
+const found = s.counts.find((c) => c.productId === part.id)?.count ?? 0;
+const here = () => s.counts.find((c) => c.productId === part.id)?.count;
+console.log(`${at()}        part: ${part.name} in ${zone.id}${designed ? '' : '  (a ledge: it holds what is stocked)'}`);
+
 await post('/api/demo/reset', undefined, ops);
 await post('/ingest/counts', { counts: [count(6)] });
-let s = await state();
-check('See: the board starts with 6 boxes of screws and the buyer is online', s.counts.find((c) => c.productId === 'p-screws')?.count === 6 && s.buyerOnline === true, `buyer ${s.buyerOnline ? 'online' : 'offline'}`);
-const policy = s.policies.find((p) => p.productId === 'p-screws');
-check('The reorder point for screws is 4', policy?.reorderPoint === 4, `rate ${policy?.ratePerDay}`);
+if (!designed) await post('/api/demo/reset', undefined, ops); // six on the ledge is a full ledge from here
+s = await state();
+check(`See: the board starts with 6 of ${part.name} and the buyer is online`, here() === 6 && s.buyerOnline === true, `buyer ${s.buyerOnline ? 'online' : 'offline'}`);
+const policy = s.policies.find((p) => p.productId === part.id);
+check('The reorder point is 4', policy?.reorderPoint === 4, `rate ${policy?.ratePerDay}`);
 
 await post('/ingest/counts', { counts: [count(4)] });
 s = await state();
-check('Take: two boxes gone, the count is 4 and the Shelf holds the screen', s.counts.find((c) => c.productId === 'p-screws')?.count === 4 && s.screen === 'shelf');
+check('Take: two gone, the count is 4 and the Shelf holds the screen', here() === 4 && s.screen === 'shelf');
 // The judge changes their mind and puts both boxes back before anyone says yes.
 const first = s.orders.at(-1);
 await sleep(1200);
 await post('/ingest/counts', { counts: [count(6)] });
 s = await state();
-check('Put back: the count is 6 again, the order is cancelled and the Shelf is back', s.counts.find((c) => c.productId === 'p-screws')?.count === 6 && s.orders.find((o) => o.id === first?.id)?.state === 'cancelled' && s.screen === 'shelf', s.activity.at(-1)?.text ?? '');
+check('Put back: the count is 6 again, the order is cancelled and the Shelf is back', here() === 6 && s.orders.find((o) => o.id === first?.id)?.state === 'cancelled' && s.screen === 'shelf', s.activity.at(-1)?.text ?? '');
 check('Nothing was bought for the cancelled order', !heard.some((m) => m.type === 'order' && m.order.id === first?.id && ['approved', 'placing', 'placed'].includes(m.order.state)));
 // Then they take them after all.
 await sleep(1200);
@@ -71,7 +88,7 @@ const order = s.orders.at(-1);
 s = await until('Shop: one retailer answers with a price', (x) => x.quotes.some((q) => q.ok) && `$${x.quotes.find((q) => q.ok).unitPrice}`, 30);
 s = await until('Decide: the cart is ready and the order waits for a yes', (x) => x.orders.at(-1)?.state === 'awaiting_approval' && `${x.orders.at(-1).units} units, $${x.orders.at(-1).total}`, 45);
 const waiting = s.orders.at(-1);
-check('The order is 8 boxes for $67.71 with a reason', waiting?.units === 8 && waiting?.total === 67.71 && typeof waiting?.reason === 'string' && waiting.reason.length > 0, waiting?.reason ?? '');
+check(`The order is ${plan.units} units${plan.total ? ` for $${plan.total}` : ''} with a reason`, waiting?.units === plan.units && (plan.total ? waiting?.total === plan.total : waiting?.total > 0) && typeof waiting?.reason === 'string' && waiting.reason.length > 0, waiting?.reason ?? '');
 check('The screen shows the order card', s.screen === 'order');
 check('Nothing was placed before a yes', !heard.some((m) => m.type === 'order' && m.order.id === order.id && ['placing', 'placed'].includes(m.order.state)));
 
@@ -82,7 +99,7 @@ const placed = s.orders.at(-1);
 check('The confirmation looks like OC-12345 and there is a delivery day', /^OC-\d+$/.test(placed?.confirmation ?? '') && placed?.eta != null, `eta ${placed?.eta}`);
 s = await until('Track: the store says it shipped', (x) => x.orders.at(-1)?.state === 'shipped', 40);
 
-const runs = s.runs.filter((r) => r.orderId === order.id || r.productId === 'p-screws');
+const runs = s.runs.filter((r) => r.orderId === order.id || r.productId === part.id);
 const kinds = (k) => runs.some((r) => r.kind === k && r.steps.length > 0);
 check('The cart run and the place run were mirrored with their steps', kinds('cart') && kinds('place'), runs.map((r) => `${r.kind}:${r.status}${r.replay ? ':replay' : ''}`).join(' '));
 // The hub skips the price check when every retailer quote is under 10 minutes old.
@@ -90,16 +107,18 @@ console.log(`${at()}        price check: ${kinds('market') ? 'run for this order
 const engines = [...new Set(runs.map((r) => r.engine ?? 'tinyfish'))].join(', ');
 console.log(`${at()}        engine: ${engines}${engines.includes('local') ? '  (the development stand in, not the live web)' : ''}`);
 
-// The delivery goes onto the board a few boxes at a time.
-await post('/ingest/counts', { counts: [count(7)] });
+// The delivery goes onto the board a few at a time.
+await post('/ingest/counts', { counts: [count(plan.some)] });
 s = await state();
-check('Restock: 3 of 8 are in and the order is still on its way', s.orders.at(-1)?.unitsReceived === 3 && ['placed', 'shipped'].includes(s.orders.at(-1)?.state), `${s.orders.at(-1)?.unitsReceived} of ${s.orders.at(-1)?.units} in`);
+check(`Restock: ${plan.someIn} of ${plan.units} in and the order is still on its way`, s.orders.at(-1)?.unitsReceived === plan.someIn && ['placed', 'shipped'].includes(s.orders.at(-1)?.state), `${s.orders.at(-1)?.unitsReceived} of ${s.orders.at(-1)?.units} in`);
 await sleep(600);
-await post('/ingest/counts', { counts: [count(12)] });
-s = await until('Receive: all 8 are in and the order is done', (x) => x.orders.at(-1)?.state === 'received' && x.orders.at(-1)?.unitsReceived === 8, 10);
+await post('/ingest/counts', { counts: [count(plan.full)] });
+s = await until(`Receive: all ${plan.units} are in and the order is done`, (x) => x.orders.at(-1)?.state === 'received' && x.orders.at(-1)?.unitsReceived === plan.units, 10);
+// Leave the hub as it was found: the count that was there, then a reset, which also makes that count a full ledge again.
+await post('/ingest/counts', { counts: [count(found)] });
 const reset = await post('/api/demo/reset', undefined, ops);
 s = await state();
-check('Reset: one call puts the demo back', reset.status === 200 && s.orders.length === 0 && s.screen === 'shelf');
+check('Reset: one call puts the demo back', reset.status === 200 && s.orders.length === 0 && s.screen === 'shelf' && here() === found, `${part.name}: ${here()} on the board`);
 
 screen.close();
 console.log(failed ? 'The loop is broken. See FAIL above.' : 'The loop works.');

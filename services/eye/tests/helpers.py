@@ -54,6 +54,10 @@ class FakeHub:
         self.teaches.append((jpeg, zone_id))
         return {"id": f"t-{len(self.teaches)}"}
 
+    def cancel_teach(self, teach_id):
+        self.cancelled = [*getattr(self, "cancelled", []), teach_id]
+        return True
+
 
 def eye(tmp_path, config_text: str = "", with_reference: bool = True):
     config = load(text=config_text)
@@ -74,3 +78,22 @@ def still(e, frame, start: float, seconds: float = 1.0, camera: str = "board") -
         t += 0.1
         e.analyse(camera, frame, t)
     return t
+
+
+
+class FakeDetector:
+    """Stands in for YOLOE in the detector process: finds one part for every 50 of brightness in the top left pixel."""
+
+    def __init__(self, model, imgsz, conf):
+        if model == "missing.pt":
+            raise ImportError("No module named 'ultralytics'")
+        self.products = []
+
+    def set_prompts(self, prompts):
+        self.products = [p[0] for p in prompts]
+        self.shapes = [p[1].shape for p in prompts]
+
+    def detect(self, frame):
+        if frame[0, 0, 0] == 255:
+            raise ValueError("bad frame")
+        return [{"productId": self.products[0], "centre": [0.5, 0.5], "points": [[0.4, 0.4], [0.6, 0.4], [0.6, 0.6]], "shape": list(frame.shape)} for _ in range(int(frame[0, 0, 0]) // 50)]

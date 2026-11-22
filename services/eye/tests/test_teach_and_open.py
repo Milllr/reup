@@ -3,10 +3,11 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from reup_eye.teach import MAX_JPEG_BYTES, TeachSpot, crop_quad, jpeg_under, present
 
-from .helpers import H, W, eye, fill, snapshot, still
+from .helpers import H, W, board, eye, fill, snapshot, still
 
 TEACH = "[teach]\ncamera = \"board\"\nquad = [[0.6, 0.55], [0.9, 0.55], [0.9, 0.92], [0.6, 0.92]]\nzone = \"z-none\""
 ITEM = [[0.7, 0.65], [0.8, 0.65], [0.8, 0.8], [0.7, 0.8]]
@@ -80,11 +81,100 @@ def test_a_new_part_on_the_teach_spot_is_sent_once_and_becomes_its_products_exam
     t = still(e, frame([ITEM]), t, 2.5)
     assert len(hub.teaches) == 1 and hub.teaches[0][1] is None
     assert e.pending_teach["id"] == "t-1"
+    # The part's box on the whole frame, a little wider than the part, and the frame it was seen in.
     x0, y0, x1, y1 = e.pending_teach["box"]
-    assert 0.25 < x0 < 0.4 and 0.6 < x1 < 0.75 and 0.2 < y0 < 0.35 and 0.6 < y1 < 0.75
+    assert 0.67 < x0 < 0.7 and 0.8 < x1 < 0.83 and 0.61 < y0 < 0.65 and 0.8 < y1 < 0.84
+    assert e.pending_teach["frame"].shape == (H, W, 3)
     still(e, frame([ITEM]), t, 3)
     assert len(hub.teaches) == 1
     assert "teach spot" in logs[-1]
+
+
+def test_the_teach_spot_needs_no_saved_empty_board_and_scattered_specks_are_not_a_part(tmp_path):
+    e, hub, _ = eye(tmp_path, TEACH, with_reference=False)
+    t = still(e, frame(), 0.0, 2.5)
+    assert e.references["board"] is None and e.teach_base is not None
+    # A dozen specks, each far too small and none touching: together over 2 percent of the spot, and still not a part.
+    specks = [[[0.62 + i * 0.022, 0.6 + (i % 4) * 0.07], [0.628 + i * 0.022, 0.6 + (i % 4) * 0.07], [0.628 + i * 0.022, 0.622 + (i % 4) * 0.07], [0.62 + i * 0.022, 0.622 + (i % 4) * 0.07]] for i in range(12)]
+    t = still(e, frame(specks), t, 2.5)
+    assert hub.teaches == []
+    seen = e.health()["teach"]
+    assert seen["learned"] and seen["waiting"] is None and seen["patch"] == 0.0
+    t = still(e, frame(), t, 2.5)
+    still(e, frame([ITEM]), t, 2.0)
+    assert len(hub.teaches) == 1
+    seen = e.health()["teach"]
+    assert seen["waiting"] == "t-1" and not seen["armed"] and 0.05 < seen["patch"] <= seen["differs"] < 0.2
+
+
+def wood(items=(), light=1.0, lamp=1.0):
+    """Brown wood with parts on it. light dims or brightens the whole picture, lamp only the left half of the teach spot."""
+    img = np.empty((H, W, 3), np.float32)
+    img[:] = (52, 84, 128)  # blue, green, red
+    for corners, colour in items:
+        xs = (np.asarray(corners)[:, 0] * W).astype(int)
+        ys = (np.asarray(corners)[:, 1] * H).astype(int)
+        img[ys.min() : ys.max() + 1, xs.min() : xs.max() + 1] = colour
+    img *= light
+    img[int(0.55 * H) : int(0.92 * H), int(0.6 * W) : int(0.75 * W)] *= lamp
+    return np.clip(img, 0, 255).astype(np.uint8)
+
+
+def test_a_shadow_or_a_lamp_on_the_teach_spot_is_not_a_part_and_a_part_in_that_light_still_is(tmp_path):
+    from reup_eye.counting import other_surface
+
+    brown = np.array([[52.0, 84.0, 128.0]])
+    assert not other_surface(brown * 0.6, brown).any() and not other_surface(brown * 1.7, brown).any()  # a shadow, a lamp
+    assert other_surface(np.array([[120.0, 120.0, 120.0]]), brown).all()  # a zinc bolt: grey, about as bright
+    assert other_surface(np.array([[14.0, 14.0, 14.0]]), brown).all()  # a black battery
+    assert other_surface(np.array([[235.0, 235.0, 235.0]]), brown).all()  # a white label
+    assert not other_surface(np.array([[60.0, 97.0, 147.0]]), brown).any()  # cardboard the colour of the board: not seen
+
+    e, hub, logs = eye(tmp_path, TEACH, with_reference=False)
+    t = still(e, wood(), 0.0, 2.5)
+    # Someone leans in and their shadow falls on half of the spot, at once, and they step back. A lamp is switched on.
+    # Then the room goes dimmer. Nothing is announced.
+    for light, lamp in ((1.0, 0.6), (1.0, 1.0), (1.0, 1.6), (0.7, 1.6), (0.7, 1.0)):
+        t = still(e, wood(light=light, lamp=lamp), t, 3.0)
+        assert hub.teaches == [] and e.teach_present_since is None
+    # A grey bolt put down in the shadow is a part, once.
+    bolt = (ITEM, (120, 120, 120))
+    t = still(e, wood([bolt], light=0.7, lamp=0.6), t, 2.0)
+    assert len(hub.teaches) == 1
+    t = still(e, wood(light=0.7, lamp=0.6), t, 3.0)
+    assert hub.cancelled == ["t-1"]
+    # The hub cannot be reached when the next part goes down. After 20 seconds the part is no longer new. Taking it
+    # away is not a part either, and putting it down again announces it.
+    t = still(e, wood(), t, 3.0)
+    real, hub.teach = hub.teach, lambda jpeg, zone_id: None
+    t = still(e, wood([bolt]), t, 10.0)
+    assert e.pending_teach is None and e.teach_present_since is not None and "Could not tell the hub" in logs[-1]
+    t = still(e, wood([bolt]), t, 12.0)
+    assert e.teach_present_since is None and "empty picture was taken again" in logs[-1]
+    hub.teach = real
+    t = still(e, wood(), t, 3.0)
+    assert "taken away" in logs[-1] and len(hub.teaches) == 1 and hub.cancelled == ["t-1"]
+    still(e, wood([bolt]), t, 2.0)
+    assert len(hub.teaches) == 2
+
+
+def test_a_part_lifted_off_before_it_is_named_takes_its_card_down(tmp_path):
+    e, hub, logs = eye(tmp_path, TEACH, with_reference=False)
+    e.analyse("board", frame(), 0.0)
+    e.capture_reference("board")
+    t = still(e, frame(), 0.0, 2.5)
+    t = still(e, frame([ITEM]), t, 2.0)
+    assert len(hub.teaches) == 1 and e.pending_teach["id"] == "t-1"
+    # Lifted for a moment: nothing yet. Gone for 2 seconds: the card is cancelled, once.
+    t = still(e, frame(), t, 1.0)
+    assert not getattr(hub, "cancelled", []) and e.pending_teach is not None
+    t = still(e, frame(), t, 1.5)
+    assert hub.cancelled == ["t-1"] and e.pending_teach is None and "taken off the teach spot" in logs[-1]
+    t = still(e, frame(), t, 2.0)
+    assert hub.cancelled == ["t-1"]
+    # The next part put down is a new card.
+    still(e, frame([ITEM]), t, 2.0)
+    assert len(hub.teaches) == 2 and e.pending_teach["id"] == "t-2"
 
 
 def test_after_the_hub_confirms_the_picture_is_saved_and_the_zone_is_counted(tmp_path):
@@ -104,7 +194,8 @@ def test_after_the_hub_confirms_the_picture_is_saved_and_the_zone_is_counted(tmp
     snap["zones"][-1]["productId"] = "p-tape"
     e.set_zones(snap)
     assert (tmp_path / "prompts" / "p-tape.npy").exists() and changed == [True] and e.pending_teach is None
-    assert [p[0] for p in e.prompts()] == ["p-tape"]
+    (product, saved, boxes), = e.prompts()
+    assert product == "p-tape" and saved.shape == (H, W, 3) and len(boxes) == 1 and 0.67 < boxes[0][0] < 0.7
     t = still(e, frame([ITEM]), t, 1.5)
     assert e.counts["z-teach"] == (1, None)
     assert len(hub.teaches) == 1
@@ -114,6 +205,65 @@ def test_after_the_hub_confirms_the_picture_is_saved_and_the_zone_is_counted(tmp
     outline = [o for o in e.outlines["board"] if o["productId"] == "p-tape"]
     assert len(outline) == 1 and 3 <= len(outline[0]["points"]) <= 24
     assert all(0.6 <= x <= 0.9 and 0.55 <= y <= 0.92 for x, y in outline[0]["points"])
+
+
+def pack(i: int, y0: float = 0.6, y1: float = 0.85, x0: float = 0.06, w: float = 0.08):
+    """Pack number i on the glue ledge. Neighbours touch, as they do on the real board."""
+    return [[x0 + i * w, y0], [x0 + (i + 1) * w, y0], [x0 + (i + 1) * w, y1], [x0 + i * w, y1]]
+
+
+def test_touching_parts_are_one_patch_until_the_full_board_is_saved(tmp_path):
+    e, hub, logs = eye(tmp_path, with_reference=False)
+    e.analyse("board", frame(), 0.0)
+    e.capture_reference("board")
+    full = frame([pack(i) for i in range(4)])
+    t = still(e, full, 0.0, 1.5)
+    assert e.counts["z-glue"] == (1, None)  # four packs side by side look like one thing
+    # The glue zone holds 4 (its part's capacity in the snapshot). Saving the full board teaches the size of one.
+    result = e.capture_full("board")
+    assert result["zones"]["z-glue"]["units"] == 4 and "z-discs" in result["skipped"] and "z-screws" not in result["zones"]
+    assert "z-glue holds 4" in logs[-1]
+    t = still(e, full, t, 1.0)
+    assert e.counts["z-glue"] == (4, None)
+    # Two taken from the middle, then one more, then the last.
+    t = still(e, frame([pack(0), pack(3)]), t, 1.0)
+    assert e.counts["z-glue"] == (2, None)
+    t = still(e, frame([pack(0)]), t, 1.0)
+    assert e.counts["z-glue"] == (1, None)
+    t = still(e, frame(), t, 1.0)
+    assert e.counts["z-glue"] == (0, None)
+    # Restocked anywhere on the ledge, three in a row: three.
+    t = still(e, frame([pack(i, x0=0.14) for i in range(3)]), t, 1.0)
+    assert e.counts["z-glue"] == (3, None)
+    e.flush(t)
+    assert [c["count"] for c in hub.posts[-1]["counts"] if c["zoneId"] == "z-glue"] == [3]
+    # One outline for the row, and none for a speck far smaller than a pack.
+    speck = [[0.38, 0.6], [0.405, 0.6], [0.405, 0.66], [0.38, 0.66]]
+    t = still(e, frame([pack(0), speck]), t, 1.0)
+    assert e.counts["z-glue"] == (1, None) and len([o for o in e.outlines["board"] if o["productId"] == "p-glue"]) == 1
+
+
+def test_the_size_of_one_unit_survives_a_restart_and_is_dropped_when_the_zone_changes_hands(tmp_path):
+    e, _, _ = eye(tmp_path, with_reference=False)
+    e.analyse("board", frame(), 0.0)
+    e.capture_reference("board")
+    still(e, frame([pack(i) for i in range(3)]), 0.0, 1.0)
+    # The operator can say how many are there when it is not the capacity.
+    assert e.capture_full("board", {"z-glue": 3})["zones"]["z-glue"]["units"] == 3
+    again, _, _ = eye(tmp_path, with_reference=False)
+    glue = next(z for z in again.zones if z["id"] == "z-glue")
+    assert again.unit_cells(glue) == e.unit_cells(glue) and again.unit_cells(glue) > 0
+    assert again.health()["units"] == {"z-glue": again.unit_cells(glue)}
+    assert again.unit_cells({**glue, "productId": "p-other"}) is None
+
+
+def test_the_full_board_needs_an_empty_board_first(tmp_path):
+    e, _, _ = eye(tmp_path, with_reference=False)
+    assert e.capture_full("board") is None
+    e.analyse("board", frame(), 0.0)
+    assert e.capture_full("board") is None
+    e.capture_reference("board")
+    assert e.capture_full("board") == {"zones": {}, "skipped": {"z-glue": "Nothing is in this zone.", "z-discs": "Nothing is in this zone."}}
 
 
 def test_detections_are_counted_by_zone_and_product_and_smoothed(tmp_path):
@@ -126,12 +276,41 @@ def test_detections_are_counted_by_zone_and_product_and_smoothed(tmp_path):
         {"productId": "p-glue", "centre": [0.7, 0.7], "points": box(0.7, 0.7)},  # in the discs zone: not glue's
         {"productId": "p-discs", "centre": [0.2, 0.8], "points": box(0.2, 0.8)},  # wrong part for this zone
     ]
+    # While a hand is still moving, what the detector sees is drawn but is not a count.
+    for _ in range(4):
+        e.take_detections("board", seen)
+    assert "z-glue" not in e.counts and len(e.detected["board"]) == 2
+    t = still(e, board(), 0.0, 1.0)
     e.take_detections("board", seen)
     e.take_detections("board", seen)
     assert "z-glue" not in e.counts
     e.take_detections("board", seen)
     assert e.counts["z-glue"] == (2, None)
     assert len(e.detected["board"]) == 2
+    # A hand comes in and hides one: two looks at one bottle are not enough once it moves again.
+    e.take_detections("board", seen[:1])
+    e.take_detections("board", seen[:1])
+    e.analyse("board", board(extra=[([[0.5, 0.45], [0.7, 0.45], [0.7, 0.65], [0.5, 0.65]], 250)]), t + 0.1)
+    e.take_detections("board", seen[:1])
+    assert e.counts["z-glue"] == (2, None)
+
+
+def test_parts_the_detector_counts_need_no_empty_board(tmp_path):
+    snap = snapshot()
+    snap["zones"] = [z for z in snap["zones"] if z["kind"] != "pockets"]
+    e, hub, _ = eye(tmp_path, '[teach]\ncamera = "aux"', with_reference=False)
+    e.set_zones(snap)
+    e.yolo_zones = {"z-glue", "z-discs"}
+    box = lambda cx, cy: [[cx - 0.03, cy - 0.05], [cx + 0.03, cy - 0.05], [cx + 0.03, cy + 0.05], [cx - 0.03, cy + 0.05]]  # noqa: E731
+    seen = [{"productId": "p-glue", "centre": [0.1 + i * 0.07, 0.7], "points": box(0.1 + i * 0.07, 0.7)} for i in range(5)]
+    t = still(e, frame(), 0.0, 1.0)
+    for _ in range(3):
+        e.take_detections("board", seen)
+    still(e, frame(), t, 0.2)
+    assert e.counts["z-glue"] == (5, None) and e.counts["z-discs"] == (0, None)
+    assert "board" not in e.notes and len(e.outlines["board"]) == 5
+    e.flush(t + 1)
+    assert {c["zoneId"]: c["count"] for c in hub.posts[-1]["counts"]} == {"z-glue": 5, "z-discs": 0}
 
 
 def test_the_detector_module_is_not_imported_unless_yoloe_is_asked_for():
@@ -140,12 +319,129 @@ def test_the_detector_module_is_not_imported_unless_yoloe_is_asked_for():
     assert out.stdout.split() == ["False", "False", "False"]
 
 
-def test_the_reference_canvas_tiles_the_examples_with_one_box_each():
-    from reup_eye.detector import TILE, reference_canvas
+def test_a_ledge_with_an_example_is_never_counted_as_blobs_while_the_detector_loads(tmp_path):
+    # The real start on the board as built: an empty board was saved with the parts on it (only the teach spot was
+    # clear), the examples are on disk, and the detector takes ten seconds to load. Nothing may read as zero meanwhile.
+    snap = snapshot()
+    snap["zones"] = [z for z in snap["zones"] if z["kind"] != "pockets"]
+    full = frame([pack(i) for i in range(4)])
+    e, hub, _ = eye(tmp_path, '[teach]\ncamera = "aux"', with_reference=False)
+    e.set_zones(snap)
+    e.save_prompt("p-glue", full, [tuple(np.array(pack(0))[[0, 2]].ravel())])
+    e.analyse("board", full, 0.0)
+    e.capture_reference("board")
+    e.set_detector(True)
+    assert e.yolo_zones == {"z-glue"}
+    t = still(e, full, 0.0, 2.0)
+    e.flush(t)
+    assert "z-glue" not in e.counts and all(c["zoneId"] != "z-glue" for post in hub.posts for c in post["counts"])
+    # The detector comes up knowing glue only. A look that was not for discs says nothing about discs.
+    box = lambda cx, cy: [[cx - 0.03, cy - 0.05], [cx + 0.03, cy - 0.05], [cx + 0.03, cy + 0.05], [cx - 0.03, cy + 0.05]]  # noqa: E731
+    seen = [{"productId": "p-glue", "centre": [0.1 + i * 0.08, 0.7], "points": box(0.1 + i * 0.08, 0.7)} for i in range(4)]
+    e.save_prompt("p-discs", full, [(0.6, 0.6, 0.7, 0.7)])
+    assert e.yolo_zones == {"z-glue", "z-discs"}
+    e.counts["z-discs"] = (2, None)
+    for _ in range(3):
+        e.take_detections("board", seen, loaded=["p-glue"])
+    assert e.counts == {"z-glue": (4, None), "z-discs": (2, None)}
+    for _ in range(3):
+        e.take_detections("board", seen, loaded=["p-discs", "p-glue"])
+    assert e.counts == {"z-glue": (4, None), "z-discs": (0, None)}
+    # No detector after all (ultralytics is not installed): the zones go back to the difference blobs.
+    e.set_detector(False)
+    assert e.yolo_zones == set()
 
-    a = np.full((100, 200, 3), 10, np.uint8)
-    b = np.full((640, 640, 3), 250, np.uint8)
-    canvas, boxes, classes = reference_canvas([("p-a", a, (0.25, 0.25, 0.75, 0.75)), ("p-b", b, (0.0, 0.0, 1.0, 1.0))])
-    assert canvas.shape == (TILE, TILE * 2, 3) and canvas[0, 0, 0] == 10 and canvas[0, TILE, 0] == 250
-    assert boxes.tolist() == [[TILE * 0.25, TILE * 0.25, TILE * 0.75, TILE * 0.75], [TILE, 0, TILE * 2, TILE]]
-    assert classes.tolist() == [0, 1]
+
+def test_example_boxes_become_pixels_of_their_own_frame():
+    from reup_eye.detector import pixel_boxes
+
+    assert pixel_boxes((1080, 1920, 3), [(0.25, 0.5, 0.5, 1.0), (0.0, 0.0, 1.0, 1.0)]).tolist() == [[480, 540, 960, 1080], [0, 0, 1920, 1080]]
+    assert pixel_boxes((720, 1280, 3), []).shape == (0, 4)
+
+
+def test_an_example_is_the_whole_frame_and_the_boxes_of_the_part_in_it(tmp_path):
+    e, _, logs = eye(tmp_path)
+    changed = []
+    e.on_prompts_changed = lambda: changed.append(True)
+    picture = frame([ITEM])
+    e.save_prompt("p-glue", picture, [(0.7, 0.65, 0.8, 0.8), (0.1, 0.6, 0.2, 0.75)])
+    assert changed == [True] and "p-glue" in logs[-1]
+    (product, saved, boxes), = e.prompts()
+    assert product == "p-glue" and saved.shape == picture.shape and (saved == picture).all()
+    assert boxes == [(0.7, 0.65, 0.8, 0.8), (0.1, 0.6, 0.2, 0.75)]
+    # A part that no longer owns an open zone is not looked for, and a broken file is skipped, not guessed at.
+    e.save_prompt("p-gone", picture, [(0.1, 0.1, 0.2, 0.2)])
+    (tmp_path / "prompts" / "p-discs.json").write_text("{}", encoding="utf-8")
+    assert [p[0] for p in e.prompts()] == ["p-glue"]
+
+
+class Source:
+    def __init__(self, picture):
+        self.frame = picture
+
+
+def test_the_operator_can_box_one_part_or_let_the_whole_zone_be_the_example(tmp_path):
+    from reup_eye.config import load
+    from reup_eye.runtime import Runtime
+
+    runtime = Runtime(load(text=""), "http://localhost:1", "t", tmp_path, post=False, log=lambda _m: None)
+    runtime.eye.set_zones(snapshot())
+    assert runtime.capture_prompt("z-glue") == "No frame from that camera yet."
+    runtime.sources["board"] = Source(frame([ITEM]))
+    assert runtime.capture_prompt("z-nowhere") == "No zone z-nowhere with a part in it."
+    assert runtime.capture_prompt("z-glue", [(0.3, 0.7, 0.2, 0.6)]) is None  # corners in any order
+    assert runtime.eye.prompts()[0][2] == [(0.2, 0.6, 0.3, 0.7)]
+    assert runtime.capture_prompt("z-glue", [(0.5, 0.5, 0.5, 0.9)]) == "That box is not a part of the picture."
+    assert runtime.capture_prompt("z-glue") is None
+    assert runtime.eye.prompts()[0][2] == [(0.04, 0.55, 0.45, 0.92)]
+
+
+
+def test_the_detector_runs_in_a_process_of_its_own_and_answers_the_same_two_calls():
+    from reup_eye.detector_proc import DetectorProcess
+
+    det = DetectorProcess("any.pt", 960, 0.3, make="tests.helpers:FakeDetector", start_timeout=60)
+    try:
+        det.set_prompts([("p-glue", np.zeros((36, 64, 3), np.uint8), [(0.1, 0.1, 0.2, 0.2)])])
+        picture = np.full((36, 64, 3), 150, np.uint8)
+        found = det.detect(picture)
+        assert len(found) == 3 and found[0]["productId"] == "p-glue" and found[0]["shape"] == [36, 64, 3]
+        assert det.detect(np.zeros((36, 64, 3), np.uint8)) == []
+        # A frame it chokes on is one failed look, said in words. The process is still there for the next one.
+        with pytest.raises(RuntimeError, match="bad frame"):
+            det.detect(np.full((36, 64, 3), 255, np.uint8))
+        assert len(det.detect(picture)) == 3
+    finally:
+        det.close()
+    assert not det.process.is_alive()
+
+
+def test_a_detector_that_cannot_load_says_why():
+    from reup_eye.detector_proc import DetectorProcess
+
+    with pytest.raises(RuntimeError, match="No module named 'ultralytics'"):
+        DetectorProcess("missing.pt", 960, 0.3, make="tests.helpers:FakeDetector", start_timeout=60)
+
+
+def test_a_card_the_hub_took_down_is_let_go_and_what_stays_on_the_spot_stops_being_new(tmp_path):
+    e, hub, logs = eye(tmp_path, TEACH, with_reference=False)
+    t = still(e, wood(), 0.0, 2.5)
+    bolt = (ITEM, (120, 120, 120))
+    t = still(e, wood([bolt]), t, 2.0)
+    assert len(hub.teaches) == 1 and e.pending_teach["id"] == "t-1"
+    shown = {**snapshot(), "teach": {"id": "t-1", "status": "failed"}}
+    e.set_zones(shown)
+    e.set_zones({**snapshot(), "teach": None})  # one snapshot without it is not enough
+    e.set_zones(shown)
+    e.set_zones({**snapshot(), "teach": None})
+    assert e.pending_teach is not None
+    e.set_zones({**snapshot(), "teach": None})
+    assert e.pending_teach is None and "took the new part card down" in logs[-1]
+    # The bolt is still there. After 20 seconds it is part of the empty spot, and taking it away is not a new part either.
+    t = still(e, wood([bolt]), t, 21.0)
+    assert e.teach_present_since is None and len(hub.teaches) == 1
+    t = still(e, wood(), t, 25.0)
+    assert len(hub.teaches) == 1 and getattr(hub, "cancelled", []) == []
+    # The next part is announced.
+    t = still(e, wood([(ITEM, (20, 20, 20))]), t, 2.0)
+    assert len(hub.teaches) == 2

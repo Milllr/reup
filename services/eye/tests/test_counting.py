@@ -91,6 +91,10 @@ def test_blobs_are_found_and_small_specks_ignored():
     assert [len(b) for b in blobs] == [36, 32]
     assert blob_count(blobs, None) == 2
     assert blob_count([blobs[0] + blobs[1]], 34) == 2  # two touching items, known size
+    # Four packs side by side are one patch. Half a unit rounds up, and a patch under the floor is not a part.
+    patch = lambda n: [(0, i) for i in range(n)]  # noqa: E731
+    assert blob_count([patch(400)], 100) == 4 and blob_count([patch(250)], 100) == 3 and blob_count([patch(249)], 100) == 2
+    assert blob_count([patch(100), patch(25)], 100, floor=0.3) == 1 and blob_count([patch(100), patch(35)], 100, floor=0.3) == 2
 
 
 def test_the_eye_counts_the_board_and_posts_a_body_the_contract_accepts(tmp_path):
@@ -133,6 +137,25 @@ def test_nothing_is_posted_while_a_hand_moves_and_the_new_count_goes_out_after_i
     assert not e.flush(t)
     assert e.flush(t + 30)
     assert len(hub.posts[-1]["counts"]) == 4
+
+
+def test_motion_beside_the_board_does_not_hold_the_counts_and_motion_on_it_does(tmp_path):
+    e, _, _ = eye(tmp_path)
+    assert e.board_quad("board") == pytest.approx(np.array([[0.0, 0.06], [0.96, 0.06], [0.96, 0.96], [0.0, 0.96]]))
+    beside = [[0.965, 0.0], [1.0, 0.0], [1.0, 1.0], [0.965, 1.0]]  # a laptop screen at the edge of the frame
+    t = 0.0
+    for i in range(20):
+        t += 0.1
+        e.analyse("board", board({"z-screws": [0, 1, 2]}, extra=[(beside, 250 if i % 2 else 20)]), t)
+    assert e.settled["board"] and e.counts["z-screws"][0] == 3
+    on_it = [[0.57, 0.44], [0.67, 0.44], [0.67, 0.54], [0.57, 0.54]]  # a hand between the zones
+    for i in range(20):
+        t += 0.1
+        e.analyse("board", board({"z-screws": [0]}, extra=[(on_it, 250 if i % 2 else 20)]), t)
+    assert not e.settled["board"] and e.counts["z-screws"][0] == 3
+    # config.toml can still name the board's corners itself.
+    named, _, _ = eye(tmp_path, "[cameras.board]\nboard = [[0.1, 0.1], [0.9, 0.1], [0.9, 0.9], [0.1, 0.9]]")
+    assert named.board_quad("board") == [[0.1, 0.1], [0.9, 0.1], [0.9, 0.9], [0.1, 0.9]]
 
 
 def test_dimming_the_room_by_a_third_changes_no_pocket(tmp_path):

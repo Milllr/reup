@@ -26,8 +26,7 @@ export async function catalog(room: RoomCore): Promise<CatalogItem[]> {
 }
 
 function setTeach(room: RoomCore, teach: TeachState | null): void {
-  room.s.teach = teach;
-  room.emit({ type: 'teach', teach });
+  room.setTeach(teach);
 }
 
 async function nameIt(room: RoomCore, id: string, jpegBase64: string): Promise<void> {

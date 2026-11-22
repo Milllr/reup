@@ -60,7 +60,7 @@ export function shopSentence(s: Snapshot, list: Pane[], order: Order): string {
   const cart = list.find((p) => p.kind === 'cart');
   const first = cart?.state === 'done' ? `The cart is ready at ${account}.` : `Filling a cart at ${account}.`;
   const second = market.length > 0 ? ` ${back} of ${market.length} price ${market.length === 1 ? 'check' : 'checks'} came back.` : '';
-  return `${first}${second} Nothing is bought until someone presses the button.`;
+  return `${first}${second} Nothing is bought until someone says yes.`;
 }
 
 const LEFTS = [96, 688, 1280];

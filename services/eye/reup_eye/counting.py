@@ -31,6 +31,23 @@ def changed(current: np.ndarray, reference: np.ndarray, g: float = 1.0, pixel: f
     return _spread(np.abs(current * g - reference), 1) > pixel
 
 
+def other_surface(current: np.ndarray, reference: np.ndarray, hue: float = 0.06, darker: float = 0.35, brighter: float = 2.5) -> np.ndarray:
+    """Which sample points show something else, not the same surface in other light. Samples are (n, 3).
+
+    A shadow or a lamp makes wood darker or brighter and leaves its colour alone. A part has another colour, or is far
+    darker or far brighter than any shadow or lamp makes wood. So a point counts when the share of each colour in it
+    moved by more than hue, or when it is under darker times or over brighter times as bright as it was. A part of
+    the very colour of the board, about as bright as the board, is not seen.
+    """
+    cur, ref = np.asarray(current, dtype=np.float64), np.asarray(reference, dtype=np.float64)
+    cur_sum, ref_sum = cur.sum(axis=-1), ref.sum(axis=-1)
+    ratio = (cur_sum + 3.0) / (ref_sum + 3.0)
+    moved = np.abs(cur / (cur_sum[..., None] + 1e-6) - ref / (ref_sum[..., None] + 1e-6)).max(axis=-1)
+    # In a point that is nearly black either way, the colour is noise.
+    lit = (cur_sum > 36.0) & (ref_sum > 36.0)
+    return (lit & (moved > hue)) | (ratio < darker) | (ratio > brighter)
+
+
 def pockets_full(levels, threshold: float, previous: Optional[list[bool]] = None, hysteresis: float = 0.7) -> list[bool]:
     """A pocket is full over the threshold. One that was full stays full until it drops well under it, so it cannot flicker."""
     out = []
@@ -131,8 +148,9 @@ def label_blobs(mask: np.ndarray, min_cells: int = 1) -> list[list[tuple[int, in
     return sorted(blobs, key=len, reverse=True)
 
 
-def blob_count(blobs: list[list[tuple[int, int]]], unit_cells: Optional[float]) -> int:
-    """Items in an open zone. With a known size for one item, a blob of two touching items counts as two."""
+def blob_count(blobs: list[list[tuple[int, int]]], unit_cells: Optional[float], floor: float = 0.0) -> int:
+    """Items in an open zone. With a known size for one item, a blob of touching items counts as that many,
+    and a patch smaller than floor of one item is not an item."""
     if not unit_cells or unit_cells <= 0:
         return len(blobs)
-    return sum(max(1, round(len(b) / unit_cells)) for b in blobs)
+    return sum(max(1, int(len(b) / unit_cells + 0.5)) for b in blobs if len(b) >= unit_cells * floor)

@@ -206,7 +206,8 @@ export const Order = z.object({
   poNumber: z.string(),
   confirmation: z.string().nullable(),
   eta: IsoTime.nullable(),
-  approvedBy: z.enum(['button', 'phone']).nullable(),
+  /** button: the wooden button on the shelf node. keyboard: Enter on a screen that holds a key. */
+  approvedBy: z.enum(['button', 'phone', 'keyboard']).nullable(),
   /** Who called for it: the hub's brain, the node while offline, or a person on the operator page. */
   trigger: z.enum(['hub', 'node', 'manual']),
   error: z.string().nullable(),

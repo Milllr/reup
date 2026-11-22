@@ -27,6 +27,16 @@ def small_colour(frame: np.ndarray, factor: int = 4) -> np.ndarray:
     return (sums / float(factor * factor)).astype(np.float32)
 
 
+def block_mean(img: np.ndarray, n: int) -> np.ndarray:
+    """The picture averaged over n by n blocks. Camera noise in a dim room averages away, a hand does not."""
+    if n <= 1:
+        return img
+    h, w = img.shape[0] // n, img.shape[1] // n
+    if h == 0 or w == 0:
+        return img
+    return img[: h * n, : w * n].reshape(h, n, w, n, -1).mean(axis=(1, 3))
+
+
 def sample(img: np.ndarray, points: np.ndarray) -> np.ndarray:
     """Values at normalized points, read between pixels. Keeps the shape of points without its last axis, plus the colour axis if img has one."""
     h, w = img.shape[:2]
@@ -66,10 +76,12 @@ class FrameSource:
     """One camera. Opens it, reads it, and when it goes away keeps trying to open it again.
 
     opener(index) returns something with read() -> (ok, frame) and release(), or None when the camera will not open.
+    indexes is the list of places to try, or a function that returns it. A function is asked again before every try,
+    so a camera that was plugged in late, or moved to another index, is still found by its name.
     Call step() in a loop. Nothing here needs OpenCV, so a test can pass a fake opener.
     """
 
-    def __init__(self, camera_id: str, indexes: list[int], opener: Callable[[int], Optional[object]], clock: Callable[[], float] = time.monotonic, retry_s: float = 1.0, stale_s: float = 1.5):
+    def __init__(self, camera_id: str, indexes, opener: Callable[[object], Optional[object]], clock: Callable[[], float] = time.monotonic, retry_s: float = 1.0, stale_s: float = 1.5):
         self.id = camera_id
         self.indexes = indexes
         self.opener = opener
@@ -77,17 +89,21 @@ class FrameSource:
         self.retry_s = retry_s
         self.stale_s = stale_s
         self.capture: Optional[object] = None
+        # raw is what the camera gave. frame is what everything else looks at: raw moved back by transform when the
+        # camera was bumped, raw itself when it was not.
+        self.raw: Optional[np.ndarray] = None
+        self.transform: Optional[Callable[[np.ndarray], np.ndarray]] = None
         self.frame: Optional[np.ndarray] = None
         self.seq = 0
         self.last_frame_at: Optional[float] = None
         self.next_try = 0.0
         self.meter = FpsMeter()
-        self.opened_index: Optional[int] = None
+        self.opened_index: Optional[object] = None
 
     def _open(self, now: float) -> None:
         if now < self.next_try:
             return
-        for index in self.indexes:
+        for index in self.indexes() if callable(self.indexes) else self.indexes:
             capture = self.opener(index)
             if capture is not None:
                 self.capture, self.opened_index = capture, index
@@ -118,7 +134,8 @@ class FrameSource:
             if self.last_frame_at is None or now - self.last_frame_at > self.stale_s:
                 self._drop(now)
             return False
-        self.frame = frame
+        self.raw = frame
+        self.frame = self.transform(frame) if self.transform is not None else frame
         self.seq += 1
         self.last_frame_at = now
         self.meter.tick(now)

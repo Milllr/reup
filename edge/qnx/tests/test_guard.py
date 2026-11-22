@@ -310,3 +310,26 @@ def test_the_zones_file_for_vision_uses_the_pi_cameras_own_quads(tmp_path):
     g.send_step()
     assert (tmp_path / "zones.txt").read_text() == "zone z-screws pockets 2 6 0.10000 0.20000 0.60000 0.20000 0.60000 0.50000 0.10000 0.50000\n"
     assert zones_text([{"id": "z-a", "kind": "open", "camera": "board", "quad": [[0, 0], [1, 0], [1, 1], [0, 1]]}]) == ""
+
+
+def test_calls_to_the_hub_carry_a_user_agent_cloudflare_lets_through():
+    import io
+
+    from guard.hub import Hub
+
+    seen = []
+
+    class Answer(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    def opener(request, timeout):
+        seen.append(request)
+        return Answer(b'{"ok": true}')
+
+    assert Hub("https://hub.example/", "device-1", opener=opener).post("/ingest/node", {"level": 2}) == ("ok", {"ok": True})
+    # Python's default (Python-urllib/3.x) is answered 403 with error 1010 on workers.dev, and the node would retry for ever.
+    assert seen[0].get_header("User-agent") == "reup-node/1" and seen[0].get_header("Authorization") == "Bearer device-1"

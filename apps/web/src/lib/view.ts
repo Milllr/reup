@@ -33,6 +33,16 @@ export function shortTime(iso: string): string {
 
 export const money = (n: number) => `$${n.toFixed(2)}`;
 
+/**
+ * What the order's total includes. Tax alone is never more than a fifth of the goods, so a total further above them
+ * than that carries shipping too, which the store adds to small orders.
+ */
+export function totalLabel(order: Pick<Order, 'total' | 'unitPrice' | 'units'>): string {
+  if (order.total == null || order.unitPrice == null) return 'Total with tax';
+  const goods = order.unitPrice * order.units;
+  return goods > 0 && order.total - goods > goods * 0.2 ? 'Total with tax and shipping' : 'Total with tax';
+}
+
 export interface PartRow {
   product: Product;
   zoneName: string;

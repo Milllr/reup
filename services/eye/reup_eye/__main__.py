@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import sys
 import time
 from pathlib import Path
 
@@ -13,18 +12,18 @@ HERE = Path(__file__).resolve().parent.parent
 
 
 def list_cameras() -> None:
-    import cv2  # noqa: PLC0415
+    """Prints the cameras by name. Opens none of them, so no webcam light comes on."""
+    from .runtime import BACKEND_NAMES, camera_listings  # noqa: PLC0415
 
-    from .runtime import camera_names  # noqa: PLC0415
-
-    names = camera_names()
-    for index in range(6):
-        capture = cv2.VideoCapture(index, cv2.CAP_DSHOW if sys.platform == "win32" else cv2.CAP_ANY)
-        if capture.isOpened():
-            ok, frame = capture.read()
-            size = f"{frame.shape[1]} by {frame.shape[0]}" if ok and frame is not None else "no picture"
-            print(f"index {index}: {names[index] if names and index < len(names) else 'camera'}, {size}")
-        capture.release()
+    for backend, names in camera_listings():
+        label = BACKEND_NAMES.get(backend, str(backend))
+        if names is None:
+            print(f"{label}: cannot list camera names here. Install cv2-enumerate-cameras.")
+            continue
+        for index, name in sorted(names.items()):
+            print(f"{label} index {index}: {name}")
+        if not names:
+            print(f"{label}: no cameras.")
 
 
 def main() -> None:
@@ -49,7 +48,11 @@ def main() -> None:
     print(f"Hub: {hub}")
     print(f"Stream: {runtime.stream_url('board')}")
     print(f"Debug picture: http://localhost:{config.eye.port}/debug/board.jpg")
-    print("Drawn board, not the cameras. Development only." if args.sim else "Clear the board, then save the empty board with: curl -X POST http://localhost:%d/reference/board" % config.eye.port)
+    if args.sim:
+        print("Drawn board, not the cameras. Development only.")
+    else:
+        print(f"Clear the board, then save the empty board with: curl -X POST http://localhost:{config.eye.port}/reference/board")
+        print(f"Fill the board, then save the full board with: curl -X POST http://localhost:{config.eye.port}/full/board")
     runtime.start()
     try:
         while True:

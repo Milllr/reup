@@ -13,18 +13,24 @@ stream_width = 1280
 stream_fps = 30
 stream_quality = 72
 zones_every_s = 2
+board_pad = 0.04
 
-# Camera choice: name is tried first (Windows, needs pygrabber), then index. List them with: python -m reup_eye --list-cameras
+# Camera choice: a camera with a name is only ever opened under that name (needs cv2-enumerate-cameras). With no name
+# the index is used. List them with: python -m reup_eye --list-cameras
 [cameras.board]
 name = "Elgato Facecam"
 index = 0
 width = 1920
 height = 1080
 fps = 30
-# The wooden board in this camera's frame, clockwise from the top left. Motion is watched inside it.
+# The wooden board in this camera's frame, clockwise from the top left. Motion is watched inside it. Left as the whole
+# frame, the eye uses a box around the zones instead (board_pad wider on every side), so nothing beside the board counts as motion.
 board = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
 
+# The station as built has one camera, so the second one is off. Turn it on only with a name, never with a bare index:
+# on most laptops index 0 or 1 is the built in webcam.
 [cameras.aux]
+enabled = false
 name = "C920"
 index = 1
 width = 1920
@@ -40,27 +46,69 @@ samples = 12
 
 [settle]
 still_ms = 500
+# Something moves when over motion_limit of the watched points change by more than motion_pixel grey levels between
+# two looks. The points are read from the picture averaged over motion_block by motion_block: in a dim room single
+# pixels flicker that much on their own. The share is "motion" in /health.
 motion_pixel = 10.0
 motion_limit = 0.004
+motion_block = 4
 keepalive_s = 30
 
+# The camera's home position. The eye saves the edges of the picture the first time it runs (or on POST /anchor/board),
+# compares every later picture with them, and moves a bumped picture back before anything else looks at it.
+[align]
+enabled = true
+every_s = 1.0
+# How sure the eye must be to move the picture, and under what it calls the board hidden. See reup_eye/align.py.
+# On the real board the same picture scores a phase of 0.5 to 0.7 and a match of 0.7 to 0.9. A bump of 300 pixels with a
+# 2 degree turn still scores 0.15 and 0.7. Another picture, or someone in front of the board, scores under 0.05.
+min_phase = 0.1
+min_match = 0.3
+hidden_phase = 0.06
+# A move under this many pixels (of a 480 wide picture, so 4 times as many on the frame) is left alone.
+dead_px = 2.0
+# Past this share of the picture's width, or this many degrees, the camera has a new home: draw the zones again.
+max_shift = 0.2
+max_turn = 4.0
+# After anything moves, counts wait for a look that says the camera is where it should be. Never longer than verify_s.
+verify_s = 3.0
+# While the board is hidden counts are held, for at most hold_s. Then counting goes on and the log says so.
+hold_s = 15.0
+
 [open]
-# auto: YOLOE-26 for parts that have a taught example and ultralytics installed, difference blobs for the rest.
+# auto: YOLOE-26 for parts that have an example picture and ultralytics installed, difference blobs for the rest.
 # Or yoloe, blobs, off.
 detector = "auto"
 model = "yoloe-26s-seg.pt"
+# 960 finds every part on the board as built. At 640 it misses a bolt and sees a battery twice.
 imgsz = 960
-conf = 0.25
-hz = 4
+conf = 0.3
+# Looks a second. 8 needs a GPU (about 40 ms a look on the demo laptop's RTX 4070). On a CPU a look takes 0.3 s, so it runs as fast as it can.
+hz = 8
+# A count is believed after it was seen this many looks in a row, with nothing moving.
 hold = 3
 grid = 64
 blob_pixel = 26.0
 min_area = 0.012
+# Once the full board is saved the eye knows the size of one unit. A patch smaller than this share of it is not a part.
+unit_floor = 0.3
 
+# The teach spot is a clear patch of the board, seen by the board camera. The hub's zone with this id decides where it
+# is (move it on the operator page). The quad here is only used when the hub has no such zone.
 [teach]
 zone = "z-teach"
-camera = "aux"
-quad = [[0.2, 0.15], [0.8, 0.15], [0.8, 0.85], [0.2, 0.85]]
+camera = "board"
+quad = [[0.76, 0.6], [0.92, 0.6], [0.92, 0.92], [0.76, 0.92]]
 hold_s = 1.0
 clear_s = 2.0
-share = 0.02
+# A part is one connected patch over this share of the spot that shows another surface than the empty spot. The eye
+# learns the empty spot by itself, so nothing has to be saved first. On the built board one box of bolts on the spot is a
+# patch of 2.8 percent and one battery 3.0, and the empty spot reads under 0.1.
+share = 0.01
+# Another surface, not the wood in other light: the share of a colour moved by more than hue, or the point is under
+# darker times or over brighter times as bright as it was. A shadow or a lamp does neither.
+hue = 0.06
+darker = 0.35
+brighter = 2.5
+# A patch that stays this long with no new part announced was there from the start: the empty picture is taken again.
+rebase_s = 20.0

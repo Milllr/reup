@@ -3,11 +3,12 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest';
 import history from '../../../contracts/mocks/history.json';
 import type { Reply } from '../src/lib/hub';
-import { Order as OrderScreen } from '../src/screens/order';
+import { ApproveHere, howToSayYes, Order as OrderScreen } from '../src/screens/order';
 import { Controls, ZoneEditor } from '../src/screens/ops';
 import { ApproveBand, NO_KEY, TeachForm } from '../src/screens/phone';
 import { NO_FEED, NO_PARTS, Shelf, WATCHING } from '../src/screens/shelf';
 import { panes, Shop, shopSentence } from '../src/screens/shop';
+import { Teach } from '../src/screens/teach';
 import { Tv } from '../src/screens/tv';
 import { Chart, scales } from '../src/screens/why';
 import { store } from '../src/store/live';
@@ -103,7 +104,7 @@ describe('Shop', () => {
       ['failed', 'No price', 'The site showed a challenge page.'],
       ['live', 'Step 3', 'Setting quantity to 8'],
     ]);
-    expect(shopSentence(s, list, order)).toBe('Filling a cart at Offcut Supply. 2 of 2 price checks came back. Nothing is bought until someone presses the button.');
+    expect(shopSentence(s, list, order)).toBe('Filling a cart at Offcut Supply. 2 of 2 price checks came back. Nothing is bought until someone says yes.');
     const done = panes(s, { ...order, total: 67.71 }, product)[2];
     expect([done?.state, done?.figure, done?.meta]).toEqual(['done', '$67.71', '8 boxes in the cart · with tax']);
   });
@@ -129,13 +130,16 @@ describe('Shop', () => {
 describe('Order', () => {
   const at = (name: string) => render(<OrderScreen live={live(name)} />);
 
-  it('waits for a yes on paper with the part, the total, the day and the button line', () => {
+  it('waits for a yes on paper with the part, the total, the day and the line that says how to say yes', () => {
     const { container } = at('order');
     expect(plate(container)).toContain('paper');
     expect(word(container)).toBe('8 boxes');
     expect(screen.getByText('$67.71')).toBeTruthy();
     expect(screen.getByText('Tuesday')).toBeTruthy();
-    expect(screen.getByText('Press the button to approve.')).toBeTruthy();
+    // The sample shelf node is connected, and the test page is on localhost so it holds the local key. Nothing on the plate is a button.
+    expect(screen.getByText('Press the wooden button to place the order.')).toBeTruthy();
+    expect(screen.getByText('Or press Enter, or say yes from a phone. Nothing is bought until then.')).toBeTruthy();
+    expect(screen.queryByRole('button')).toBeNull();
     expect(screen.getByText('8 boxes fills the board and arrives before it runs out. Retailer A is $1.20 more per box.')).toBeTruthy();
     expect(screen.getByText('Waiting for a yes · PO RU-1042 · spend cap $150 an order')).toBeTruthy();
     expect(container.querySelector('.frame.waiting')).not.toBeNull();
@@ -153,7 +157,7 @@ describe('Order', () => {
     let r = at('placing');
     expect([plate(r.container).includes('wine'), word(r.container)]).toEqual([true, 'Placing']);
     expect(screen.getByText('Placing the order at Offcut Supply.')).toBeTruthy();
-    expect(screen.getByText('Approved with the button · PO RU-1042')).toBeTruthy();
+    expect(screen.getByText('Approved with the wooden button · PO RU-1042')).toBeTruthy();
     r.unmount();
     r = at('placed');
     expect([plate(r.container).includes('olive'), word(r.container)]).toEqual([true, 'Ordered']);
@@ -207,12 +211,82 @@ describe('the TV', () => {
     act(() => store.set(live('teach')));
     expect(word(container)).toBe('New part');
     expect(screen.getByText('Looks like wood screws #8 x 2 in.')).toBeTruthy();
-    expect(screen.getByText('box of 100 · Offcut OC-1008-200 · fairly sure')).toBeTruthy();
+    // The test page is on localhost, like the station's own laptop: the plate holds the local key and shows the form.
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('Wood screws #8 x 2 in');
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeTruthy();
     act(() => store.set(live('shelf')));
     expect(word(container)).toBe('Stocked');
     act(() => store.set({ ...live('shelf'), countingUntil: Date.now() + 3000 }));
     expect(word(container)).toBe('Counting');
     act(() => store.set({ ...initial }));
+  });
+});
+
+describe('saying yes and naming a part on the TV itself', () => {
+  const teaching = mockSnapshot('teach');
+
+  it('a screen with no key points at a phone, and one with a key has the form', () => {
+    const { unmount } = render(<Teach live={live('teach')} bearer={null} />);
+    expect(screen.getByText('box of 100 · Offcut OC-1008-200 · fairly sure')).toBeTruthy();
+    expect(screen.getByText('Confirm on a phone or the operator page.')).toBeTruthy();
+    expect(screen.queryByLabelText('Name')).toBeNull();
+    unmount();
+    render(<Teach live={live('teach')} bearer="key-1" />);
+    expect(screen.getByLabelText('Name')).toBeTruthy();
+    expect(screen.queryByText('Confirm on a phone or the operator page.')).toBeNull();
+  });
+
+  it('when naming failed the plate asks for a name in a text field, and has none while it is still naming', () => {
+    const failed: Snapshot = { ...teaching, teach: { ...(teaching.teach as TeachState), status: 'failed', suggestion: null, error: 'Naming is not set up. Type a name to add it.' } };
+    const { unmount } = render(<Teach live={{ ...live('teach'), snapshot: failed }} bearer="key-1" />);
+    expect(screen.getByText('Type its name.')).toBeTruthy();
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('');
+    expect(screen.getByRole('button', { name: 'Not a part' })).toBeTruthy();
+    unmount();
+    const naming: Snapshot = { ...teaching, teach: { ...(teaching.teach as TeachState), status: 'naming', suggestion: null } };
+    render(<Teach live={{ ...live('teach'), snapshot: naming }} bearer="key-1" />);
+    expect(screen.getByText('Naming it.')).toBeTruthy();
+    expect(screen.queryByLabelText('Name')).toBeNull();
+  });
+
+  it('the order screen says yes with Enter, has nothing to click, and does nothing without a key', async () => {
+    const s = mockSnapshot('order');
+    const order = s.orders[0] as Order;
+    const send = vi.fn(async () => ok(order));
+    const { unmount, container } = render(<ApproveHere order={order} k="key-1" send={send as never} />);
+    expect(container.innerHTML).toBe('');
+    fireEvent.keyDown(window, { key: 'Enter' });
+    await waitFor(() => expect(send).toHaveBeenCalledWith('POST', `/api/orders/${order.id}/approve`, { by: 'keyboard' }, 'key-1'));
+    await waitFor(() => {
+      fireEvent.keyDown(window, { key: 'Enter' });
+      expect(send).toHaveBeenCalledTimes(2);
+    });
+    // Enter typed into a field is not a yes, and neither is another key or a held one.
+    const field = document.body.appendChild(document.createElement('input'));
+    fireEvent.keyDown(field, { key: 'Enter' });
+    fireEvent.keyDown(window, { key: 'a' });
+    fireEvent.keyDown(window, { key: 'Enter', repeat: true });
+    expect(send).toHaveBeenCalledTimes(2);
+    field.remove();
+    unmount();
+    render(<ApproveHere order={order} k={null} send={send as never} />);
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it('the order screen says why when the hub says no', async () => {
+    const s = mockSnapshot('order');
+    const send = vi.fn(async () => ({ ok: false, status: 409, data: null, message: 'This order is over the spend cap.' }));
+    render(<ApproveHere order={s.orders[0] as Order} k="key-1" send={send as never} />);
+    fireEvent.keyDown(window, { key: 'Enter' });
+    await waitFor(() => expect(screen.getByText('This order is over the spend cap.')).toBeTruthy());
+  });
+
+  it('the line names only what can say yes right now', () => {
+    expect(howToSayYes(true, false).line).toBe('Press the wooden button to place the order.');
+    expect(howToSayYes(true, true)).toEqual({ line: 'Press the wooden button to place the order.', also: 'Or press Enter, or say yes from a phone. Nothing is bought until then.' });
+    expect(howToSayYes(false, true)).toEqual({ line: 'Press Enter to place the order.', also: 'Or say yes from a phone. Nothing is bought until then.' });
+    expect(howToSayYes(false, false)).toEqual({ line: 'Say yes from a phone to place the order.', also: 'Nothing is bought until then.' });
   });
 });
 
@@ -266,6 +340,35 @@ describe('the operator page', () => {
     expect(body.zones).toHaveLength(s.zones.length);
     expect(body.zones[0]).toMatchObject({ id: 'z-screws', rows: 3, cols: 6 });
     await waitFor(() => expect(screen.getByText('Saved.')).toBeTruthy());
+  });
+
+  it('set camera position tells the eye where the camera sits now', async () => {
+    const fetched = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetched);
+    try {
+      render(<ZoneEditor s={s} ops="ops-1" send={vi.fn() as never} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Set camera position' }));
+      await waitFor(() => expect(screen.getByText('Camera position saved. Check that every zone still sits on its ledge.')).toBeTruthy());
+      expect(fetched.mock.calls[0]).toEqual(['http://192.168.1.20:8089/anchor/board', { method: 'POST' }]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('capture full board asks the eye and says what each open zone holds', async () => {
+    const fetched = vi.fn(async () => new Response(JSON.stringify({ ok: true, zones: { 'z-glue': { units: 4, cells: 820 } }, skipped: {} }), { status: 200 }));
+    vi.stubGlobal('fetch', fetched);
+    try {
+      render(<ZoneEditor s={s} ops="ops-1" send={vi.fn() as never} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Capture full board' }));
+      await waitFor(() => expect(screen.getByText('Full board captured: Wood glue 4.')).toBeTruthy());
+      expect(fetched.mock.calls[0]).toEqual(['http://192.168.1.20:8089/full/board', { method: 'POST' }]);
+      fetched.mockResolvedValueOnce(new Response(JSON.stringify({ ok: false, code: 'conflict', message: 'Save the empty board for that camera first.' }), { status: 409 }));
+      fireEvent.click(screen.getByRole('button', { name: 'Capture full board' }));
+      await waitFor(() => expect(screen.getByText('Save the empty board for that camera first.')).toBeTruthy());
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('reset asks for confirmation first', async () => {

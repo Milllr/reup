@@ -89,17 +89,23 @@ export class Shop {
   init(): Promise<void> {
     this.ready ??= (async () => {
       for (const statement of SCHEMA) await this.sql.run(statement);
-      const row = await this.sql.first<{ n: number }>('SELECT COUNT(*) AS n FROM items');
-      if ((row?.n ?? 0) === 0) await this.seed();
+      await this.seed();
     })();
     return this.ready;
   }
 
+  /**
+   * Adds every catalog item the store does not have yet. An item that is already there is left alone, with whatever
+   * the admin page did to it, so a part added to the catalog later shows up in a store that is already running.
+   */
   private async seed(): Promise<void> {
-    await this.sql.run('DELETE FROM items');
-    let position = 0;
+    const have = new Set((await this.sql.all<{ sku: string }>('SELECT sku FROM items')).map((r) => r.sku));
+    if (SEED.items.every((item) => have.has(item.sku))) return;
+    let position = (await this.sql.first<{ n: number | null }>('SELECT MAX(position) AS n FROM items'))?.n ?? -1;
     for (const item of SEED.items) {
-      await this.sql.run('INSERT INTO items (sku, name, category, unit, packs, in_stock, lead_days, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', item.sku, item.name, item.category, item.unit, JSON.stringify(item.packs), item.inStock ? 1 : 0, item.leadDays, position++);
+      if (have.has(item.sku)) continue;
+      position += 1;
+      await this.sql.run('INSERT INTO items (sku, name, category, unit, packs, in_stock, lead_days, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', item.sku, item.name, item.category, item.unit, JSON.stringify(item.packs), item.inStock ? 1 : 0, item.leadDays, position);
     }
   }
 
@@ -248,6 +254,7 @@ export class Shop {
   async reset(): Promise<void> {
     await this.sql.run('DELETE FROM orders');
     await this.sql.run('DELETE FROM cart_lines');
+    await this.sql.run('DELETE FROM items');
     await this.seed();
   }
 }

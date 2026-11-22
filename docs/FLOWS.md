@@ -10,7 +10,7 @@ Each step names the screen and the data. Shapes are in contracts/.
 4. Hub opens Order o-1 (pricing), PO RU-1042, sends a market job and a cart job to the buyer. The Shelf keeps the screen for 2.5 seconds so the drop is seen, then `screen` becomes shop.
 5. Shop. Three frames settle in with blinking handles, then hold live iframes as each Run gets its streamingUrl. The newest step shows above each frame.
 6. Shop. Market runs finish: a result above each frame and its handles stop blinking. The cart run reaches the review page: "8 boxes in the cart. $67.71 with tax." Buyer posts IngestCartBody. Order becomes awaiting_approval. `screen` becomes order.
-7. Order. Paper plate, the word "8 boxes", the part in the frame. "$67.71" total with tax, $7.49 a box, arrives Tuesday, from Offcut Supply. Reason and market note below. "Press the button to approve."
+7. Order. Paper plate, the word "8 boxes", the part in the frame. "$67.71" total with tax, $7.49 a box, arrives Tuesday, from Offcut Supply. Reason and market note below. "Press the wooden button to place the order."
 8. The judge presses the wooden button. Node posts approve by button. Order becomes approved; hub sends the place job.
 9. Order. The plate cuts to wine, the word is "Placing", and the frame holds the live browser: "Placing the order at Offcut Supply." The agent enters the PO number and places the order. Buyer posts IngestPlacedBody. Order becomes placed: the plate cuts to olive, the word is "Ordered", the figure is the confirmation number OC-58213. "Ordered. Arrives Tuesday."
 10. Offcut's webhook: order.confirmed, then order.shipped 20 seconds later. Order becomes shipped.
@@ -50,10 +50,11 @@ In the demo: the 8 bags in the Delivery box go into the pockets after "Ordered".
 
 ## Setup flow (operator, once)
 
+0. The station as built (ledges, one camera): `npm run board -- <hub url>` sets its zones and parts. Start the eye, then give the detector one example of each part: `curl -X POST "http://localhost:8089/prompt/z-9v?box=0.61,0.71,0.64,0.80"` with the box around one battery, and the same for the other ledges. The counts follow within a second. Steps 2 to 4 are for pockets and the teach spot.
 1. Open `/ops`, enter the ops token.
 2. Empty the board. Press "Capture empty board". On the Pi run `./capture_reference.sh`.
 3. Drag a quad over each group of pockets, set rows and cols, pick or create the product. Save.
-4. Fill the board. Check every count on Shelf matches what is there.
+4. Fill the board. Press "Capture full board": the eye learns the size of one unit on every ledge, so parts that touch are still counted one by one. Check every count on Shelf matches what is there.
 5. In the TinyFish dashboard create a profile, sign in to Offcut Supply in its setup browser, save it, and put the profile id in Infisical as TINYFISH_PROFILE_ID.
 6. Run one order by hand from `/ops` so every kind of run has a recording for replay.
 

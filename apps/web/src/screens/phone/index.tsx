@@ -1,15 +1,15 @@
 /** The phone view: plates stacked as bands. Approve an order, name a new part, see the counts. */
 import { unitsText } from '@reup/brain';
-import type { Order, Snapshot, TeachConfirmBody, TeachState } from '@reup/contracts';
-import { useState, type FormEvent } from 'react';
+import type { Order, Snapshot } from '@reup/contracts';
+import { useState } from 'react';
 import { cx, Frame, Tag, Units, Word, Wordmark } from '../../components';
 import { call, hubUrl, token } from '../../lib/hub';
 import { money, partRows, shelfMoment, shortTime, supplierName, weekday, type Tone } from '../../lib/view';
 import { useLive } from '../../store/live';
 import { sentence } from '../shelf';
-import { SURE } from '../teach';
+import { NO_KEY, TeachForm } from '../teach/form';
 
-export const NO_KEY = 'This phone cannot approve. Scan the code on the station.';
+export { NO_KEY, TeachForm } from '../teach/form';
 
 function Band({ tone, label, children, word }: { tone: Tone; label: string; word: string; children: React.ReactNode }) {
   return (
@@ -47,52 +47,6 @@ export function ApproveBand({ order, s, send = call, k = token('k'), first }: { 
       <button className="btn" type="button" disabled={state === 'busy'} onClick={() => void approve()}>Approve</button>
       <button className="btn quiet" type="button" onClick={() => setState('hidden')}>Not now</button>
     </Band>
-  );
-}
-
-/** Name a new part. Shared by the phone and the operator page. */
-export function TeachForm({ teach, s, send = call, bearer }: { teach: TeachState; s: Snapshot; send?: typeof call; bearer: string | null }) {
-  const sug = teach.suggestion;
-  const [name, setName] = useState(sug?.name ?? '');
-  const [unit, setUnit] = useState(sug?.unit ?? 'each');
-  const [sku, setSku] = useState(sug?.sku ?? '');
-  const [zoneId, setZoneId] = useState(teach.zoneId ?? s.zones[0]?.id ?? '');
-  const [error, setError] = useState<string | null>(null);
-  const [seenId, setSeenId] = useState(`${teach.id}:${teach.status}`);
-  // When the suggestion arrives, fill the form with it once.
-  if (seenId !== `${teach.id}:${teach.status}`) {
-    setSeenId(`${teach.id}:${teach.status}`);
-    if (sug) {
-      setName(sug.name);
-      setUnit(sug.unit);
-      setSku(sug.sku ?? '');
-    }
-  }
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!bearer) return setError(NO_KEY);
-    const body: TeachConfirmBody = { name: name.trim(), unit: unit.trim() || 'each', sku: sku.trim() === '' ? null : sku.trim(), searchPhrase: sug && sug.name === name.trim() ? sug.searchPhrase : name.trim(), zoneId };
-    if (body.name === '' || body.zoneId === '') return setError('Give it a name and a place.');
-    const res = await send('POST', `/api/teach/${teach.id}/confirm`, body, bearer);
-    setError(res.ok ? null : (res.message ?? 'Could not add it.'));
-  };
-  const cancel = async () => {
-    const res = await send('POST', `/api/teach/${teach.id}/cancel`, undefined, bearer);
-    setError(res.ok ? null : (res.message ?? 'Could not cancel.'));
-  };
-  return (
-    <form className="stack" style={{ gap: 14 }} onSubmit={(e) => void submit(e)}>
-      <p className="copy small">{teach.status === 'naming' ? 'Naming it.' : sug ? `Looks like ${sug.name}. ${SURE[sug.confidence].charAt(0).toUpperCase()}${SURE[sug.confidence].slice(1)}.` : (teach.error ?? 'Type a name to add it.')}</p>
-      <label className="field"><span className="meta">Name</span><input value={name} onChange={(e) => setName(e.target.value)} required /></label>
-      <label className="field"><span className="meta">One unit is</span><input value={unit} onChange={(e) => setUnit(e.target.value)} /></label>
-      <label className="field"><span className="meta">Offcut SKU</span><input value={sku} onChange={(e) => setSku(e.target.value)} /></label>
-      <label className="field"><span className="meta">Where it sits</span>
-        <select value={zoneId} onChange={(e) => setZoneId(e.target.value)}>{s.zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}</select>
-      </label>
-      {error ? <Tag tone="alert" style={{ whiteSpace: 'normal', borderRadius: 14, lineHeight: 1.3 }}>{error}</Tag> : null}
-      <button className="btn" type="submit">Confirm</button>
-      <button className="btn quiet" type="button" onClick={() => void cancel()}>Not a part</button>
-    </form>
   );
 }
 

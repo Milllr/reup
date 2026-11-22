@@ -1,13 +1,14 @@
 /** Teach: a new part is on the teach spot. Its picture sits in the frame while reup names it and a person says yes. */
 import type { Snapshot } from '@reup/contracts';
 import { Frame, Plate, Word } from '../../components';
-import { hubUrl } from '../../lib/hub';
+import { hubUrl, token } from '../../lib/hub';
 import type { LiveState } from '../../store/reduce';
 import { alertText, BottomBar } from '../common';
+import { SURE, TeachForm } from './form';
 
-export const SURE = { sure: 'sure', fairly_sure: 'fairly sure', not_sure: 'not sure' } as const;
+export { SURE } from './form';
 
-export function Teach({ live }: { live: LiveState }) {
+export function Teach({ live, bearer = token('k') ?? token('ops') }: { live: LiveState; bearer?: string | null }) {
   const s = live.snapshot as Snapshot;
   const teach = s.teach;
   if (!teach) return null;
@@ -24,20 +25,26 @@ export function Teach({ live }: { live: LiveState }) {
         <span className="meta">{zone}</span>
         <p className="copy small" style={{ maxWidth: '21em' }}>Put one unit on the teach spot. reup names it from the store catalog and starts counting it.</p>
       </div>
-      <div className="abs stack" style={{ left: 1280, top: 420, width: 580, gap: 22 }}>
-        {teach.status === 'needs_confirm' && sug ? (
+      <div className="abs stack" style={{ left: 1280, top: bearer && teach.status !== 'naming' ? 372 : 420, width: 580, gap: 14 }}>
+        {teach.status === 'naming' ? (
+          <p className="figure mid">Naming it.</p>
+        ) : bearer ? (
+          // A screen that holds a key names the part right here: the station's own laptop, or a TV opened with ?k=.
+          <>
+            <p className="figure mid">{teach.status === 'needs_confirm' && sug ? `Looks like ${sug.name.charAt(0).toLowerCase()}${sug.name.slice(1)}.` : 'Type its name.'}</p>
+            <TeachForm teach={teach} s={s} bearer={bearer} focus />
+          </>
+        ) : teach.status === 'needs_confirm' && sug ? (
           <>
             <p className="figure mid">{`Looks like ${sug.name.charAt(0).toLowerCase()}${sug.name.slice(1)}.`}</p>
             <span className="meta">{`${sug.unit}${sug.sku ? ` · Offcut ${sug.sku}` : ' · not in the catalog'} · ${SURE[sug.confidence]}`}</span>
             <p className="copy small" style={{ maxWidth: '19em' }}>Confirm on a phone or the operator page.</p>
           </>
-        ) : teach.status === 'failed' ? (
+        ) : (
           <>
             <p className="figure mid">Could not name it.</p>
             <p className="copy small" style={{ maxWidth: '19em' }}>Type a name on a phone or the operator page to add it.</p>
           </>
-        ) : (
-          <p className="figure mid">Naming it.</p>
         )}
       </div>
       <BottomBar credit="Named by Gemini from the store catalog" alert={alertText(live) ?? (teach.status === 'failed' ? (teach.error ?? 'Could not name it.') : null)} />

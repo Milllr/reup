@@ -49,6 +49,14 @@ export interface Internal {
   recentPicks: { pick: PickEvent; at: number }[];
   /** For each order that is on its way: the lowest count seen since it was placed. What has come in is measured from there. */
   deliveries: Record<string, { low: number }>;
+  /** Parts set up with PUT /api/board. learn: the part has no fixed capacity, it holds what is stocked. */
+  board: Record<string, { learn: boolean }>;
+  /** When the new part card gives up waiting for a name or a yes, so the screens are never held by it for good. Null when no card is up. */
+  teachUntil: number | null;
+  /** orderId to the last time the buyer said anything about that order, or was handed work for it. */
+  heard: Record<string, number>;
+  /** Since when no buyer is connected. Null while one is. */
+  buyerAwaySince: number | null;
   spend: { day: string; total: number };
   catalog: { at: number; items: CatalogItem[] } | null;
   lastHeartbeat: number;
@@ -65,15 +73,26 @@ export interface Deps {
   waitUntil?: (p: Promise<unknown>) => void;
 }
 
+/** How long a new part card waits: for its name while it is being named, for someone to type one, for someone to say yes. */
+export const TEACH_WAIT_MS = { naming: 20_000, failed: 90_000, needs_confirm: 180_000 } as const;
+
 /** How long the Shelf keeps the screen after a count crosses the reorder point: the judge sees the drop, then the shopping. */
 export const REORDER_BEAT_MS = 2500;
+
+/**
+ * How long an order waits on the buyer before the hub gives it up, so the Shop and Order screens are never held for good.
+ * away: no buyer is connected and none has said a word about the order. quiet: a buyer is connected and has gone silent.
+ * One run of the buyer may take 5 minutes by its own limit, and it reports every step, so quiet sits above that.
+ */
+export const BUYER_WAIT_MS = { away: 45_000, quiet: 360_000 } as const;
+const ON_THE_BUYER: ReadonlySet<Order['state']> = new Set(['pricing', 'carting', 'approved', 'placing']);
 
 export const OPEN_STATES: ReadonlySet<Order['state']> = new Set(['pricing', 'carting', 'awaiting_approval', 'approved', 'placing', 'placed', 'shipped']);
 
 export function freshInternal(): Internal {
   return {
     seq: 0, poSeq: 1041, seenIds: [], eyeCounts: {}, nodeCounts: {}, disagree: {}, usage: {}, leadDays: {}, jobs: [],
-    replay: { market: false, cart: false, place: false }, screenOverride: null, screenUntil: {}, shopAfter: {}, recentChanges: {}, recentReaches: [], recentPicks: [], deliveries: {},
+    replay: { market: false, cart: false, place: false }, screenOverride: null, screenUntil: {}, shopAfter: {}, recentChanges: {}, recentReaches: [], recentPicks: [], deliveries: {}, board: {}, teachUntil: null, heard: {}, buyerAwaySince: null,
     spend: { day: '', total: 0 }, catalog: null, lastHeartbeat: 0,
   };
 }
@@ -228,6 +247,8 @@ export class RoomCore {
       sampleHistory: use.sample,
       now: this.iso(),
     });
+    // A part set up on the board is ordered up to a full ledge: its sample use says when to order, the ledge says how many.
+    if (this.x.board[productId] && product.capacity != null) policy.orderQty = Math.max(1, product.capacity - (this.count(productId)?.count ?? 0));
     const i = this.s.policies.findIndex((p) => p.productId === productId);
     if (i >= 0) this.s.policies[i] = policy;
     else this.s.policies.push(policy);
@@ -273,6 +294,7 @@ export class RoomCore {
   setBuyerOnline(online: boolean): void {
     if (this.s.buyerOnline === online) return;
     this.s.buyerOnline = online;
+    this.x.buyerAwaySince = online ? null : this.nowMs();
     this.emit({ type: 'buyer', online });
     if (!online && this.s.orders.some((o) => o.state === 'pricing' || o.state === 'carting')) this.activity('error', 'The buyer is offline.');
   }
@@ -295,9 +317,73 @@ export class RoomCore {
       d.raised = true;
       this.activity('attention', `The eye and the shelf node disagree on ${this.zone(zoneId)?.name ?? zoneId}: ${eye.count} and ${node.count}.`);
     }
+    this.expireTeach(now);
+    this.expireOrders(now);
     for (const [orderId, until] of Object.entries(this.x.screenUntil)) if (until <= now) delete this.x.screenUntil[orderId];
     for (const [orderId, after] of Object.entries(this.x.shopAfter)) if (after <= now) delete this.x.shopAfter[orderId];
     this.refreshScreen();
+  }
+
+  /** Puts a new part card up, changes it or takes it down, and starts the clock on how long it may stay. */
+  setTeach(teach: Snapshot['teach']): void {
+    this.s.teach = teach;
+    const wait = teach && teach.status in TEACH_WAIT_MS ? TEACH_WAIT_MS[teach.status as keyof typeof TEACH_WAIT_MS] : null;
+    this.x.teachUntil = wait != null ? this.nowMs() + wait : null;
+    this.emit({ type: 'teach', teach });
+  }
+
+  /** A new part card nobody finished comes down by itself. The part was never added, so nothing has to be undone. */
+  private expireTeach(now: number): void {
+    const teach = this.s.teach;
+    if (!teach) return;
+    if (this.x.teachUntil == null) {
+      // A card from before the clock existed, or one put up some other way: its time starts now.
+      const wait = teach.status in TEACH_WAIT_MS ? TEACH_WAIT_MS[teach.status as keyof typeof TEACH_WAIT_MS] : null;
+      this.x.teachUntil = wait != null ? now + wait : null;
+      return;
+    }
+    if (this.x.teachUntil > now) return;
+    this.later(this.deps.store.delete(`crop:${teach.id}`));
+    this.setTeach(null);
+    this.activity('info', teach.status === 'needs_confirm' ? 'Nobody confirmed the new part. It was not added.' : 'The new part was not named. It was not added.');
+  }
+
+  /** The buyer said something about this order, or was just handed work for it: its wait starts again. */
+  heardFrom(orderId: string): void {
+    this.x.heard[orderId] = this.nowMs();
+  }
+
+  /** When the hub stops waiting on the buyer for this order, or null when the order is not waiting on the buyer. */
+  private givenUpAt(order: Order): number | null {
+    if (!ON_THE_BUYER.has(order.state)) return null;
+    const heard = this.x.heard[order.id] ?? Date.parse(order.updatedAt);
+    const quiet = heard + BUYER_WAIT_MS.quiet;
+    if (this.s.buyerOnline) return quiet;
+    return Math.min(quiet, Math.max(heard, this.x.buyerAwaySince ?? heard) + BUYER_WAIT_MS.away);
+  }
+
+  /**
+   * An order the buyer never finishes fails by itself. Before the yes nothing was bought. After the yes the store may
+   * have the order all the same, so the words say to check, and the store's webhook or a late report still marks it placed.
+   */
+  private expireOrders(now: number): void {
+    for (const id of Object.keys(this.x.heard)) if (!this.s.orders.some((o) => o.id === id && ON_THE_BUYER.has(o.state))) delete this.x.heard[id];
+    for (const order of this.s.orders) {
+      const at = this.givenUpAt(order);
+      if (at == null || at > now) continue;
+      const who = this.s.buyerOnline ? 'The buyer stopped answering' : 'The buyer is offline';
+      const error = order.state === 'approved' || order.state === 'placing' ? `${who} while the order was being placed. Check the store before ordering again.` : `${who}. Nothing was bought.`;
+      order.state = 'failed';
+      order.error = error;
+      order.updatedAt = this.iso();
+      this.x.jobs = this.x.jobs.filter((j) => !('orderId' in j) || j.orderId !== order.id);
+      delete this.x.heard[order.id];
+      delete this.x.shopAfter[order.id];
+      this.holdScreen(order.id);
+      this.deps.history.order(order);
+      this.emit({ type: 'order', order });
+      this.activity('error', error);
+    }
   }
 
   /** When tick() next has something to do, or null. */
@@ -305,6 +391,11 @@ export class RoomCore {
     const times: number[] = [];
     if (this.s.node.online && this.x.lastHeartbeat > 0) times.push(this.x.lastHeartbeat + 15_001);
     for (const d of Object.values(this.x.disagree)) if (!d.raised) times.push(d.since + 3001);
+    if (this.s.teach && this.x.teachUntil != null) times.push(this.x.teachUntil + 1);
+    for (const order of this.s.orders) {
+      const at = this.givenUpAt(order);
+      if (at != null) times.push(at + 1);
+    }
     for (const until of Object.values(this.x.screenUntil)) times.push(until + 1);
     for (const after of Object.values(this.x.shopAfter)) times.push(after + 1);
     return times.length > 0 ? Math.min(...times) : null;

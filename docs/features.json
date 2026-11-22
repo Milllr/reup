@@ -4,12 +4,14 @@
       "id": "F1", "title": "Camera capture and the local stream", "lane": "eye", "priority": 0, "demo": true,
       "story": "As the TV, I want a smooth live picture of the board, so that a judge sees the real thing.",
       "acceptance": [
-        "Run `python -m reup_eye --hub $HUB_URL` on the laptop and see both cameras open at 1080p (board: Facecam, aux: C920). Camera choice is by name or index in services/eye/config.toml",
+        "Run `python -m reup_eye --hub $HUB_URL` on the laptop and see the board camera (the Facecam) open at 1080p. The station as built has one laptop camera: a second one (aux) is off unless services/eye/config.toml turns it on",
+        "A camera with a name in config.toml is only ever opened under that name. If it is unplugged, or the names cannot be listed, nothing is opened in its place, so the eye never looks through a built in webcam. `python -m reup_eye --list-cameras` prints the names and opens nothing",
+        "On Windows the camera is opened through Media Foundation first, then DirectShow, each with its own numbering",
         "Open http://localhost:8089/stream/board.mjpg in a browser and see live video at 15 fps or more",
         "Unplug a camera: the eye keeps running, reports that camera offline within 3 seconds, and reopens it when it is plugged back in",
         "Every 5 seconds the eye posts camera health with its counts or alone, as IngestCountsBody.cameras"
       ],
-      "tests": ["frame source falls back and retries when open fails", "camera health reports fps over a 2 second window", "config loads camera names, indexes and the stream port with defaults"],
+      "tests": ["frame source falls back and retries when open fails", "camera health reports fps over a 2 second window", "config loads camera names, indexes and the stream port with defaults", "a camera is chosen by name in each backend's own numbering", "a named camera that is missing never falls back to another camera", "a camera plugged in late is found by asking again before every try", "a camera that is turned off gets no source"],
       "screens": ["docs/ui/shelf.html"], "depends": []
     },
     {
@@ -18,6 +20,9 @@
       "acceptance": [
         "The eye loads zones from GET /api/state at start and again every 2 seconds (it has no socket to the hub, so a `zones` change is picked up by the next poll)",
         "POST http://localhost:8089/reference/board captures and saves the empty board frame for that camera to services/eye/data/ (gitignored); it survives a restart",
+        "POST http://localhost:8089/full/board, with the board full, saves the size of one unit for every open zone (a zone holds its part's capacity, or ?z-id=n says otherwise); it survives a restart and is dropped when the zone gets another part",
+        "A bumped camera is put back by itself. The eye saves the edges of the picture at the camera's home position (first still picture, or POST /anchor/:camera), finds the slide and the turn of every later picture against it, and moves each frame back before the stream, the zones or the detector see it. After any motion, counts wait for one look that confirms the position (3 seconds at most). A board it cannot find at all holds counts for up to 15 seconds",
+        "Motion and the room's brightness are read inside the board only: the corners named in config.toml, or a box around the zones when none are named, so a screen or a person beside the board does not hold the counts",
         "For a pocket zone the eye warps the quad to a flat rectangle and splits it into rows by cols pocket cells in pocket order",
         "GET http://localhost:8089/debug/board.jpg returns the current frame with zones and pocket cells drawn, for checking alignment"
       ],
@@ -41,21 +46,24 @@
       "id": "F4", "title": "Open zone counting and outlines", "lane": "eye", "priority": 1, "demo": true,
       "story": "As reup, I want to count items that do not sit in pockets, and trace every part on screen.",
       "acceptance": [
-        "For an open zone the eye counts instances of that zone's product found by YOLOE-26 using the product's taught example crop as a visual prompt (check docs.ultralytics.com/models/yoloe for the current way to fix visual prompt classes once, not per frame)",
+        "For an open zone the eye counts instances of that zone's product found by YOLOE-26. Each product has one example: a whole frame and the box of one of the part in it. The model turns each example into an embedding, the embeddings are joined into one set of classes, and every later frame is looked at with no prompts",
+        "POST http://localhost:8089/prompt/:zoneId?box=x0,y0,x1,y1 saves the current frame and that box as the example for the zone's part (several boxes, split by a semicolon, are several of the same part; with no box the whole zone is the example)",
+        "A detector count is believed only after it was seen 3 looks in a row with nothing moving, so a hand that hides parts never changes a count. Parts the detector counts need no empty board",
         "The model size and image size come from config; the detector runs in its own thread so the stream never stutters",
         "GET http://localhost:8089/outlines/board.json returns, per detected item, a simplified polygon in normalized coordinates, refreshed at least 3 times a second",
-        "If ultralytics or the weights are missing, or a part has no taught example yet, pocket counting and the stream still work and open zones are counted as difference blobs against the empty board; the log says why in one line"
+        "If ultralytics or the weights are missing, or a part has no taught example yet, pocket counting and the stream still work and open zones are counted as difference blobs against the empty board; the log says why in one line",
+        "Parts that touch on a ledge are one blob. Once the full board is saved a blob counts as its size divided by the size of one unit, and a patch under 0.3 of a unit is not a part"
       ],
-      "tests": ["instances are assigned to the zone that contains their centre", "polygon simplification keeps at most 24 points", "count smoothing: a count must hold for 3 consecutive detections before it is posted", "the detector module is not imported when disabled in config"],
+      "tests": ["instances are assigned to the zone that contains their centre", "polygon simplification keeps at most 24 points", "count smoothing: a count must hold for 3 consecutive detections before it is posted", "the detector module is not imported when disabled in config", "parts the detector counts need no empty board", "an example is the whole frame and the boxes of the part in it", "touching parts are one patch until the full board is saved"],
       "screens": ["docs/ui/shelf.html"], "depends": ["F2"]
     },
     {
       "id": "F5", "title": "The teach spot", "lane": "eye", "priority": 1, "demo": true,
       "story": "As a shop owner, I want to add a part by showing it to the camera, so that there is no setup.",
       "acceptance": [
-        "The teach spot is a fixed quad in config on the aux camera. When something is placed on it and holds still for 1 second, the eye crops it and posts POST /api/teach with a JPEG under 400 kB",
+        "The teach spot is the hub's z-teach zone, a clear patch of the board seen by the board camera (a quad in config when the hub has no such zone). When something is placed on it and holds still for 1 second, the eye crops it and posts POST /api/teach with a JPEG under 400 kB",
         "The same item is not posted twice: a new teach needs the spot to be empty for 2 seconds first",
-        "After a teach is confirmed, the eye saves the crop as that product's visual prompt for F4"
+        "After a teach is confirmed, the eye saves the frame the part was seen in, and the part's box on it, as that product's example for F4"
       ],
       "tests": ["presence detection against the empty teach spot reference", "debounce: one teach per placement", "JPEG is re-encoded at lower quality until under 400 kB"],
       "screens": [], "depends": ["F2"]
@@ -340,10 +348,10 @@
       "story": "As a judge, I want to say yes with a wooden button.",
       "acceptance": [
         "Matches docs/ui/order.html: paper plate, the word is the order (\"8 boxes\"), the PartBox drawing across the frame with the product's name and unit on its label, the total, unit price, arrival day and supplier on the left, the reason and the market note as small copy",
-        "awaiting_approval: \"Press the button to approve.\" on the right, the frame's orange handles blink, and the tag reads \"Waiting for a yes · PO RU-1042 · spend cap $150 an order\"",
+        "awaiting_approval: one line on the right says how to say yes (\"Press the wooden button to place the order.\" with the shelf node connected, \"Press Enter to place the order.\" on a screen that holds a key, a phone otherwise), with nothing to click, the frame's orange handles blink, and the tag reads \"Waiting for a yes · PO RU-1042 · spend cap $150 an order\"",
         "approved and placing: wine plate, the word \"Placing\", the frame turns landscape and holds the live pane of the place run, \"Placing the order at Offcut Supply.\"",
         "placed: olive plate, the word \"Ordered\", the confirmation number OC-58213 as the figure, \"Ordered. Arrives Tuesday.\"; shipped changes the tag to \"Shipped · arrives Tuesday\"; failed is a wine plate with the word \"Stopped\", an alert tag with the error and \"Nothing was bought.\"; cancelled is paper with the word \"Cancelled\"",
-        "The PO number and who approved (\"Approved with the button at 9:16 AM\" or \"from a phone\") show in the tag"
+        "The PO number and who approved (\"Approved with the wooden button at 9:16 AM\", \"from the keyboard\" or \"from a phone\") show in the tag"
       ],
       "tests": ["each order state renders its plate, word and line", "the word pluralises the unit: 8 boxes, 3 bags, 2 units for each", "arrival day formats as a weekday name in America/Toronto", "the market note is hidden when null"],
       "screens": ["docs/ui/order.html"], "depends": ["F23"]
@@ -390,10 +398,13 @@
       "acceptance": [
         "A seed in apps/hub/src/seed.ts holds the suppliers, and 30 days of sample daily use per seeded product (flagged sample), chosen so the demo product (wood screws, capacity 12) has a rate of 0.56 a day and a reorder point of 4; the demo starts with 6 on the board, so taking two crosses the line",
         "POST /api/demo/reset cancels open orders, clears runs, quotes older than 10 minutes and activity, restores sample history and policies, and keeps zones, products and current counts. The one exception: a part taught on the teach spot is removed and the spot is freed, so every judge can teach one",
+        "PUT /api/board sets up the station in one call: every zone and every part (contracts/mocks/board.json is the station as built, `npm run board -- <hub url>` sends it). It cancels open orders and clears the demo. Counts of parts that stay on their ledge are kept",
+        "A part set up with no capacity sits on a ledge that holds what is stocked. Its capacity is the most the cameras have counted there since the last reset, and reset takes what is on the ledge now as full (an empty ledge holds nothing known)",
+        "A part set up on the board has sample use sized to its ledge: the reorder point is two under a full ledge, so taking two of any part crosses its line, and the order is what it takes to fill the ledge again. A ledge with one unit is counted and never reordered",
         "POST /api/demo/season sets the season, recomputes every policy and broadcasts them",
         "POST /api/demo/replay stores the replay switches and includes them in jobs"
       ],
-      "tests": ["reset leaves zones and products and clears orders", "season recomputes policies", "the demo product's reorder point is 4 with the seed"],
+      "tests": ["reset leaves zones and products and clears orders", "season recomputes policies", "the demo product's reorder point is 4 with the seed", "PUT /api/board replaces every zone and part and clears the demo", "the first count teaches the capacity, with no pick and no order", "taking one of any part orders nothing, taking two orders what was taken", "stocking up raises the capacity and the reorder point with it", "reset takes what is on each ledge as full"],
       "screens": [], "depends": ["F9"]
     },
     {

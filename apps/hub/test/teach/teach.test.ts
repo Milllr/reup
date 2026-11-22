@@ -108,4 +108,52 @@ describe('naming a new part', () => {
     expect(r.room.s.teach).toBeNull();
     expect((await r.call('POST', `/api/teach/${id}/cancel`, undefined, APPROVE)).status).toBe(404);
   });
+
+  it('a card nobody names comes down by itself, so it never holds the screens', async () => {
+    const r = await rig({}, { fetch: catalogFetch });
+    const teach = TeachState.parse(await (await r.call('POST', '/api/teach', body, DEVICE)).json());
+    await r.room.idle();
+    expect(r.room.s.teach).toMatchObject({ status: 'failed', error: 'Naming is not set up. Type a name to add it.' });
+    expect(r.room.nextDeadline()).toBe(r.clock.now + 90_001);
+    r.advance(89_000);
+    expect(r.room.s.teach?.id).toBe(teach.id);
+    r.advance(1_500);
+    expect(r.room.s.teach).toBeNull();
+    expect(r.of('teach').at(-1)).toEqual({ type: 'teach', teach: null });
+    expect(r.room.s.activity.at(-1)?.text).toBe('The new part was not named. It was not added.');
+    await r.room.idle();
+    expect((await r.call('GET', teach.cropUrl ?? '')).status).toBe(404);
+    expect(r.room.s.products).toHaveLength(4);
+    expect(r.room.nextDeadline()).toBeNull();
+  });
+
+  it('a suggestion waits three minutes for a yes, and a yes in time stops the clock', async () => {
+    const named = namer({ sku: 'OC-1008-200', name: 'x', unit: 'x', confidence: 'sure' });
+    const r = await rig({}, { fetch: catalogFetch, namer: named });
+    await r.call('POST', '/api/teach', body, DEVICE);
+    await r.room.idle();
+    r.advance(179_000);
+    expect(r.room.s.teach?.status).toBe('needs_confirm');
+    r.advance(1_500);
+    expect(r.room.s.teach).toBeNull();
+    expect(r.room.s.activity.at(-1)?.text).toBe('Nobody confirmed the new part. It was not added.');
+    // The next one is confirmed in time: it is added and nothing comes down later.
+    const again = TeachState.parse(await (await r.call('POST', '/api/teach', body, DEVICE)).json());
+    await r.room.idle();
+    r.advance(60_000);
+    expect((await r.call('POST', `/api/teach/${again.id}/confirm`, { name: 'Wood screws 2 in', unit: 'box of 100', sku: 'OC-1008-200', searchPhrase: 'wood screws', zoneId: 'z-teach' }, APPROVE)).status).toBe(200);
+    expect(r.room.x.teachUntil).toBeNull();
+    r.advance(600_000);
+    expect(r.room.s.products.some((p) => p.name === 'Wood screws 2 in')).toBe(true);
+  });
+
+  it('the eye may take the card down when the part is lifted off the teach spot', async () => {
+    const r = await rig({}, { fetch: catalogFetch });
+    const teach = TeachState.parse(await (await r.call('POST', '/api/teach', body, DEVICE)).json());
+    await r.room.idle();
+    expect((await r.call('POST', `/api/teach/${teach.id}/cancel`, undefined, 'wrong')).status).toBe(401);
+    expect((await r.call('POST', `/api/teach/${teach.id}/cancel`, undefined, DEVICE)).status).toBe(200);
+    expect(r.room.s.teach).toBeNull();
+    expect(r.room.x.teachUntil).toBeNull();
+  });
 });

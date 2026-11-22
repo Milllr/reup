@@ -69,6 +69,29 @@ export function ZoneEditor({ s, ops, send = call }: { s: Snapshot; ops: string; 
       setNote('The eye is not reachable from this page.');
     }
   };
+  // The eye keeps the picture lined up with the camera's home position. After moving the camera on purpose, this makes
+  // where it sits now its home, and the zones are drawn again on that picture.
+  const setHome = async () => {
+    if (!cam?.streamUrl) return setNote('The eye is not reachable from this page.');
+    try {
+      const res = await fetch(cam.streamUrl.replace(/\/stream\/(\w+)\.mjpg.*$/, '/anchor/$1'), { method: 'POST' });
+      setNote(res.ok ? 'Camera position saved. Check that every zone still sits on its ledge.' : 'The eye could not save the camera position.');
+    } catch {
+      setNote('The eye is not reachable from this page.');
+    }
+  };
+  const captureFull = async () => {
+    if (!cam?.streamUrl) return setNote('The eye is not reachable from this page.');
+    try {
+      const res = await fetch(cam.streamUrl.replace(/\/stream\/(\w+)\.mjpg.*$/, '/full/$1'), { method: 'POST' });
+      const body = (await res.json().catch(() => null)) as { zones?: Record<string, { units: number }>; message?: string } | null;
+      if (!res.ok) return setNote(body?.message ?? 'The eye could not capture the board.');
+      const learned = Object.entries(body?.zones ?? {}).map(([id, v]) => `${zones.find((z) => z.id === id)?.name ?? id} ${v.units}`);
+      setNote(learned.length > 0 ? `Full board captured: ${learned.join(', ')}.` : 'No open zone has parts in it.');
+    } catch {
+      setNote('The eye is not reachable from this page.');
+    }
+  };
   const zone = zones.find((z) => z.id === selected);
   const shown = zones.filter((z) => z.camera === camera);
 
@@ -81,6 +104,8 @@ export function ZoneEditor({ s, ops, send = call }: { s: Snapshot; ops: string; 
         </div>
         <button type="button" className="btn quiet" onClick={() => change(addZone(zones, camera))}>Add zone</button>
         <button type="button" className="btn quiet" onClick={() => void capture()}>Capture empty board</button>
+        <button type="button" className="btn quiet" onClick={() => void captureFull()}>Capture full board</button>
+        <button type="button" className="btn quiet" onClick={() => void setHome()}>Set camera position</button>
         <button type="button" className="btn" disabled={!dirty} onClick={() => void save()}>Save zones</button>
         {note ? <span className="meta" role="status">{note}</span> : null}
       </div>
