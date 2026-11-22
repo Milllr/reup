@@ -2,7 +2,7 @@
 
 Usage: python3 vision/patch_workshop.py ~/QNX-AI-workshop
 
-It copies the reup headers next to handtrack_node.cpp and makes five small changes. Running it again changes nothing.
+It copies the reup headers next to handtrack_node.cpp and makes six small changes. Running it again changes nothing.
 1. handtrack_node.cpp includes reup_hook.hpp.
 2. Every frame the hand model has looked at goes to reup::feed, with the hands it found: reaches, pockets, the snapshot.
 3. Every frame the camera gives goes to reup::offer: the picture for the eye on the laptop and for the board page.
@@ -10,6 +10,7 @@ It copies the reup headers next to handtrack_node.cpp and makes five small chang
    the browser on the same screen. The camera itself stays at full size.
 5. rpi_cam.cpp takes its smallest size from REUP_MIN_PIXELS when that is set. The workshop asks for 720p, which is
    enough for hands. The eye counts parts in the same frames and was set up on 1080p.
+6. CMakeLists.txt links libsocket: the camera stream uses sockets, and on QNX they are not in libc.
 """
 import shutil
 import sys
@@ -22,6 +23,9 @@ EDITS = {
         ("    auto hands = pipe->detect(frame, 2);", "    auto hands = pipe->detect(frame, 2);\n    reup::feed(hands, frame);", "reup::feed"),
         ("    if (!g_run.load()) return;\n\n    // Resized here", "    if (!g_run.load()) return;\n    reup::offer(bgr);\n\n    // Resized here", "reup::offer"),
         ("  if (gui.open(cw, ch) != 0) {", "  const int reup_w = cw > 1280 ? cw / 3 : cw, reup_h = cw > 1280 ? ch / 3 : ch;\n  if (gui.open(reup_w, reup_h) != 0) {", "reup_w"),
+    ],
+    "CMakeLists.txt": [
+        ('target_link_libraries(handtrack_node "${cpp_typesupport_target}")', 'target_link_libraries(handtrack_node "${cpp_typesupport_target}")\n# reup: the camera stream uses sockets, which on QNX are in libsocket.\ntarget_link_libraries(handtrack_node socket)', "handtrack_node socket"),
     ],
     "rpi_cam.cpp": [
         ("    constexpr long MIN_PIXELS = 1280 * 720;", "    const char *reup_min = std::getenv(\"REUP_MIN_PIXELS\");\n    const long MIN_PIXELS = reup_min ? std::atol(reup_min) : 1280 * 720;", "REUP_MIN_PIXELS"),
