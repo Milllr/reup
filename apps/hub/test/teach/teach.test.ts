@@ -40,6 +40,15 @@ describe('naming a new part', () => {
     const good = () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"sku":"OC-2202","name":"b","unit":"bag of 4","confidence":"sure"}' }] } }] }));
     const modelOf = (url: string) => /models\/([^:]+):/.exec(url)?.[1] ?? '';
 
+    it('calls fetch the way a Worker allows: as a plain function, with no object as its this', async () => {
+      // The Workers runtime throws "Illegal invocation" when its fetch is called as a method of something else.
+      const strict = function (this: unknown) {
+        if (this !== undefined && this !== globalThis) throw new TypeError('Illegal invocation: function called with incorrect `this` reference.');
+        return Promise.resolve(good());
+      } as unknown as typeof fetch;
+      expect((await new GeminiNamer('k', 'steady-flash', strict, 7000, () => {}).name('abc', items, new AbortController().signal)).sku).toBe('OC-2202');
+    });
+
     it('skips a model that is overloaded and takes the next one', async () => {
       const asked: string[] = [];
       const logs: string[] = [];

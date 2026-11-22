@@ -69,7 +69,10 @@ export class GeminiNamer implements Namer {
   }
 
   private async call(model: string, body: unknown, signal: AbortSignal): Promise<Response> {
-    return this.fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    // Called as a plain function, never as this.fetcher(...): on Workers the global fetch refuses to run with an object
+    // as its this ("Illegal invocation"), which is how naming failed on the deployed hub while every test in Node passed.
+    const send = this.fetcher;
+    return send(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
       body: JSON.stringify(body),
