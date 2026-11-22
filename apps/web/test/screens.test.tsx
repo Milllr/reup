@@ -204,8 +204,10 @@ describe('Order', () => {
     expect(word(container)).toBe('8 boxes');
     expect(screen.getByText('$67.71')).toBeTruthy();
     expect(screen.getByText('Tuesday')).toBeTruthy();
-    // The sample shelf node is connected, and the test page is on localhost so it holds the local key: the plate has one button, Approve.
-    expect(screen.getByText('Press the wooden button to place the order.')).toBeTruthy();
+    // The test page is on localhost so it holds the local key: the plate has one button, Approve, and no line above it,
+    // though the sample shelf node is connected. The station has no button of its own.
+    expect(container.textContent).not.toContain('wooden button');
+    expect(container.querySelector('.figure.mid')?.textContent).toBe('Tuesday');
     expect(APPROVE).toBe('Approve to place order');
     expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([APPROVE]);
     // Nothing else is written: no small print, no reason, no price note, no tag with the PO and the spend cap.
@@ -823,11 +825,9 @@ describe('saying yes and naming a part on the TV itself', () => {
   });
 
   it('the line names only what can say yes right now', () => {
-    expect(howToSayYes(true, false)).toBe('Press the wooden button to place the order.');
-    expect(howToSayYes(true, true)).toBe('Press the wooden button to place the order.');
-    // A screen that can say yes and has no shelf node: the button is the line, nothing is written above it.
-    expect(howToSayYes(false, true)).toBeNull();
-    expect(howToSayYes(false, false)).toBe('Say yes from a phone to place the order.');
+    // A screen that can say yes: the button is the line, nothing is written above it.
+    expect(howToSayYes(true)).toBeNull();
+    expect(howToSayYes(false)).toBe('Say yes from a phone to place the order.');
   });
 });
 

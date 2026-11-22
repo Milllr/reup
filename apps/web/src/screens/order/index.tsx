@@ -9,11 +9,11 @@ import type { LiveState } from '../../store/reduce';
 import { alertText, BottomBar, Steps, TopBar } from '../common';
 
 /**
- * The one line above the Approve button, or null when the button says it all. It names only what can say yes right
- * now: the wooden button when the shelf node is connected, a phone when this screen cannot say yes itself.
+ * The one line above the Approve button, or null when the button says it all: a screen that can say yes needs no
+ * line. A screen that cannot is told where a yes can come from. The station has no button of its own, so the shelf
+ * node being connected changes nothing here.
  */
-export function howToSayYes(nodeOnline: boolean, canSayYes: boolean): string | null {
-  if (nodeOnline) return 'Press the wooden button to place the order.';
+export function howToSayYes(canSayYes: boolean): string | null {
   return canSayYes ? null : 'Say yes from a phone to place the order.';
 }
 
@@ -92,7 +92,7 @@ export function Order({ live, onClose }: { live: LiveState; onClose?: () => void
   if (moment.plate === 'paper') {
     const waiting = order.state === 'awaiting_approval';
     const k = yesKey(s);
-    const line = waiting ? howToSayYes(s.node.online, k != null) : order.state === 'cancelled' ? 'Nothing was bought.' : 'Getting the cart ready.';
+    const line = waiting ? howToSayYes(k != null) : order.state === 'cancelled' ? 'Nothing was bought.' : 'Getting the cart ready.';
     return (
       <Plate tone="paper" label="Order">
         <Word text={moment.word} at="top" quiet={quiet} />

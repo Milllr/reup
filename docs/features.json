@@ -350,10 +350,10 @@
     },
     {
       "id": "F26", "title": "Order screen", "lane": "web", "priority": 0, "demo": true,
-      "story": "As a judge, I want to say yes with a wooden button.",
+      "story": "As a judge, I want to say yes with one click.",
       "acceptance": [
         "Matches docs/ui/order.html: paper plate, the word is the order (\"8 boxes\"), the PartBox drawing across the frame with the product's name and unit on its label, the total, unit price, arrival day and supplier on the left, the reason and the market note as small copy",
-        "awaiting_approval: the right side holds one button, \"Approve to place order\", on any screen that can say yes: one that holds a key, or any screen when the hub is open (Snapshot.open). Enter does the same. With the shelf node connected one line above it reads \"Press the wooden button to place the order.\" There is no small print, no reason line, no price note and no tag. The frame's orange handles blink",
+        "awaiting_approval: the right side holds one button, \"Approve to place order\", on any screen that can say yes: one that holds a key, or any screen when the hub is open (Snapshot.open). Enter does the same. There is no small print, no reason line, no price note and no tag. The frame's orange handles blink",
         "approved and placing: wine plate, the word \"Placing\", the frame turns landscape and holds the live pane of the place run, \"Placing the order at Offcut Supply.\"",
         "placed: olive plate, the word \"Ordered\", the confirmation number OC-58213 as the figure, \"Ordered. Arrives Tuesday.\"; shipped changes the tag to \"Shipped · arrives Tuesday\"; failed is a wine plate with the word \"Stopped\", an alert tag with the error and \"Nothing was bought.\"; cancelled is paper with the word \"Cancelled\"",
         "The PO number shows top right once the order is placed. There is no tag saying who approved. A finished order has an X beside the menu that goes back to the main view, and Escape does the same"

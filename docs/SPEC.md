@@ -12,13 +12,13 @@ A small shop or lab that keeps parts on hand. Today someone notices an empty box
 
 ## The 3 minute demo
 
-Three judges, one at a time, at our table. No slides. A wooden parts board, two cameras, a Raspberry Pi on QNX, a wooden button, a TV.
+Three judges, one at a time, at our table. No slides. A wooden parts board, two cameras, a Raspberry Pi on QNX, a TV.
 
 1. See (0:00). The TV shows the live board with a count on every part.
 2. Take (0:15). The judge takes two boxes of screws. The count drops in about a second and crosses the reorder point.
 3. Shop (0:25). Live browser panes open. reup checks the price at two real retailers and fills a cart at Offcut Supply.
 4. Decide (1:10). One order card: 8 boxes, the total, arrives Tuesday, one line of reason.
-5. Approve (1:20). The judge presses the wooden button. reup places the order and the confirmation number appears.
+5. Approve (1:20). The judge clicks Approve on the screen. reup places the order and the confirmation number appears.
 6. Explain (1:50). One chart: usage, forecast, a reorder line that moves when the season switch is flipped.
 7. Teach (2:15). A new part goes on the teach spot. reup names it from the store catalog and starts counting it.
 8. For QNX judges. Pull the network cable, take a part: the Pi still records it and still calls for the order. Kill the vision process: it is back within a second and the ledger never stopped.

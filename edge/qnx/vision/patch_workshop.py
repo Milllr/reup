@@ -7,7 +7,9 @@ It copies the reup headers next to handtrack_node.cpp and makes these small chan
 2. Every frame the hand model has looked at goes to reup::feed, with the hands it found: reaches, pockets, the snapshot.
 3. Every frame the camera gives goes to reup::offer, which serves it on REUP_STREAM_PORT when that is set above 0.
 4. The window opens 480 wide (REUP_WINDOW_WIDTH changes that) when the camera is wider than 640, and full screen when
-   REUP_FULLSCREEN is set. The hand model looks at the picture at the window's size.
+   REUP_FULLSCREEN is set. The hand model looks at the picture at the window's size. REUP_WINDOW_HEIGHT gives the
+   window the screen's own shape: in the camera's shape on a screen of another shape, the last rows of the picture
+   smeared over the strip that was left.
 5. rpi_cam.cpp takes its smallest size from REUP_MIN_PIXELS when that is set.
 6. The camera is a reup::Camera: the Pi's own USB camera as before, or with REUP_CAMERA_URL set, the pictures another
    machine serves as MJPEG. On the station that is the laptop, where the one camera is plugged in.
@@ -24,7 +26,7 @@ EDITS = {
         ("  RpiCam cam(static_cast<camera_unit_t>(unit));", "  reup::Camera cam(static_cast<camera_unit_t>(unit));", "reup::Camera cam"),
         ("    auto hands = pipe->detect(frame, 2);", "    auto hands = pipe->detect(frame, 2);\n    reup::feed(hands, frame);", "reup::feed"),
         ("    if (!g_run.load()) return;\n\n    // Resized here", "    if (!g_run.load()) return;\n    reup::offer(bgr);\n\n    // Resized here", "reup::offer"),
-        ("  if (gui.open(cw, ch) != 0) {", "  const char *reup_win = std::getenv(\"REUP_WINDOW_WIDTH\");\n  const int reup_w = reup_win && std::atoi(reup_win) > 0 ? std::atoi(reup_win) : (cw > 640 ? 480 : cw), reup_h = reup_w * ch / cw;\n  if (gui.open(reup_w, reup_h) != 0) {", "reup_w"),
+        ("  if (gui.open(cw, ch) != 0) {", "  const char *reup_win = std::getenv(\"REUP_WINDOW_WIDTH\");\n  const int reup_w = reup_win && std::atoi(reup_win) > 0 ? std::atoi(reup_win) : (cw > 640 ? 480 : cw);\n  const char *reup_hgt = std::getenv(\"REUP_WINDOW_HEIGHT\");\n  const int reup_h = reup_hgt && std::atoi(reup_hgt) > 0 ? std::atoi(reup_hgt) : reup_w * ch / cw;\n  if (gui.open(reup_w, reup_h) != 0) {", "reup_w"),
         ("  const int DW = gui.width(), DH = gui.height();", "  if (std::getenv(\"REUP_FULLSCREEN\")) gui.toggle_fullscreen();\n  const int DW = gui.width(), DH = gui.height();", "REUP_FULLSCREEN"),
     ],
     "CMakeLists.txt": [

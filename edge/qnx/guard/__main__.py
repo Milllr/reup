@@ -16,10 +16,11 @@ HERE = Path(__file__).resolve().parent.parent
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="guard", description="The shelf node's ledger, queue, heartbeat and button.")
+    parser = argparse.ArgumentParser(prog="guard", description="The shelf node's ledger, queue and heartbeat.")
     parser.add_argument("--hub", default=os.environ.get("HUB_URL", "http://localhost:3000"))
     parser.add_argument("--data", default=os.environ.get("GUARD_DATA", str(HERE / "data")))
-    parser.add_argument("--button-pin", type=int, default=int(os.environ.get("GUARD_BUTTON_PIN", "16")))
+    # The station has no button. One is read only when a pin or a file is named for it.
+    parser.add_argument("--button-pin", type=int, default=int(os.environ.get("GUARD_BUTTON_PIN", "-1")))
     args = parser.parse_args()
     log = lambda text: print(f"[guard] {text}", file=sys.stderr, flush=True)  # noqa: E731
     guard = Guard(Path(args.data), Hub(args.hub, os.environ.get("DEVICE_TOKEN", "dev-device-token")), log=log, supervised=os.environ.get("GUARD_SUPERVISED") == "1")
@@ -35,7 +36,10 @@ def main() -> None:
             guard.wake.clear()
 
     def button() -> None:
-        down = pin_reader(args.button_pin, os.environ.get("GUARD_BUTTON_FILE", ""), log)
+        path = os.environ.get("GUARD_BUTTON_FILE", "")
+        if args.button_pin < 0 and not path:
+            return
+        down = pin_reader(args.button_pin, path, log)
         presses = Presses()
         began = time.monotonic()
         rested = said = False

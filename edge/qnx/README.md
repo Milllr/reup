@@ -5,7 +5,7 @@ The part of reup that keeps working when everything else is gone. It sees hands 
 Two processes and a supervisor:
 
 * `vision/`: C++. The QNX AI workshop hand tracker (github.com/qnx/QNX-AI-workshop) with three header files added. It prints one JSON line an event.
-* `guard/`: Python, standard library only. The ledger, the offline queue, the heartbeat, the reorder guard and the wooden button.
+* `guard/`: Python, standard library only. The ledger, the offline queue, the heartbeat and the reorder guard.
 * `supervisor.py`: starts both, and starts either again within a second if it exits. Vision's lines reach the guard through one pipe the supervisor keeps open, so a restart of either side loses no line.
 
 Nothing here builds in CI for QNX. CI runs the guard and supervisor tests with normal Python (`npm run test:py`) and compiles the C++ math and pipeline tests with g++ on the host (`npm run test:cpp`).
@@ -90,19 +90,19 @@ The Pi's camera sees the board from its own angle, so it needs its own corners f
 
 `REUP_THRESHOLD` (default 18) is the same number as `threshold` in the eye's config.
 
-## The wooden button
+## A button on a pin
 
-The Grove button goes on GPIO 16 (D16 on the Grove hat, a BCM number), read through the `rpi_gpio` module on the QNX image. Another pin: `GUARD_BUTTON_PIN=5 ./run.sh`. No GPIO module: point `GUARD_BUTTON_FILE` at any file that holds 1 while the button is down. A press approves the oldest order that is waiting for a yes. Presses within one second count once.
+The station has no button: a yes is a click on a screen. The guard can still read one. Name its pin and it is read through the `rpi_gpio` module on the QNX image: `GUARD_BUTTON_PIN=16 ./run.sh` (a BCM number). No GPIO module: point `GUARD_BUTTON_FILE` at any file that holds 1 while the button is down. A press approves the oldest order that is waiting for a yes. Presses within one second count once.
 
-A press counts only after the pin was at rest for 0.3 s and then down for 0.04 s. The level the pin starts at is never a press. On the station's Pi every free pin read high with nothing wired, through `rpi_gpio` and through `/dev/gpio`, with either pull. Before this rule a guard that started while an order waited would have approved it by itself. The guard says so once in the log when the pin has read pressed since the start.
+A press counts only after the pin was at rest for 0.3 s and then down for 0.04 s. The level the pin starts at is never a press. On the station's Pi every free pin read high with nothing wired, through `rpi_gpio` and through `/dev/gpio`, with either pull, and before this rule a guard that started while an order waited would have approved it by itself. No button was ever tried on this Pi.
 
 ## Priorities
 
-`run.sh` starts the guard with `on -p 20` and leaves vision at the usual 10, so a busy hand model never delays the ledger or the button. See them with: `pidin -F "%a %p %n" | grep -e python3 -e handtrack_node`
+`run.sh` starts the guard with `on -p 20` and leaves vision at the usual 10, so a busy hand model never delays the ledger. See them with: `pidin -F "%a %p %n" | grep -e python3 -e handtrack_node`
 
 ## For the judges
 
-`./judge_demo.sh` prints the three things to show and the exact commands: kill vision, pull the network cable, press the button.
+`./judge_demo.sh` prints what to show and the exact commands: the hand model on the screen, the ledger, kill vision.
 
 ## What is on disk, in `data/`
 
@@ -128,4 +128,4 @@ Checked on the Pi, Sunday Nov 22 from 3:20 AM to 4:25 AM:
 * Vision killed with `slay -f handtrack_node`: the hand model was ready again 3.5 s after the kill. Through the workshop's `start.sh` it took 36 s, so `run.sh` sets ROS 2 up once and starts the program itself.
 * With the camera on the Pi's own USB (the earlier layout): the eye read the Pi's stream and counted the live board right, washers 3, bolts 3, MWAX 4, 9V 3.
 
-Not checked: a real button on a pin (every pin read high with nothing wired), a reach that names its ledge (the node has no zones for this board yet), the pockets at level 2, and the network cable pulled on purpose.
+Not checked: a reach that names its ledge (the node has no zones for this board yet), the pockets at level 2, and the network cable pulled on purpose.

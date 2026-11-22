@@ -17,7 +17,17 @@ if [ -n "$CAMERA_URL" ]; then export REUP_CAMERA_URL="$CAMERA_URL"; fi
 # With no page beside it the hand model's window is the whole screen. The hand model looks at the picture at the
 # window's own width and the screen scales it up. Measured on the Pi with the laptop's stream: 640 wide, 20 to 25
 # pictures a second. 1024 wide, 10 to 14.
-if [ -z "$SITE" ]; then export REUP_FULLSCREEN="${REUP_FULLSCREEN:-1}" REUP_WINDOW_WIDTH="${REUP_WINDOW_WIDTH:-640}"; fi
+if [ -z "$SITE" ]; then
+  export REUP_FULLSCREEN="${REUP_FULLSCREEN:-1}" REUP_WINDOW_WIDTH="${REUP_WINDOW_WIDTH:-640}"
+  # The window takes the screen's own shape (1024 x 600 on the station's TV gives 640 by 375). In the camera's 16 to 9
+  # the last rows of the picture smeared over the strip of screen that was left.
+  mode="$(sudo sh -c 'grep -a "video mode = " /dev/screen/0/dpy-1' 2>/dev/null | head -1)"
+  screen_w="$(echo "$mode" | awk '{ print $4 }')"
+  screen_h="$(echo "$mode" | awk '{ print $6 }')"
+  if [ "${screen_w:-0}" -gt 0 ] 2>/dev/null && [ "${screen_h:-0}" -gt 0 ] 2>/dev/null; then
+    export REUP_WINDOW_HEIGHT="${REUP_WINDOW_HEIGHT:-$((REUP_WINDOW_WIDTH * screen_h / screen_w))}"
+  fi
+fi
 running() { pidin ar 2>/dev/null | grep -v grep | grep -q "$1"; }
 
 # The Pi has no clock battery. With the wrong date every https call fails.
@@ -39,7 +49,7 @@ if ! running "/usr/bin/weston"; then
 fi
 
 # A node that runs on another camera address, or another layout, than the one asked for now is started again.
-want="camera=$CAMERA_URL site=$SITE"
+want="camera=$CAMERA_URL site=$SITE window=${REUP_WINDOW_WIDTH}x${REUP_WINDOW_HEIGHT} button=${GUARD_BUTTON_PIN}"
 if running "supervisor.py" && [ "$(cat "$DATA/up.txt" 2>/dev/null)" != "$want" ]; then
   for pid in $(pidin ar 2>/dev/null | grep -v grep | grep -E "supervisor.py|python3 -m guard|handtrack_node" | awk '{ print $1 }'); do kill "$pid" 2>/dev/null; done
   sleep 2

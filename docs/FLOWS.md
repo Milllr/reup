@@ -10,8 +10,8 @@ Each step names the screen and the data. Shapes are in contracts/.
 4. Hub opens Order o-1 (pricing), PO RU-1042, sends a market job and a cart job to the buyer. The Shelf keeps the screen for 2.5 seconds so the drop is seen, then `screen` becomes shop.
 5. Shop. Three frames settle in with blinking handles, then hold live iframes as each Run gets its streamingUrl. The newest step shows above each frame.
 6. Shop. Market runs finish: a result above each frame and its handles stop blinking. The cart run reaches the review page: "8 boxes in the cart. $67.71 with tax." Buyer posts IngestCartBody. Order becomes awaiting_approval. `screen` becomes order.
-7. Order. Paper plate, the word "8 boxes", the part in the frame. "$67.71" total with tax, $7.49 a box, arrives Tuesday, from Offcut Supply. Reason and market note below. "Press the wooden button to place the order."
-8. The judge presses the wooden button. Node posts approve by button. Order becomes approved; hub sends the place job.
+7. Order. Paper plate, the word "8 boxes", the part in the frame. "$67.71" total with tax, $7.49 a box, arrives Tuesday, from Offcut Supply. Reason and market note below. One button: "Approve to place order".
+8. The judge clicks Approve. The screen posts approve. Order becomes approved; hub sends the place job.
 9. Order. The plate cuts to wine, the word is "Placing", and the frame holds the live browser: "Placing the order at Offcut Supply." The agent enters the PO number and places the order. Buyer posts IngestPlacedBody. Order becomes placed: the plate cuts to olive, the word is "Ordered", the figure is the confirmation number OC-58213. "Ordered. Arrives Tuesday."
 10. Offcut's webhook: order.confirmed, then order.shipped 20 seconds later. Order becomes shipped.
 11. After 20 seconds on placed, `screen` returns to shelf. Olive plate, the word "On the way". The wood screws row says "8 boxes on the way · arrives Tuesday".
@@ -33,9 +33,9 @@ In the demo: the 8 bags in the Delivery box go into the pockets after "Ordered".
 
 ## QNX judge flow
 
-1. Show the Pi, the C270 and the button. Operator page shows node level and "online".
+1. Show the Pi and its screen. Operator page shows node level and "online".
 2. Run `./judge_demo.sh` on the Pi over ssh; it prints the steps.
-3. Kill vision. The page shows visionRestarts go up by one within a second. Press the button: it still answers.
+3. Kill vision. The page shows visionRestarts go up by one within a second. The guard's heartbeat never stopped.
 4. Pull the network cable. Take a box. Nothing changes on the TV pocket count if the eye is also covered, or the eye shows it; the Pi's ledger gains a line and its queue shows 1.
 5. Plug the cable back in. The queue drains to 0, the pick appears with source node, and if the count crossed the line while offline, the order opens with trigger node.
 

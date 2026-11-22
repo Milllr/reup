@@ -9,7 +9,7 @@ Read on demand. It is not loaded into every session.
    |  Facecam, C920            C270
    v                            v
  Eye (laptop, Python)        Shelf node (Pi 5, QNX)
-   | counts, teach crops        | picks, pocket counts, button, reorder calls
+   | counts, teach crops        | picks, pocket counts, reorder calls
    +-------------+--------------+
                  v
         Hub (Cloudflare Worker + Durable Object + D1)
@@ -50,7 +50,7 @@ Package manager: npm workspaces. Tests: vitest for TypeScript, pytest for Python
 3. The hub's Durable Object holds the live `Snapshot` (contracts/src/schema.ts). Every change is broadcast to every WebSocket as a `ServerMessage` (contracts/src/events.ts) and written to D1.
 4. On every count the brain recomputes the product's policy. If the count is at or under the reorder point and the product has no open order, the hub opens an order and sends jobs to the buyer over its WebSocket.
 5. The buyer runs TinyFish: a market check on the live retailers (prices only) and a cart run at Offcut Supply. It streams run progress and the live preview URL back to the hub with `POST /ingest/runs`.
-6. The order waits for a yes from the wooden button (through the node) or a phone. Then the buyer runs the place job, and Offcut Supply's webhook confirms and later ships the order.
+6. The order waits for a yes on a screen or from a phone. Then the buyer runs the place job, and Offcut Supply's webhook confirms and later ships the order.
 7. When the count for that product rises, the order is marked received.
 
 Count of record: for pocket zones the node's count wins when the node is online and at level 2 or higher; otherwise the eye's count is used. Open zones always use the eye. If the two disagree for more than 3 seconds the operator page shows it.
