@@ -97,7 +97,7 @@ def test_a_part_given_its_own_box_becomes_that_products_example(tmp_path):
     t = still(e, frame(), 0.0, 2.5)
     t = still(e, frame([ITEM]), t, 2.5)
     assert e.pending_teach["id"] == "t-1"
-    assert e.config.teach.view == 0.2
+    assert e.config.teach.view == 0.15
     # The hub gave the part a new box, away from the teach spot. Its picture is the card's.
     snap = snapshot()
     snap["zones"].append({"id": "z-new", "name": "Tape", "kind": "open", "camera": "board", "quad": [[0.05, 0.6], [0.2, 0.6], [0.2, 0.9], [0.05, 0.9]], "rows": None, "cols": None, "productId": "p-tape"})

@@ -86,7 +86,7 @@ def view_size(frame_shape, quad, long_side: int = 640) -> tuple[int, int]:
     return max(8, int(round(across * scale))), max(8, int(round(down * scale)))
 
 
-def view_quad(frame: np.ndarray, quad, margin: float = 0.2, long_side: int = 640) -> np.ndarray:
+def view_quad(frame: np.ndarray, quad, margin: float = 0.15, long_side: int = 640) -> np.ndarray:
     """The picture of a new part that a person and the namer look at: the quad and a margin of board around it.
 
     crop_quad stretched the spot to a square and stopped at its edges, so a part near an edge was cut and nothing
