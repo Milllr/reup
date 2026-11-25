@@ -1,8 +1,4 @@
-# task worktrees and personal Claude settings
-.claude/worktrees/
-.claude/settings.local.json
-
-# secrets and local env (each worktree gets its own PORT in .env.local)
+# secrets and local env
 .env
 .env.*
 !.env.example
@@ -16,12 +12,6 @@ build/
 __pycache__/
 *.pyc
 
-# scratch space any lane may use
-scratch/
-
-# hw local state: builder state, logs, heartbeats, PR bodies
-.hw/
-
 # reup: local data and build output
 .wrangler/
 *.tsbuildinfo
@@ -32,3 +22,6 @@ services/buyer/recordings/
 .dev.vars
 # YOLOE weights, downloaded on first run
 *.pt
+# the link to your own Infisical project (infisical init makes it)
+.infisical.json
+.infisical.yaml
