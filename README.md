@@ -2,7 +2,7 @@
 
 # reup
 
-Winning Best Domain at HackWestern13, an inventory management tracking system with YOLOE, OpenCV, QNX on a Raspberry Pi.
+It automatically tracks your inventory for you, then delegates web scraping agents to repurchase your items before you run out.
 
 <img src=".github/readme/reup.svg" width="100%" alt="What the screen says while reup works: Stocked, Reorder, Shopping, On the way">
 
